@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Povezivanje...</string>
+    <string name="mozilla_sync_open_tab">Otvorite u Candyju</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Poveži svoj Mozilla račun kako bi dijelio obične kartice ovog profila s Firefoxom i Zenom. Drugi uređaji pojavljuju se u biraču profila.</string>
+    <string name="mozilla_sync_parallel_summary">Ovaj lokalni profil možeš povezati i s Candy Syncom. Obje usluge primaju njegove obične kartice. Privatne kartice ostaju na ovom uređaju.</string>
+    <string name="mozilla_sync_unavailable">Nije dostupno u ovoj inačici</string>
+    <string name="mozilla_sync_unavailable_summary">Prijava putem Mozille još nije omogućena za ovu inačicu Candyja. Candy Sync ostaje dostupan.</string>
+    <string name="mozilla_sync_signed_out">Nije povezano</string>
+    <string name="mozilla_sync_connected">Povezano</string>
+    <string name="mozilla_sync_error">Povezivanje nije uspjelo. Pokušaj ponovno ili se ponovno poveži.</string>
+    <string name="mozilla_sync_sign_in">Prijavi se putem Mozille</string>
+    <string name="mozilla_sync_disconnect">Prekini vezu</string>
+    <string name="mozilla_sync_device_summary">Kartice s ovog uređaja otvaraju se kao kopije u tvom povezanom Candy profilu. Promjene u Candyju ne mijenjaju izvorne kartice.</string>
+    <string name="mozilla_sync_send_tab">Pošalji trenutačnu karticu na ovaj uređaj</string>
+    <string name="mozilla_sync_send_success">Kartica je poslana. Uređaj će je primiti kada se poveže.</string>
+    <string name="mozilla_sync_send_failed">Karticu nije moguće poslati. Pokušaj ponovno.</string>
+    <string name="mozilla_sync_no_tabs">Još nema dijeljenih kartica s ovog uređaja.</string>
+</resources>

@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -479,6 +480,7 @@ internal fun BrowserScreen(
         mutableStateOf(Offset.Unspecified)
     }
     val context = LocalContext.current
+    val resources = remember(context, LocalConfiguration.current) { context.resources }
     val readerLibraryRepository = remember(context) { ReaderLibraryRepository.get(context) }
     val rssInboxRepository = remember(context) { RssInboxRepository.get(context) }
     val feedRepository = remember(controller.activeProfileId, selectedTab.isIncognito) {
@@ -501,7 +503,7 @@ internal fun BrowserScreen(
         if (submission.existingId != null && existing == null) {
             Toast.makeText(
                 context,
-                context.getString(R.string.capsule_invalid_configuration),
+                resources.getString(R.string.capsule_invalid_configuration),
                 Toast.LENGTH_SHORT,
             ).show()
             return@rememberLauncherForActivityResult
@@ -548,7 +550,7 @@ internal fun BrowserScreen(
             CapsuleSaveResult.LimitReached -> R.string.capsule_limit_reached
             CapsuleSaveResult.Invalid -> R.string.capsule_invalid_configuration
         }
-        Toast.makeText(context, context.getString(message), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, resources.getString(message), Toast.LENGTH_SHORT).show()
         if (result == CapsuleSaveResult.PinRequested || result == CapsuleSaveResult.Updated) {
             rootView.performConfirmHaptic()
         }
@@ -2341,6 +2343,18 @@ internal fun BrowserScreen(
             pendingLinkSnooze = PendingLinkSnooze(url, title, sourceTabId)
         },
     )
+    controller.mozillaSyncState.devices.firstOrNull { it.id == controller.viewedMozillaDeviceId }?.let { device ->
+        MozillaDeviceSheet(
+            device = device,
+            canSendCurrentTab = controller.canSendSelectedTabToMozilla,
+            onOpen = { tab ->
+                if (controller.openMozillaTab(tab)) closeTabOverview()
+            },
+            onSend = { onComplete -> controller.sendSelectedTabToMozillaDevice(device.id, onComplete) },
+            onRefresh = controller::refreshMozillaSync,
+            onDismiss = controller::dismissMozillaDevice,
+        )
+    }
     FirefoxExtensionChrome(controller)
 }
 

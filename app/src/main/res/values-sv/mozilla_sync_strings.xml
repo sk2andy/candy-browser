@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Ansluter...</string>
+    <string name="mozilla_sync_open_tab">Öppet i Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Anslut ditt Mozilla-konto för att dela profilens vanliga flikar med Firefox och Zen. Andra enheter visas i profilväljaren.</string>
+    <string name="mozilla_sync_parallel_summary">Du kan även ansluta den här lokala profilen till Candy Sync. Båda tjänsterna får dess vanliga flikar. Privata flikar stannar på den här enheten.</string>
+    <string name="mozilla_sync_unavailable">Inte tillgängligt i den här versionen</string>
+    <string name="mozilla_sync_unavailable_summary">Mozilla-inloggning är ännu inte aktiverad i den här Candy-versionen. Candy Sync är fortfarande tillgängligt.</string>
+    <string name="mozilla_sync_signed_out">Inte ansluten</string>
+    <string name="mozilla_sync_connected">Ansluten</string>
+    <string name="mozilla_sync_error">Anslutningen misslyckades. Försök igen eller anslut på nytt.</string>
+    <string name="mozilla_sync_sign_in">Logga in med Mozilla</string>
+    <string name="mozilla_sync_disconnect">Koppla från</string>
+    <string name="mozilla_sync_device_summary">Flikar från den här enheten öppnas som kopior i din länkade Candy-profil. Ändringar i Candy ändrar inte originalflikarna.</string>
+    <string name="mozilla_sync_send_tab">Skicka aktuell flik till den här enheten</string>
+    <string name="mozilla_sync_send_success">Fliken har skickats. Enheten tar emot den när den ansluter.</string>
+    <string name="mozilla_sync_send_failed">Kunde inte skicka fliken. Försök igen.</string>
+    <string name="mozilla_sync_no_tabs">Inga delade flikar från den här enheten ännu.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Připojte účet Mozilla a sdílejte běžné panely tohoto profilu s Firefoxem a Zenem. Další zařízení se zobrazí v přepínači profilů.</string>
+    <string name="mozilla_sync_parallel_summary">Tento místní profil můžete připojit i ke Candy Sync. Obě služby obdrží jeho běžné panely. Anonymní panely zůstanou na tomto zařízení.</string>
+    <string name="mozilla_sync_unavailable">V tomto sestavení není dostupné</string>
+    <string name="mozilla_sync_unavailable_summary">Přihlášení Mozilla zatím není v tomto sestavení Candy zapnuto. Candy Sync zůstává dostupné.</string>
+    <string name="mozilla_sync_signed_out">Nepřipojeno</string>
+    <string name="mozilla_sync_connecting">Připojování…</string>
+    <string name="mozilla_sync_connected">Připojeno</string>
+    <string name="mozilla_sync_error">Připojení selhalo. Zkuste to znovu nebo se znovu připojte.</string>
+    <string name="mozilla_sync_sign_in">Přihlásit se přes Mozilla</string>
+    <string name="mozilla_sync_disconnect">Odpojit</string>
+    <string name="mozilla_sync_device_summary">Panely z tohoto zařízení se otevřou jako kopie v propojeném profilu Candy. Změny v Candy neupravují původní panely.</string>
+    <string name="mozilla_sync_open_tab">Otevřít v Candy</string>
+    <string name="mozilla_sync_send_tab">Odeslat aktuální panel do tohoto zařízení</string>
+    <string name="mozilla_sync_send_success">Panel odeslán. Zařízení jej obdrží, až se připojí.</string>
+    <string name="mozilla_sync_send_failed">Panel se nepodařilo odeslat. Zkuste to znovu.</string>
+    <string name="mozilla_sync_no_tabs">Z tohoto zařízení zatím nejsou sdílené panely.</string>
+</resources>

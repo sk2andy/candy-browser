@@ -1,13 +1,15 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.SyncProvider
 import dev.sk2andy.materialbrowser.browser.isSynced
 
 /** The shared host has no profile unlock presenter; protected profiles stay unavailable. */
 object BrowserProfileManagementRules {
     fun canDeleteProfile(state: BrowserTabsState, profileId: String): Boolean {
         val profile = state.profiles.firstOrNull { it.id == profileId } ?: return false
-        return !profile.isSynced && profile.linkedSyncDeviceId == null && profile.protection == null &&
+        return !profile.isSynced && profile.linkedSyncDeviceId == null &&
+            profile.linkedMozillaDeviceId == null && profile.protection == null &&
             state.profiles.count { !it.isSynced } > 1 &&
             state.profiles.any { it.id != profileId && !it.isSynced && it.protection == null }
     }
@@ -20,7 +22,8 @@ object BrowserProfileManagementRules {
             state.tabs.size >= BrowserSessionPersistenceRules.MAX_TABS
         ) return emptyList()
         return state.profiles.filter { target ->
-            target.id != source.id && target.protection == null && (!tab.isPrivate || !target.isSynced)
+            target.id != source.id && target.syncProvider != SyncProvider.Mozilla &&
+                target.protection == null && (!tab.isPrivate || !target.isSynced)
         }
     }
 }

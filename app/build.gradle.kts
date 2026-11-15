@@ -240,6 +240,9 @@ android {
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
         buildConfigField("boolean", "SYSTEM_WEBVIEW_ONLY", "false")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
+        // Firefox Android's public client registration requires its native WebChannel return path.
+        buildConfigField("String", "MOZILLA_CLIENT_ID", "\"a2270f727f45f648\"")
+        buildConfigField("String", "MOZILLA_REDIRECT_URI", "\"urn:ietf:wg:oauth:2.0:oob:oauth-redirect-webchannel\"")
         buildConfigField(
             "boolean",
             "ENABLE_PERFORMANCE_DIAGNOSTICS",
@@ -722,7 +725,14 @@ listOf("release", "nightly").forEach { buildType ->
     }
 }
 
-val geckoViewDependency = "org.mozilla.geckoview:geckoview:160.0.20261104181552"
+val geckoViewDependency = "org.mozilla.geckoview:geckoview-omni:160.0.20261104181552"
+
+// GeckoView Omni supplies Glean's native library inside libxul; package it only once.
+configurations.configureEach {
+    resolutionStrategy.capabilitiesResolution.withCapability("org.mozilla.telemetry:glean-native") {
+        select(geckoViewDependency)
+    }
+}
 
 dependencies {
     implementation(project(":shared"))
@@ -753,6 +763,11 @@ dependencies {
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.24.3")
     implementation("com.lambdapioneer.argon2kt:argon2kt:1.6.0")
+    implementation("org.mozilla.components:service-firefox-accounts:160.0")
+    implementation("org.mozilla.components:browser-storage-sync:160.0")
+    implementation("org.mozilla.components:support-appservices:160.0")
+    implementation("org.mozilla.components:lib-fetch-httpurlconnection:160.0")
+    implementation("org.mozilla.telemetry:glean:70.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     "fullImplementation"(geckoViewDependency)
     "fossImplementation"(geckoViewDependency) {

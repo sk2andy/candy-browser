@@ -129,6 +129,11 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
 
+    fun bindMozillaAccountWebChannel(
+        handler: (String) -> String?,
+        onReady: (Boolean) -> Unit,
+    ): AutoCloseable? = null
+
     /** Marks an explicitly committed temporary preview as regular browsing content. */
     fun promoteToRegularTab() = Unit
 
@@ -514,6 +519,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     override fun promoteToRegularTab() {
         if (!closed) session.bindToppingSession(tabId, BrowserEngineContentKind.RegularTab)
     }
+
+    override fun bindMozillaAccountWebChannel(
+        handler: (String) -> String?,
+        onReady: (Boolean) -> Unit,
+    ): AutoCloseable? = if (closed) null else session.bindMozillaAccountWebChannel(handler, onReady)
 
     @UiThread
     override fun execute(command: BrowserEngineCommand) {

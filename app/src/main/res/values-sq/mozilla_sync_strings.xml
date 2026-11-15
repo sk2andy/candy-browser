@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Lidhja...</string>
+    <string name="mozilla_sync_open_tab">Hape në Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Lidh llogarinë tënde Mozilla për të ndarë skedat e zakonshme të këtij profili me Firefox dhe Zen. Pajisjet e tjera shfaqen te zgjedhësi i profilit.</string>
+    <string name="mozilla_sync_parallel_summary">Mund ta lidhësh këtë profil lokal edhe me Candy Sync. Të dy shërbimet marrin skedat e tij të zakonshme. Skedat private mbeten në këtë pajisje.</string>
+    <string name="mozilla_sync_unavailable">Nuk është e disponueshme në këtë version</string>
+    <string name="mozilla_sync_unavailable_summary">Hyrja me Mozilla nuk është aktivizuar ende për këtë version të Candy. Candy Sync mbetet i disponueshëm.</string>
+    <string name="mozilla_sync_signed_out">Nuk është lidhur</string>
+    <string name="mozilla_sync_connected">U lidh</string>
+    <string name="mozilla_sync_error">Lidhja dështoi. Provo përsëri ose rilidhu.</string>
+    <string name="mozilla_sync_sign_in">Hyr me Mozilla</string>
+    <string name="mozilla_sync_disconnect">Shkëput</string>
+    <string name="mozilla_sync_device_summary">Skedat nga kjo pajisje hapen si kopje në profilin tënd të lidhur Candy. Ndryshimet në Candy nuk ndryshojnë skedat origjinale.</string>
+    <string name="mozilla_sync_send_tab">Dërgo skedën aktuale në këtë pajisje</string>
+    <string name="mozilla_sync_send_success">Skeda u dërgua. Pajisja do ta marrë kur të lidhet.</string>
+    <string name="mozilla_sync_send_failed">Skeda nuk mund të dërgohej. Provo përsëri.</string>
+    <string name="mozilla_sync_no_tabs">Ende nuk ka skeda të ndara nga kjo pajisje.</string>
+</resources>

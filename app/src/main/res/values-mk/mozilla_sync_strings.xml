@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Се поврзувам...</string>
+    <string name="mozilla_sync_open_tab">Отворете во Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Поврзи ја твојата сметка на Mozilla за да ги споделиш обичните јазичиња на овој профил со Firefox и Zen. Другите уреди се појавуваат во избирачот на профили.</string>
+    <string name="mozilla_sync_parallel_summary">Овој локален профил можеш да го поврзеш и со Candy Sync. Двете услуги ги добиваат неговите обични јазичиња. Приватните јазичиња остануваат на овој уред.</string>
+    <string name="mozilla_sync_unavailable">Не е достапно во оваа верзија</string>
+    <string name="mozilla_sync_unavailable_summary">Најавувањето со Mozilla сѐ уште не е овозможено за оваа верзија на Candy. Candy Sync останува достапен.</string>
+    <string name="mozilla_sync_signed_out">Не е поврзано</string>
+    <string name="mozilla_sync_connected">Поврзано</string>
+    <string name="mozilla_sync_error">Поврзувањето не успеа. Обиди се повторно или поврзи се одново.</string>
+    <string name="mozilla_sync_sign_in">Најави се со Mozilla</string>
+    <string name="mozilla_sync_disconnect">Прекини ја врската</string>
+    <string name="mozilla_sync_device_summary">Јазичињата од овој уред се отвораат како копии во твојот поврзан профил на Candy. Промените во Candy не ги менуваат изворните јазичиња.</string>
+    <string name="mozilla_sync_send_tab">Испрати го тековното јазиче на овој уред</string>
+    <string name="mozilla_sync_send_success">Јазичето е испратено. Уредот ќе го добие кога ќе се поврзе.</string>
+    <string name="mozilla_sync_send_failed">Јазичето не можеше да се испрати. Обиди се повторно.</string>
+    <string name="mozilla_sync_no_tabs">Сѐ уште нема споделени јазичиња од овој уред.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Connect your Mozilla account to share this profile’s regular tabs with Firefox and Zen. Other devices appear in the profile switcher.</string>
+    <string name="mozilla_sync_parallel_summary">You can also connect this local profile to Candy Sync. Both services receive its regular tabs. Private tabs stay on this device.</string>
+    <string name="mozilla_sync_unavailable">Not available in this build</string>
+    <string name="mozilla_sync_unavailable_summary">Mozilla sign-in is not enabled for this Candy build yet. Candy Sync remains available.</string>
+    <string name="mozilla_sync_signed_out">Not connected</string>
+    <string name="mozilla_sync_connecting">Connecting…</string>
+    <string name="mozilla_sync_connected">Connected</string>
+    <string name="mozilla_sync_error">Connection failed. Try again or reconnect.</string>
+    <string name="mozilla_sync_sign_in">Sign in with Mozilla</string>
+    <string name="mozilla_sync_disconnect">Disconnect</string>
+    <string name="mozilla_sync_device_summary">Tabs from this device open as copies in your linked Candy profile. Changes in Candy do not edit the original tabs.</string>
+    <string name="mozilla_sync_open_tab">Open in Candy</string>
+    <string name="mozilla_sync_send_tab">Send current tab to this device</string>
+    <string name="mozilla_sync_send_success">Tab sent. The device will receive it when it connects.</string>
+    <string name="mozilla_sync_send_failed">Could not send the tab. Try again.</string>
+    <string name="mozilla_sync_no_tabs">No shared tabs from this device yet.</string>
+</resources>

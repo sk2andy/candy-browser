@@ -60,6 +60,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
+import dev.sk2andy.materialbrowser.sync.MozillaSyncState
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
@@ -150,6 +151,10 @@ internal fun SettingsScreen(
     toppingCatalogState: ToppingCatalogUiState,
     syncState: SyncRepositoryState,
     syncIconCatalog: SyncDeviceIconCatalog,
+    mozillaSyncState: MozillaSyncState = MozillaSyncState(),
+    onConnectMozillaSync: (String, String) -> Unit = { _, _ -> },
+    onRefreshMozillaSync: () -> Unit = {},
+    onDisconnectMozillaSync: () -> Unit = {},
     onDestinationChanged: (SettingsDestination) -> Unit,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
@@ -760,6 +765,10 @@ internal fun SettingsScreen(
                     onRefresh = onRefreshSync,
                     onOpenDocumentation = onOpenLegalUrl,
                     onShareExtensionLink = onShareSyncExtensionLink,
+                    mozillaState = mozillaSyncState,
+                    onConnectMozilla = onConnectMozillaSync,
+                    onRefreshMozilla = onRefreshMozillaSync,
+                    onDisconnectMozilla = onDisconnectMozillaSync,
                     onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 

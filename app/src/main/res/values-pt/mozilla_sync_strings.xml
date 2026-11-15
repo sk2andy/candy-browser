@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Ligue a sua conta Mozilla para partilhar os separadores normais deste perfil com Firefox e Zen. Os outros dispositivos aparecem no seletor de perfis.</string>
+    <string name="mozilla_sync_parallel_summary">Também pode ligar este perfil local ao Candy Sync. Ambos os serviços recebem os separadores normais. Os separadores privados ficam neste dispositivo.</string>
+    <string name="mozilla_sync_unavailable">Não disponível nesta versão</string>
+    <string name="mozilla_sync_unavailable_summary">O início de sessão Mozilla ainda não está ativado nesta versão do Candy. O Candy Sync continua disponível.</string>
+    <string name="mozilla_sync_signed_out">Não ligado</string>
+    <string name="mozilla_sync_connecting">A ligar…</string>
+    <string name="mozilla_sync_connected">Ligado</string>
+    <string name="mozilla_sync_error">Falha na ligação. Tente novamente ou volte a ligar.</string>
+    <string name="mozilla_sync_sign_in">Iniciar sessão com Mozilla</string>
+    <string name="mozilla_sync_disconnect">Desligar</string>
+    <string name="mozilla_sync_device_summary">Os separadores deste dispositivo abrem como cópias no perfil Candy associado. As alterações no Candy não modificam os separadores originais.</string>
+    <string name="mozilla_sync_open_tab">Abrir no Candy</string>
+    <string name="mozilla_sync_send_tab">Enviar separador atual para este dispositivo</string>
+    <string name="mozilla_sync_send_success">Separador enviado. O dispositivo irá recebê-lo quando se ligar.</string>
+    <string name="mozilla_sync_send_failed">Não foi possível enviar o separador. Tente novamente.</string>
+    <string name="mozilla_sync_no_tabs">Ainda não há separadores partilhados deste dispositivo.</string>
+</resources>

@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -339,6 +340,7 @@ fun SiteCapsuleEditorScreen(
     onEditCustomIcon: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val resources = remember(context, LocalConfiguration.current) { context.resources }
     val existing = request.existing
     val profiles = request.profiles
     var name by rememberSaveable(existing?.id, request.sourceTitle) {
@@ -702,7 +704,7 @@ fun SiteCapsuleEditorScreen(
                         if (BrowserUriPolicy.normalizeHttpUrl(url) == null || name.isBlank()) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.capsule_invalid_configuration),
+                                resources.getString(R.string.capsule_invalid_configuration),
                                 Toast.LENGTH_SHORT,
                             ).show()
                             return@Button
@@ -710,7 +712,7 @@ fun SiteCapsuleEditorScreen(
                         if (existing == null && !request.canCreate) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.capsule_limit_reached),
+                                resources.getString(R.string.capsule_limit_reached),
                                 Toast.LENGTH_SHORT,
                             ).show()
                             return@Button

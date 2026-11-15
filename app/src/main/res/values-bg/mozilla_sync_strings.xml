@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Свързване...</string>
+    <string name="mozilla_sync_open_tab">Отворете в Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Свържете профила си в Mozilla, за да споделяте обикновените раздели на този профил с Firefox и Zen. Другите устройства се показват в избора на профил.</string>
+    <string name="mozilla_sync_parallel_summary">Можете да свържете този локален профил и с Candy Sync. И двете услуги получават обикновените му раздели. Поверителните раздели остават на това устройство.</string>
+    <string name="mozilla_sync_unavailable">Недостъпно в тази версия</string>
+    <string name="mozilla_sync_unavailable_summary">Входът с Mozilla все още не е разрешен за тази версия на Candy. Candy Sync остава достъпен.</string>
+    <string name="mozilla_sync_signed_out">Няма връзка</string>
+    <string name="mozilla_sync_connected">Свързано</string>
+    <string name="mozilla_sync_error">Свързването е неуспешно. Опитайте отново или се свържете наново.</string>
+    <string name="mozilla_sync_sign_in">Вход с Mozilla</string>
+    <string name="mozilla_sync_disconnect">Прекъсване на връзката</string>
+    <string name="mozilla_sync_device_summary">Разделите от това устройство се отварят като копия в свързания ви профил в Candy. Промените в Candy не променят оригиналните раздели.</string>
+    <string name="mozilla_sync_send_tab">Изпращане на текущия раздел до това устройство</string>
+    <string name="mozilla_sync_send_success">Разделът е изпратен. Устройството ще го получи, когато се свърже.</string>
+    <string name="mozilla_sync_send_failed">Разделът не можа да бъде изпратен. Опитайте отново.</string>
+    <string name="mozilla_sync_no_tabs">Все още няма споделени раздели от това устройство.</string>
+</resources>

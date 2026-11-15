@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Conectarea...</string>
+    <string name="mozilla_sync_open_tab">Deschideți în Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Conectează contul Mozilla pentru a partaja filele obișnuite ale acestui profil cu Firefox și Zen. Alte dispozitive apar în selectorul de profiluri.</string>
+    <string name="mozilla_sync_parallel_summary">Poți conecta acest profil local și la Candy Sync. Ambele servicii primesc filele obișnuite. Filele private rămân pe acest dispozitiv.</string>
+    <string name="mozilla_sync_unavailable">Indisponibil în această versiune</string>
+    <string name="mozilla_sync_unavailable_summary">Autentificarea Mozilla nu este încă activată pentru această versiune Candy. Candy Sync rămâne disponibil.</string>
+    <string name="mozilla_sync_signed_out">Neconectat</string>
+    <string name="mozilla_sync_connected">Conectat</string>
+    <string name="mozilla_sync_error">Conexiunea a eșuat. Încearcă din nou sau reconectează-te.</string>
+    <string name="mozilla_sync_sign_in">Autentificare cu Mozilla</string>
+    <string name="mozilla_sync_disconnect">Deconectează</string>
+    <string name="mozilla_sync_device_summary">Filele de pe acest dispozitiv se deschid ca exemplare în profilul Candy asociat. Modificările din Candy nu schimbă filele originale.</string>
+    <string name="mozilla_sync_send_tab">Trimite fila curentă pe acest dispozitiv</string>
+    <string name="mozilla_sync_send_success">Fila a fost trimisă. Dispozitivul o va primi când se conectează.</string>
+    <string name="mozilla_sync_send_failed">Fila nu a putut fi trimisă. Încearcă din nou.</string>
+    <string name="mozilla_sync_no_tabs">Încă nu există file partajate de pe acest dispozitiv.</string>
+</resources>

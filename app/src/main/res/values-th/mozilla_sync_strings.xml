@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">การซิงค์ Mozilla</string>
+    <string name="candy_sync_provider_title">การซิงค์ Candy</string>
+    <string name="mozilla_sync_summary">เชื่อมต่อบัญชี Mozilla เพื่อแชร์แท็บปกติของโปรไฟล์นี้กับ Firefox และ Zen อุปกรณ์อื่นจะปรากฏในตัวสลับโปรไฟล์</string>
+    <string name="mozilla_sync_parallel_summary">เชื่อมโปรไฟล์ในเครื่องนี้กับ Candy Sync ได้ด้วย ทั้งสองบริการจะรับแท็บปกติ แท็บส่วนตัวอยู่ในอุปกรณ์นี้เท่านั้น</string>
+    <string name="mozilla_sync_unavailable">ไม่มีในรุ่นนี้</string>
+    <string name="mozilla_sync_unavailable_summary">รุ่น Candy นี้ยังไม่ได้เปิดใช้การลงชื่อเข้าใช้ Mozilla แต่ยังใช้ Candy Sync ได้</string>
+    <string name="mozilla_sync_signed_out">ไม่ได้เชื่อมต่อ</string>
+    <string name="mozilla_sync_connecting">กำลังเชื่อมต่อ…</string>
+    <string name="mozilla_sync_connected">เชื่อมต่อแล้ว</string>
+    <string name="mozilla_sync_error">เชื่อมต่อไม่สำเร็จ ลองอีกครั้งหรือเชื่อมต่อใหม่</string>
+    <string name="mozilla_sync_sign_in">ลงชื่อเข้าใช้ด้วย Mozilla</string>
+    <string name="mozilla_sync_disconnect">ตัดการเชื่อมต่อ</string>
+    <string name="mozilla_sync_device_summary">แท็บจากอุปกรณ์นี้จะเปิดเป็นสำเนาในโปรไฟล์ Candy ที่เชื่อมไว้ การเปลี่ยนใน Candy ไม่แก้แท็บต้นฉบับ</string>
+    <string name="mozilla_sync_open_tab">เปิดใน Candy</string>
+    <string name="mozilla_sync_send_tab">ส่งแท็บปัจจุบันไปอุปกรณ์นี้</string>
+    <string name="mozilla_sync_send_success">ส่งแท็บแล้ว อุปกรณ์จะรับเมื่อเชื่อมต่อ</string>
+    <string name="mozilla_sync_send_failed">ส่งแท็บไม่ได้ โปรดลองอีกครั้ง</string>
+    <string name="mozilla_sync_no_tabs">ยังไม่มีแท็บที่แชร์จากอุปกรณ์นี้</string>
+</resources>

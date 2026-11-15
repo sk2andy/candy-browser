@@ -16,10 +16,9 @@ Open `http://127.0.0.1:4173/`. The privacy policy is available at `/privacy/` an
 
 ## Mozilla sign-in return
 
-`/oauth/mozilla/` returns Mozilla's OAuth response to Candy through an explicit **Open Candy** link.
-Register `https://sk2andy.github.io/candy-browser/oauth/mozilla/` as the Android client's redirect URI.
-The fixed app destination is `dev.sk2andy.materialbrowser://oauth/callback`; Candy validates the
-OAuth state and completes the PKCE exchange. A direct visit without a response explains how to restart.
+`/oauth/mozilla/` is the earlier standalone OAuth return prototype. Current Android builds use
+Firefox Android's native WebChannel return instead and do not handle this page's app link.
+The page remains published, but must not be configured as the redirect for the Firefox client ID.
 
 The page removes the response from its browser-history entry and uses no analytics or browser
 storage. GitHub Pages receives the initial HTTPS request, including its query parameters.

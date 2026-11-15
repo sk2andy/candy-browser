@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Forbinder...</string>
+    <string name="mozilla_sync_open_tab">Åbn i Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Forbind din Mozilla-konto for at dele profilens almindelige faner med Firefox og Zen. Andre enheder vises i profilvælgeren.</string>
+    <string name="mozilla_sync_parallel_summary">Du kan også forbinde denne lokale profil til Candy Sync. Begge tjenester modtager dens almindelige faner. Private faner bliver på denne enhed.</string>
+    <string name="mozilla_sync_unavailable">Ikke tilgængelig i denne udgave</string>
+    <string name="mozilla_sync_unavailable_summary">Mozilla-login er endnu ikke aktiveret i denne Candy-udgave. Candy Sync er stadig tilgængelig.</string>
+    <string name="mozilla_sync_signed_out">Ikke forbundet</string>
+    <string name="mozilla_sync_connected">Forbundet</string>
+    <string name="mozilla_sync_error">Forbindelsen mislykkedes. Prøv igen, eller forbind på ny.</string>
+    <string name="mozilla_sync_sign_in">Log ind med Mozilla</string>
+    <string name="mozilla_sync_disconnect">Afbryd forbindelse</string>
+    <string name="mozilla_sync_device_summary">Faner fra denne enhed åbnes som kopier i din tilknyttede Candy-profil. Ændringer i Candy ændrer ikke de oprindelige faner.</string>
+    <string name="mozilla_sync_send_tab">Send den aktuelle fane til denne enhed</string>
+    <string name="mozilla_sync_send_success">Fanen er sendt. Enheden modtager den, når den forbinder.</string>
+    <string name="mozilla_sync_send_failed">Kunne ikke sende fanen. Prøv igen.</string>
+    <string name="mozilla_sync_no_tabs">Ingen delte faner fra denne enhed endnu.</string>
+</resources>

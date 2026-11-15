@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla 동기화</string>
+    <string name="candy_sync_provider_title">Candy 동기화</string>
+    <string name="mozilla_sync_summary">Mozilla 계정을 연결하여 이 프로필의 일반 탭을 Firefox 및 Zen과 공유하세요. 다른 기기는 프로필 전환기에 표시됩니다.</string>
+    <string name="mozilla_sync_parallel_summary">이 로컬 프로필을 Candy Sync에도 연결할 수 있습니다. 두 서비스 모두 일반 탭을 받습니다. 비공개 탭은 이 기기에만 유지됩니다.</string>
+    <string name="mozilla_sync_unavailable">이 빌드에서 사용할 수 없음</string>
+    <string name="mozilla_sync_unavailable_summary">이 Candy 빌드에서는 Mozilla 로그인을 아직 지원하지 않습니다. Candy Sync는 사용할 수 있습니다.</string>
+    <string name="mozilla_sync_signed_out">연결 안 됨</string>
+    <string name="mozilla_sync_connecting">연결 중…</string>
+    <string name="mozilla_sync_connected">연결됨</string>
+    <string name="mozilla_sync_error">연결하지 못했습니다. 다시 시도하거나 재연결하세요.</string>
+    <string name="mozilla_sync_sign_in">Mozilla로 로그인</string>
+    <string name="mozilla_sync_disconnect">연결 해제</string>
+    <string name="mozilla_sync_device_summary">이 기기의 탭은 연결된 Candy 프로필에서 사본으로 열립니다. Candy에서 변경해도 원본 탭은 바뀌지 않습니다.</string>
+    <string name="mozilla_sync_open_tab">Candy에서 열기</string>
+    <string name="mozilla_sync_send_tab">현재 탭을 이 기기로 보내기</string>
+    <string name="mozilla_sync_send_success">탭을 보냈습니다. 기기가 연결되면 받습니다.</string>
+    <string name="mozilla_sync_send_failed">탭을 보내지 못했습니다. 다시 시도하세요.</string>
+    <string name="mozilla_sync_no_tabs">이 기기에서 공유한 탭이 아직 없습니다.</string>
+</resources>

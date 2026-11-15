@@ -6,6 +6,70 @@ normal local behavior, gains a sync badge, and is not duplicated in the profile 
 other active device appears beside local profiles with its encrypted name, freely selected shared
 icon, accent, and a local sync badge.
 
+## Mozilla Sync on Android
+
+Android's Sync settings offer separate Candy Sync and Mozilla Sync connections. Mozilla uses
+Mozilla Android Components / Application Services, including Firefox Accounts OAuth with PKCE,
+the encrypted Tabs engine, and device commands. Gecko builds use Firefox Android's public OAuth
+client ID `a2270f727f45f648` with its native return URI
+`urn:ietf:wg:oauth:2.0:oob:oauth-redirect-webchannel`, matching Firefox-based Android browsers.
+This is the Firefox client registration, not a separate Candy registration; Mozilla's continued
+acceptance of this configuration for Candy is not guaranteed. The client ID is public, not a secret.
+
+A bundled WebChannel extension returns account messages directly from Mozilla's HTTPS origin to
+the explicit, non-private login session. Candy passes the authorization code and state to the SDK
+for the PKCE exchange. No external callback activity or hosted redirect is used. The previously
+published GitHub Pages callback is not part of this flow. System WebView-only builds leave Mozilla
+Sync unavailable because this login transport requires GeckoView.
+
+Gecko builds use GeckoView Omni and resolve Glean's native capability to Gecko's `libxul.so`.
+The Java Glean version must match that Gecko build. System WebView builds keep standalone Glean.
+
+| Behavior | Candy Sync | Mozilla Sync |
+| --- | --- | --- |
+| Connection | Self-hosted endpoint and Candy credentials | One Mozilla account |
+| Current device | Bound to one existing local profile | Bound independently to one existing local profile |
+| Other devices | Writable profiles | Read-only tab sheets in the same profile switcher |
+| Open remote tab locally | Supported | Supported, as a new tab in the bound profile |
+| Remote navigation, pin, reorder, close | Supported | Not part of the native Tabs protocol |
+| Send current local tab to another device | Through remote tab mutations | Send Tab, when the target advertises support |
+| Private, ephemeral login, internal and file tabs | Excluded | Excluded |
+| Provider-specific data | Candy tab mutations | Native tab snapshots; no Zen Spaces or other engines |
+
+Both providers may bind the same local profile. Local changes, including Candy changes applied to
+that bound profile, then publish through both connections. Remote profiles are never automatically
+bridged, merged by display name, or republished as local tabs. Mozilla's account profile endpoint
+describes the account, not separate desktop browsing profiles: the runtime mapping uses each
+device's ID. Mozilla IDs are namespaced with `mozilla:` and carry `SyncProvider.Mozilla`, so one
+provider's refresh cannot remove or write to the other's devices. Disconnecting either connection
+leaves the local profile and the other connection intact.
+
+Selecting a Mozilla device opens a tab sheet without changing the active browsing profile or
+creating placeholder browser tabs. Opening a copy uses the usual local profile unlock flow.
+OAuth opens in an ephemeral Candy login tab, excluded from session persistence and both providers.
+Only the login session receives the account bridge; the SDK verifies OAuth state and PKCE.
+
+Mozilla account secrets use the SDK's Keystore-backed secure account storage. The native tabs cache
+is app-private `filesDir/tabs.sqlite`, not Candy's encrypted cache; it and Mozilla preferences/account
+state are excluded from Android backup and device transfer. Logout clears the native tabs cache.
+Periodic sync uses Mozilla's WorkManager integration. An uninitialized local tabs store does not
+upload an empty snapshot after process restart. Candy does not initialize Glean telemetry uploads.
+
+| Owner | Implementation |
+| --- | --- |
+| SDK account, storage, sync and device commands | `data/sync/MozillaSyncRepository.kt` |
+| Provider identity and eligible local tabs | `shared/.../sync/MozillaSyncRules.kt` |
+| Profile projection, publishing and local open | `browser/BrowserController.kt` |
+| Settings and remote device tabs | `ui/MozillaSyncSettings.kt`, `ui/MozillaDeviceSheet.kt` |
+| Native OAuth messages | `data/sync/MozillaAccountWebChannel.kt`, `browser/gecko/GeckoMozillaAccountWebChannel.kt`, `gecko/assets/candy_fxa/` |
+
+Focused unit and Android instrumentation cover provider separation, eligible local tabs, login-tab
+exclusion, settings and opening local copies. A real Mozilla login, two-device exchange and network
+telemetry observation require test accounts and an actual authenticated device exchange.
+The opt-in `GeckoMozillaAccountWebChannelInstrumentedTest` live probe uses
+`-e liveMozillaAuth true` to verify a status request/response against Mozilla's actual authorization
+page without entering credentials. The other bridge tests run without that flag.
+
 ## Current-device profile binding
 
 Setup defaults to the active local profile and lets the user select any existing local profile. The

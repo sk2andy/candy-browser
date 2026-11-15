@@ -317,6 +317,7 @@ import dev.sk2andy.materialbrowser.data.sync.AndroidSyncCacheStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncSettingsStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncVaultStore
 import dev.sk2andy.materialbrowser.data.sync.CandySyncRepository
+import dev.sk2andy.materialbrowser.data.sync.MozillaSyncRepository
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -344,6 +345,10 @@ import dev.sk2andy.materialbrowser.sync.SyncPendingMutation
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncTab
+import dev.sk2andy.materialbrowser.sync.MozillaSyncRules
+import dev.sk2andy.materialbrowser.sync.MozillaSyncState
+import dev.sk2andy.materialbrowser.sync.MozillaSyncStatus
+import dev.sk2andy.materialbrowser.sync.MozillaSyncTab
 import java.util.ArrayDeque
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -353,6 +358,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 private class PendingGeckoPreviewCapture(
     val tabId: String,
@@ -1399,6 +1409,14 @@ class BrowserController(
     }
 
     @VisibleForTesting
+    internal fun applyMozillaSyncStateForTesting(state: MozillaSyncState) {
+        applyMozillaSyncState(state)
+    }
+
+    @VisibleForTesting
+    internal fun openMozillaAuthTabForTesting(url: String) = openMozillaAuthTab(url)
+
+    @VisibleForTesting
     internal fun dispatchGeckoEngineEventForTesting(event: BrowserEngineEvent) {
         onGeckoEngineEvent(event)
     }
@@ -1620,6 +1638,17 @@ class BrowserController(
     var syncState by mutableStateOf(syncRepository.currentState())
         private set
     private var syncObservation: AutoCloseable? = null
+    private val mozillaSyncRepository = MozillaSyncRepository.getInstance(activity.applicationContext)
+    private val mozillaSyncScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    var mozillaSyncState by mutableStateOf(mozillaSyncRepository.currentState())
+        private set
+    var viewedMozillaDeviceId by mutableStateOf<String?>(null)
+        private set
+    private var mozillaAuthTabId: String? = null
+    private var mozillaAuthWebChannel: AutoCloseable? = null
+    private var mozillaSyncObservation: AutoCloseable? = null
+    private var lastPublishedMozillaTabs: List<MozillaSyncTab>? = null
+    private val publishMozillaTabsRunnable = Runnable { publishMozillaTabs() }
     private val locallyPendingSyncCandyIds = mutableSetOf<String>()
     private val pendingSyncReopenMutationIds = mutableMapOf<String, String>()
     private val pendingSyncNavigationRunnables = mutableMapOf<String, Runnable>()
@@ -1946,7 +1975,9 @@ class BrowserController(
         profiles.any { it.id == profileId && it.isSynced }
 
     private fun syncTargetDeviceId(profileId: String): String? {
-        profiles.firstOrNull { it.id == profileId }?.syncedDeviceId?.let { return it }
+        profiles.firstOrNull { it.id == profileId && it.syncProvider == SyncProvider.Candy }
+            ?.syncedDeviceId?.let { return it }
+        if (isSyncedProfile(profileId)) return null
         val state = syncState
         val currentDeviceId = state.currentDeviceId ?: return null
         val configuredProfileId = state.settings?.localProfileId
@@ -1961,6 +1992,9 @@ class BrowserController(
 
     private fun isBoundSyncProfile(profileId: String): Boolean =
         !isSyncedProfile(profileId) && syncTargetDeviceId(profileId) != null
+
+    private fun isBoundMozillaProfile(profileId: String): Boolean =
+        mozillaSyncState.localProfileId == profileId
 
     val activeTabStacks: List<TabStack>
         get() = TabStackRules.sanitized(tabStacks, activeTabs)
@@ -3082,6 +3116,12 @@ class BrowserController(
                     if (!destroyed) applySyncRepositoryState(state)
                 }
             }
+            mozillaSyncObservation = mozillaSyncRepository.observe { state ->
+                mainHandler.post {
+                    if (!destroyed) applyMozillaSyncState(state)
+                }
+            }
+            mozillaSyncScope.launch { mozillaSyncRepository.start() }
         }
     }
 
@@ -6939,6 +6979,8 @@ class BrowserController(
     fun selectProfile(profileId: String): Boolean {
         if (!profilesEnabled) return false
         if (profileId == activeProfileId || profiles.none { it.id == profileId }) return false
+        profiles.firstOrNull { it.id == profileId && it.syncProvider == SyncProvider.Mozilla }
+            ?.syncedDeviceId?.let { viewedMozillaDeviceId = it; return true }
         if (profileId in lockedProfileIds) return false
         return selectProfileNow(profileId)
     }
@@ -6968,6 +7010,12 @@ class BrowserController(
             mainHandler.post { if (!destroyed) onComplete(false) }
             return true
         }
+        profiles.firstOrNull { it.id == profileId && it.syncProvider == SyncProvider.Mozilla }
+            ?.syncedDeviceId?.let { deviceId ->
+                viewedMozillaDeviceId = deviceId
+                mainHandler.post { if (!destroyed) onComplete(true) }
+                return true
+            }
         if (profileId !in lockedProfileIds) {
             val selected = selectProfileNow(profileId)
             mainHandler.post { if (!destroyed) onComplete(selected) }
@@ -7018,6 +7066,7 @@ class BrowserController(
     private fun selectProfileNow(profileId: String): Boolean {
         if (!profilesEnabled) return false
         if (profileId == activeProfileId || profiles.none { it.id == profileId }) return false
+        if (profiles.any { it.id == profileId && it.syncProvider == SyncProvider.Mozilla }) return false
         dismissClosedTabUndo()
         val previousTabId = selectedTabId
         clearPermissionActivity(previousTabId)
@@ -7048,7 +7097,8 @@ class BrowserController(
     fun leaveLockedProfile(): Boolean {
         if (!isActiveProfileLocked) return false
         val targetProfileId = profiles.firstOrNull { profile ->
-            profile.id != activeProfileId && profile.id !in lockedProfileIds
+            profile.id != activeProfileId && profile.syncProvider != SyncProvider.Mozilla &&
+                profile.id !in lockedProfileIds
         }?.id ?: return false
         if (!profilesEnabled) {
             profilesEnabled = true
@@ -7361,6 +7411,7 @@ class BrowserController(
             localProfiles.size <= 1 ||
             isSyncedProfile(profileId) ||
             isBoundSyncProfile(profileId) ||
+            isBoundMozillaProfile(profileId) ||
             profileId in lockedProfileIds ||
             profileId in pendingProfileIsolationChanges ||
             profiles.none { it.id == profileId }
@@ -7422,6 +7473,7 @@ class BrowserController(
             localProfiles.size <= 1 ||
             isSyncedProfile(profileId) ||
             isBoundSyncProfile(profileId) ||
+            isBoundMozillaProfile(profileId) ||
             profileId in lockedProfileIds
         ) {
             return false
@@ -7571,6 +7623,7 @@ class BrowserController(
         if (
             sourceTab.profileId == profileId ||
             profileId in lockedProfileIds ||
+            profiles.any { it.id == profileId && it.syncProvider == SyncProvider.Mozilla } ||
             profiles.none { it.id == profileId }
         ) return false
         val targetIsSynced = isSyncedProfile(profileId)
@@ -7635,6 +7688,7 @@ class BrowserController(
         val sourceTab = tabs.firstOrNull { tab -> tab.id == tabId } ?: return emptyList()
         return profiles.filter { profile ->
             profile.id != sourceTab.profileId &&
+                profile.syncProvider != SyncProvider.Mozilla &&
                 profile.id !in lockedProfileIds &&
                 (!sourceTab.isIncognito || !profile.isSynced)
         }
@@ -11297,6 +11351,106 @@ class BrowserController(
         syncRepository.refresh()
     }
 
+    fun connectMozillaSync(profileId: String, deviceName: String): Boolean {
+        if (!usesGeckoEngine) return false
+        if (localProfiles.none { it.id == profileId }) return false
+        if (!mozillaSyncRepository.configureLocalProfile(profileId, deviceName)) return false
+        mozillaSyncScope.launch {
+            mozillaSyncRepository.start()
+            val url = mozillaSyncRepository.beginAuthentication() ?: return@launch
+            val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return@launch
+            requestProfileSelection(profileId) { selected ->
+                if (selected) openMozillaAuthTab(safeUrl)
+                else mozillaSyncRepository.authenticationCancelled()
+            }
+        }
+        return true
+    }
+
+    private fun openMozillaAuthTab(url: String) {
+        if (!usesGeckoEngine) return mozillaSyncRepository.authenticationCancelled()
+        val previousAuthTabId = mozillaAuthTabId
+        mozillaAuthTabId = null
+        mozillaAuthWebChannel?.close()
+        mozillaAuthWebChannel = null
+        previousAuthTabId?.let(::closeTab)
+        val tabId = createBackgroundTab(
+            initialUrl = BLANK_URL,
+            openerTabId = selectedTabId,
+            isIncognito = false,
+            transientPopup = true,
+        ) ?: return mozillaSyncRepository.authenticationCancelled()
+        transientPopupTabIds.remove(tabId)
+        federatedLoginPopupTabIds += tabId
+        mozillaAuthTabId = tabId
+        updateTab(tabId) { it.copy(syncCandyId = null) }
+        selectTab(tabId)
+        val session = browserEngineSessionFor(tabId)
+        mozillaAuthWebChannel = session.bindMozillaAccountWebChannel(
+            handler = mozillaSyncRepository::handleWebChannelMessage,
+            onReady = { ready ->
+                if (!destroyed && mozillaAuthTabId == tabId && browserEngineSessions[tabId] === session) {
+                    if (ready) {
+                        updateTab(tabId) { it.copy(url = url, isLoading = true) }
+                        loadGeckoWithPrivacy(tabId, session, url)
+                    } else {
+                        closeTab(tabId)
+                    }
+                }
+            },
+        )
+        if (mozillaAuthWebChannel == null) {
+            closeTab(tabId)
+            mozillaSyncRepository.authenticationCancelled()
+        }
+    }
+
+    fun refreshMozillaSync() {
+        lastPublishedMozillaTabs = null
+        scheduleMozillaTabsPublish()
+        mozillaSyncScope.launch { mozillaSyncRepository.refresh() }
+    }
+
+    fun disconnectMozillaSync() {
+        mozillaSyncScope.launch { mozillaSyncRepository.logout() }
+    }
+
+    fun dismissMozillaDevice() {
+        viewedMozillaDeviceId = null
+    }
+
+    fun openMozillaTab(tab: MozillaSyncTab): Boolean {
+        val url = BrowserUriPolicy.normalizeHttpUrl(tab.url) ?: return false
+        val profileId = mozillaSyncState.localProfileId ?: return false
+        if (localProfiles.none { it.id == profileId }) return false
+        return requestProfileSelection(profileId) { selected ->
+            if (selected) {
+                dismissMozillaDevice()
+                createTab(initialUrl = url, isIncognito = false)
+            }
+        }
+    }
+
+    val canSendSelectedTabToMozilla: Boolean
+        get() = selectedTab.let { tab ->
+            !tab.isIncognito && !isSessionEphemeralTab(tab.id) &&
+                tab.id !in activeFederatedLoginFlowTabIds() && !isSyncedProfile(tab.profileId) &&
+                tab.profileId !in lockedProfileIds && BrowserUriPolicy.normalizeHttpUrl(tab.url) != null
+        }
+
+    fun sendSelectedTabToMozillaDevice(deviceId: String, onComplete: (Boolean) -> Unit) {
+        val tab = selectedTab
+        val url = BrowserUriPolicy.normalizeHttpUrl(tab.url)
+        val device = mozillaSyncState.devices.firstOrNull { it.id == deviceId && it.canReceiveTabs }
+        if (!canSendSelectedTabToMozilla || url == null || device == null) {
+            onComplete(false)
+            return
+        }
+        mozillaSyncScope.launch {
+            onComplete(mozillaSyncRepository.sendTab(deviceId, tab.title, url))
+        }
+    }
+
     fun onAppearanceConfigurationChanged() {
         val externalPreview = externalLinkPreviewState
         browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
@@ -12725,6 +12879,12 @@ class BrowserController(
         syncObservation?.close()
         syncObservation = null
         syncRepository.close()
+        mainHandler.removeCallbacks(publishMozillaTabsRunnable)
+        mozillaSyncObservation?.close()
+        mozillaAuthWebChannel?.close()
+        mozillaAuthWebChannel = null
+        if (mozillaAuthTabId != null) mozillaSyncRepository.authenticationCancelled()
+        mozillaSyncScope.cancel()
         closeFindInPage()
         releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
         clearGeckoMediaPresentation()
@@ -17670,6 +17830,7 @@ class BrowserController(
             }
         }
         savePersistentFilterRules()
+        scheduleMozillaTabsPublish()
     }
 
     private fun lockProfilesAfterBackground(nowElapsedRealtime: Long) {
@@ -17832,7 +17993,8 @@ class BrowserController(
         }
 
         val removedProfiles = profiles.filter { profile ->
-            profile.isSynced && profile.syncedDeviceId !in remoteById
+            profile.isSynced && profile.syncProvider == SyncProvider.Candy &&
+                profile.syncedDeviceId !in remoteById
         }
         if (removedProfiles.any { it.id == activeProfileId }) {
             selectProfileNow(localProfiles.first().id)
@@ -17916,6 +18078,64 @@ class BrowserController(
             }
         }
         persist()
+    }
+
+    private fun applyMozillaSyncState(state: MozillaSyncState) {
+        val previous = mozillaSyncState
+        mozillaSyncState = state
+        if (state.status == MozillaSyncStatus.Connected) {
+            val authTabId = mozillaAuthTabId
+            mozillaAuthTabId = null
+            mozillaAuthWebChannel?.close()
+            mozillaAuthWebChannel = null
+            authTabId?.let(::closeTab)
+        }
+        if (previous.localProfileId != state.localProfileId ||
+            previous.currentDeviceId != state.currentDeviceId ||
+            previous.status != state.status
+        ) {
+            lastPublishedMozillaTabs = null
+        }
+        profiles.indices.forEach { index ->
+            val profile = profiles[index]
+            if (!profile.isSynced) {
+                val linkedDeviceId = state.currentDeviceId.takeIf { profile.id == state.localProfileId }
+                if (profile.linkedMozillaDeviceId != linkedDeviceId) {
+                    profiles[index] = profile.copy(linkedMozillaDeviceId = linkedDeviceId)
+                }
+            }
+        }
+        val remoteDevices = state.devices.filterNot { it.id == state.currentDeviceId }
+        val remoteIds = remoteDevices.mapTo(hashSetOf()) { MozillaSyncRules.profileId(it.id) }
+        profiles.removeAll { it.syncProvider == SyncProvider.Mozilla && it.id !in remoteIds }
+        remoteDevices.forEach { device ->
+            val profile = MozillaSyncRules.profile(device)
+            val index = profiles.indexOfFirst { it.id == profile.id }
+            if (index >= 0) profiles[index] = profile else profiles += profile
+        }
+        if (remoteDevices.none { it.id == viewedMozillaDeviceId }) dismissMozillaDevice()
+        scheduleMozillaTabsPublish()
+    }
+
+    private fun scheduleMozillaTabsPublish() {
+        mainHandler.removeCallbacks(publishMozillaTabsRunnable)
+        if (mozillaSyncState.status == MozillaSyncStatus.Connected) {
+            mainHandler.postDelayed(publishMozillaTabsRunnable, 1_000L)
+        }
+    }
+
+    private fun publishMozillaTabs() {
+        val profileId = mozillaSyncState.localProfileId ?: return
+        if (localProfiles.none { it.id == profileId }) return
+        val eligibleTabs = MozillaSyncRules.localTabs(
+            tabs = tabs,
+            profileId = profileId,
+            excludedTabIds = tabs.filter { isSessionEphemeralTab(it.id) }
+                .mapTo(activeFederatedLoginFlowTabIds().toMutableSet(), BrowserTab::id),
+        )
+        if (eligibleTabs == lastPublishedMozillaTabs) return
+        lastPublishedMozillaTabs = eligibleTabs
+        mozillaSyncScope.launch { mozillaSyncRepository.sync(eligibleTabs) }
     }
 
     private fun publishUntrackedLinkedTabs(
@@ -18315,6 +18535,12 @@ class BrowserController(
         preserveFaviconGeneration: Boolean = false,
         preserveRestorableState: Boolean = false,
     ) {
+        if (tabId == mozillaAuthTabId) {
+            mozillaAuthTabId = null
+            mozillaAuthWebChannel?.close()
+            mozillaAuthWebChannel = null
+            mozillaSyncRepository.authenticationCancelled()
+        }
         formDrafts.deleteTab(tabId)
         closeBrowserEngineSession(tabId)
         if (!preserveRestorableState) {

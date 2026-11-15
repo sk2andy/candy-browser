@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Повезивање...</string>
+    <string name="mozilla_sync_open_tab">Отвори у Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Повежи свој Mozilla налог да делиш обичне картице овог профила са Firefox-ом и Zen-ом. Други уређаји појављују се у бирачу профила.</string>
+    <string name="mozilla_sync_parallel_summary">Овај локални профил можеш повезати и са Candy Sync-ом. Обе услуге примају његове обичне картице. Приватне картице остају на овом уређају.</string>
+    <string name="mozilla_sync_unavailable">Није доступно у овој верзији</string>
+    <string name="mozilla_sync_unavailable_summary">Пријава преко Mozilla налога још није омогућена за ову верзију Candy-ја. Candy Sync остаје доступан.</string>
+    <string name="mozilla_sync_signed_out">Није повезано</string>
+    <string name="mozilla_sync_connected">Повезано</string>
+    <string name="mozilla_sync_error">Повезивање није успело. Покушај поново или се поново повежи.</string>
+    <string name="mozilla_sync_sign_in">Пријави се преко Mozilla налога</string>
+    <string name="mozilla_sync_disconnect">Прекини везу</string>
+    <string name="mozilla_sync_device_summary">Картице са овог уређаја отварају се као копије у твом повезаном Candy профилу. Промене у Candy-ју не мењају изворне картице.</string>
+    <string name="mozilla_sync_send_tab">Пошаљи тренутну картицу на овај уређај</string>
+    <string name="mozilla_sync_send_success">Картица је послата. Уређај ће је примити када се повеже.</string>
+    <string name="mozilla_sync_send_failed">Картица није могла да се пошаље. Покушај поново.</string>
+    <string name="mozilla_sync_no_tabs">Још нема дељених картица са овог уређаја.</string>
+</resources>
