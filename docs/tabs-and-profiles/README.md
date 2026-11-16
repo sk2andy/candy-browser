@@ -50,4 +50,4 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 | Launcher app shortcuts | `LauncherShortcutRulesTest`, `LauncherShortcutInstrumentedTest` |
 | Home-screen search widget | `CandySearchWidgetRulesTest`, `LauncherShortcutInstrumentedTest` |
 | Tab overview layout and reorder | `TabOverviewReorderInstrumentedTest` |
-| Candy Stacks shared rules, Android controller, persistence adapter and UI | common `TabStackRulesTest`; Android `BrowserControllerTabStackInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `TabStackUiInstrumentedTest` |
+| Candy Stacks shared rules, Android controller, persistence adapter and UI | common `TabStackRulesTest`; Android `BrowserControllerTabStackInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `TabStackUiInstrumentedTest`, `TabOverviewReorderInstrumentedTest` (real overflow-create → marker → collapse → folder → expand in Coverflow/Grid, List stays flat) |

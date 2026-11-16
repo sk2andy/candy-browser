@@ -655,6 +655,11 @@ private fun TabStackFolderPreviewCard(
                     favicon = favicon,
                     favorites = favorites,
                 )
+                // The preview may contain disabled controls; the folder owns this tap.
+                Box(Modifier.matchParentSize().clickable(
+                    enabled = interactionsEnabled,
+                    role = Role.Button,
+                ) { onSelectTab(tab.id) })
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),

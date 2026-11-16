@@ -202,6 +202,9 @@ fun TabOverviewHeroPager(
     modifier: Modifier = Modifier,
     titleAbovePreview: Boolean = false,
     titleOverlayTopOffset: Dp = 0.dp,
+    cardFrame: @Composable (BrowserTab, @Composable () -> Unit) -> Unit = { _, content -> content() },
+    onCardClick: (BrowserTab) -> Boolean = { false },
+    interactionsEnabled: Boolean = true,
 ) {
     val pagerFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
@@ -228,7 +231,7 @@ fun TabOverviewHeroPager(
         } else {
             (tabs.size - 1).coerceAtLeast(0)
         },
-        userScrollEnabled = dismissingTabId == null &&
+        userScrollEnabled = interactionsEnabled && dismissingTabId == null &&
             movingTabId == null &&
             exitHeroTabId == null &&
             reorder.animationTabId == null &&
@@ -368,7 +371,7 @@ fun TabOverviewHeroPager(
                     .draggable(
                         state = dragState,
                         orientation = Orientation.Vertical,
-                        enabled = heroCompleted && !heroVisible &&
+                        enabled = interactionsEnabled && heroCompleted && !heroVisible &&
                             canDelete(tab) &&
                             dismissingTabId == null &&
                             movingTabId == null &&
@@ -483,38 +486,43 @@ fun TabOverviewHeroPager(
                     Spacer(Modifier.height(8.dp))
                 }
                 Box(modifier = Modifier.width(tabCardWidth)) {
-                    TabCard(
-                        cardWidth = tabCardWidth,
-                        cardAspectRatio = cardAspectRatio,
-                        modifier = Modifier
-                            .graphicsLayer { alpha = if (realCardVisible) 1f else 0f }
-                            .then(cardModifier(tab))
-                            .onGloballyPositioned { coordinates ->
-                                val bounds = coordinates.boundsInRoot()
-                                cardBounds = bounds
-                                onCardBounds(tab, bounds, isInitialCard)
-                            },
-                        onClick = {
-                            val bounds = cardBounds
-                            if (bounds == null) {
-                                onSelectTab(tab.id)
-                                onCloseOverview()
-                            } else {
-                                onStartExitHero(tab, bounds)
+                    cardFrame(tab) {
+                        Box {
+                            TabCard(
+                                cardWidth = tabCardWidth,
+                                cardAspectRatio = cardAspectRatio,
+                                modifier = Modifier
+                                    .graphicsLayer { alpha = if (realCardVisible) 1f else 0f }
+                                    .then(cardModifier(tab))
+                                    .onGloballyPositioned { coordinates ->
+                                        val bounds = coordinates.boundsInRoot()
+                                        cardBounds = bounds
+                                        onCardBounds(tab, bounds, isInitialCard)
+                                    },
+                                onClick = {
+                                    if (onCardClick(tab)) return@TabCard
+                                    val bounds = cardBounds
+                                    if (bounds == null) {
+                                        onSelectTab(tab.id)
+                                        onCloseOverview()
+                                    } else {
+                                        onStartExitHero(tab, bounds)
+                                    }
+                                },
+                            ) {
+                                previewContent(tab)
                             }
-                        },
-                    ) {
-                        previewContent(tab)
-                    }
-                    if (!titleAbovePreview) {
-                        titleContent(
-                            tab,
-                            isInitialCard,
-                            Modifier
-                                .align(Alignment.TopStart)
-                                .offset(y = titleOverlayTopOffset)
-                                .padding(start = 12.dp, top = 4.dp, end = 12.dp),
-                        )
+                            if (!titleAbovePreview) {
+                                titleContent(
+                                    tab,
+                                    isInitialCard,
+                                    Modifier
+                                        .align(Alignment.TopStart)
+                                        .offset(y = titleOverlayTopOffset)
+                                        .padding(start = 12.dp, top = 4.dp, end = 12.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }

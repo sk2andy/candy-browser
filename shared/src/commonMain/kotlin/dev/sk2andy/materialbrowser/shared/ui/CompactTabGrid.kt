@@ -103,6 +103,7 @@ fun CompactTabGrid(
     onSwipeDismiss: (BrowserTab) -> Unit,
     gridTestTag: String,
     tabTestTag: (BrowserTab) -> String,
+    cardFrame: @Composable (BrowserTab, @Composable () -> Unit) -> Unit = { _, content -> content() },
     topPadding: Dp = 8.dp,
     modifier: Modifier = Modifier,
 ) {
@@ -177,43 +178,45 @@ fun CompactTabGrid(
                 key = { _, tab -> tab.id },
                 contentType = { _, _ -> "tab-grid-card" },
             ) { _, tab ->
-                CompactGridTabItem(
-                    tab = tab,
-                    visuals = visuals(tab),
-                    previewContent = { previewContent(tab) },
-                    selected = tab.id == selectedTabId,
-                    initial = tab.id == initialTabId,
-                    heroProgress = heroProgress,
-                    heroCompleted = heroCompleted,
-                    heroVisible = heroVisible,
-                    exitTarget = tab.id == exitHeroTabId,
-                    dismissResistanceFraction = dismissResistanceFraction,
-                    interactionsEnabled = interactionsEnabled,
-                    previewAspectRatio = layout.previewAspectRatio,
-                    viewportSize = viewportSize,
-                    canDelete = { canDelete(tab) },
-                    haptics = haptics,
-                    onReorderBounds = { bounds -> onReorderBounds(tab, bounds) },
-                    onReorderBoundsDisposed = { bounds ->
-                        onReorderBoundsDisposed(tab, bounds)
-                    },
-                    onPreviewBounds = { bounds -> onPreviewBounds(tab, bounds) },
-                    onPreviewBoundsDisposed = { bounds ->
-                        onPreviewBoundsDisposed(tab, bounds)
-                    },
-                    onSelect = { bounds -> onSelect(tab, bounds) },
-                    onClose = { onCloseTab(tab) },
-                    onSwipeDismissStart = { onSwipeDismissStart(tab) },
-                    onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
-                    onSwipeDismiss = { onSwipeDismiss(tab) },
-                    modifier = Modifier
-                        .then(
-                            if (reorderSessionId == null) Modifier.animateItem() else Modifier,
-                        )
-                        .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
-                        .then(reorderModifier(tab))
-                        .testTag(tabTestTag(tab)),
-                )
+                cardFrame(tab) {
+                    CompactGridTabItem(
+                        tab = tab,
+                        visuals = visuals(tab),
+                        previewContent = { previewContent(tab) },
+                        selected = tab.id == selectedTabId,
+                        initial = tab.id == initialTabId,
+                        heroProgress = heroProgress,
+                        heroCompleted = heroCompleted,
+                        heroVisible = heroVisible,
+                        exitTarget = tab.id == exitHeroTabId,
+                        dismissResistanceFraction = dismissResistanceFraction,
+                        interactionsEnabled = interactionsEnabled,
+                        previewAspectRatio = layout.previewAspectRatio,
+                        viewportSize = viewportSize,
+                        canDelete = { canDelete(tab) },
+                        haptics = haptics,
+                        onReorderBounds = { bounds -> onReorderBounds(tab, bounds) },
+                        onReorderBoundsDisposed = { bounds ->
+                            onReorderBoundsDisposed(tab, bounds)
+                        },
+                        onPreviewBounds = { bounds -> onPreviewBounds(tab, bounds) },
+                        onPreviewBoundsDisposed = { bounds ->
+                            onPreviewBoundsDisposed(tab, bounds)
+                        },
+                        onSelect = { bounds -> onSelect(tab, bounds) },
+                        onClose = { onCloseTab(tab) },
+                        onSwipeDismissStart = { onSwipeDismissStart(tab) },
+                        onSwipeDismissEnd = { onSwipeDismissEnd(tab) },
+                        onSwipeDismiss = { onSwipeDismiss(tab) },
+                        modifier = Modifier
+                            .then(
+                                if (reorderSessionId == null) Modifier.animateItem() else Modifier,
+                            )
+                            .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
+                            .then(reorderModifier(tab))
+                            .testTag(tabTestTag(tab)),
+                    )
+                }
             }
         }
         Box(

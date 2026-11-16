@@ -6,6 +6,8 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.clickable
+
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewGridRules
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroRules
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewEdgeAction
@@ -16,6 +18,7 @@ import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroPagerHaptics
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroPagerReorder
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewBottomChrome
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
+import dev.sk2andy.materialbrowser.shared.ui.TabCard
 import dev.sk2andy.materialbrowser.shared.ui.TabTitleRow
 import dev.sk2andy.materialbrowser.shared.ui.CompactTabGrid
 import dev.sk2andy.materialbrowser.shared.ui.CompactTabList
@@ -26,6 +29,8 @@ import dev.sk2andy.materialbrowser.ui.allowTopOverflow
 
 import android.app.Activity
 import android.view.HapticFeedbackConstants
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.EnterTransition
@@ -59,6 +64,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
@@ -93,6 +99,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -138,6 +145,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaperTarget
+import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.data.TabAutoSortingRules
 import dev.sk2andy.materialbrowser.data.TabDeletionRules
@@ -150,6 +158,7 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
@@ -211,10 +220,16 @@ internal fun TabOverview(
     }
     var dismissingTabId by remember { mutableStateOf<String?>(null) }
     val overviewTabs = controller.activeTabs
+    val stackAwareTabs = controller.stackAwareOverviewTabs
+    fun stackAwareIndexFor(tabId: String): Int = controller.stackAwareOverviewTabs
+        .indexOfFirst { it.id == controller.stackAwareOverviewTabId(tabId) }.coerceAtLeast(0)
+    val initialStackAwareTabId = remember(visible) {
+        controller.stackAwareOverviewTabId(controller.selectedTabId)
+    }
     var frozenHeroPagerTabs by remember { mutableStateOf<List<BrowserTab>?>(null) }
-    val pagerTabs = frozenHeroPagerTabs ?: overviewTabs
+    val pagerTabs = frozenHeroPagerTabs ?: stackAwareTabs
     val initialPage = remember {
-        overviewTabs.indexOfFirst { it.id == controller.selectedTabId }.coerceAtLeast(0)
+        stackAwareIndexFor(controller.selectedTabId)
     }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
@@ -275,6 +290,11 @@ internal fun TabOverview(
     var pagerSessionEndJob by remember { mutableStateOf<Job?>(null) }
     var tabActionsTabId by remember { mutableStateOf<String?>(null) }
     var tabStackEditorTabId by remember { mutableStateOf<String?>(null) }
+    var openStackFolderId by remember { mutableStateOf<String?>(null) }
+    val stackOverviewMotionProgress = remember { Animatable(1f) }
+    var stackOverviewMotion by remember { mutableStateOf<TabStackOverviewMotion?>(null) }
+    var stackOverviewMotionJob by remember { mutableStateOf<Job?>(null) }
+    var stackOverviewMotionSession by remember { mutableIntStateOf(0) }
     var overviewBlurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     var profileActionsProfileId by remember { mutableStateOf<String?>(null) }
     var profileIsolationChange by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
@@ -299,13 +319,122 @@ internal fun TabOverview(
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
     }
+    fun toggleStackWithMotion(
+        stack: TabStack,
+        sourceTabId: String,
+        onAnchored: suspend (String) -> Unit,
+    ): Boolean {
+        if (stackOverviewMotionJob?.isActive == true) return false
+        val memberIds = controller.activeTabs
+            .filter { tab -> tab.id in stack.tabIds }
+            .map(BrowserTab::id)
+        val anchorTabId = sourceTabId.takeIf(memberIds::contains)
+            ?: stack.collapsedAnchorTabId?.takeIf(memberIds::contains)
+            ?: memberIds.firstOrNull()
+            ?: return false
+        stackOverviewMotionSession += 1
+        val motionSession = stackOverviewMotionSession
+        stackOverviewMotionJob = overviewScope.launch {
+            try {
+                stackOverviewMotionProgress.snapTo(0f)
+                if (!stack.isCollapsed) {
+                    stackOverviewMotion = TabStackOverviewMotion(
+                        stackId = stack.id,
+                        phase = TabStackMotionPhase.Collapsing,
+                        memberIds = memberIds,
+                        anchorTabId = anchorTabId,
+                        boundsByTabId = memberIds.mapNotNull { tabId ->
+                            tabCardBounds[tabId]?.let { bounds -> tabId to bounds }
+                        }.toMap(),
+                    )
+                    stackOverviewMotionProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(
+                            durationMillis = TabStackMotionRules.COLLAPSE_DURATION_MILLIS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                    if (controller.toggleTabStackCollapsed(stack.id, sourceTabId)) {
+                        withFrameNanos { }
+                        onAnchored(anchorTabId)
+                    }
+                } else {
+                    val initialBounds = tabCardBounds[anchorTabId]
+                        ?: tabCardBounds[sourceTabId]
+                    stackOverviewMotion = TabStackOverviewMotion(
+                        stackId = stack.id,
+                        phase = TabStackMotionPhase.Expanding,
+                        memberIds = memberIds,
+                        anchorTabId = anchorTabId,
+                        boundsByTabId = initialBounds?.let { bounds ->
+                            mapOf(anchorTabId to bounds)
+                        }.orEmpty(),
+                    )
+                    if (controller.toggleTabStackCollapsed(stack.id, sourceTabId)) {
+                        withFrameNanos { }
+                        onAnchored(anchorTabId)
+                        withFrameNanos { }
+                        stackOverviewMotion = stackOverviewMotion?.copy(
+                            boundsByTabId = memberIds.mapNotNull { tabId ->
+                                tabCardBounds[tabId]?.let { bounds -> tabId to bounds }
+                            }.toMap(),
+                        )
+                        stackOverviewMotionProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = 0.8f,
+                                stiffness = 520f,
+                            ),
+                        )
+                    }
+                }
+            } finally {
+                withContext(NonCancellable) {
+                    if (stackOverviewMotionSession == motionSession) {
+                        stackOverviewMotion = null
+                        stackOverviewMotionProgress.snapTo(1f)
+                        stackOverviewMotionJob = null
+                    }
+                }
+            }
+        }
+        return true
+    }
+    LaunchedEffect(controller.activeProfileId, visible) {
+        stackOverviewMotionSession += 1
+        stackOverviewMotionJob?.cancelAndJoin()
+        stackOverviewMotionJob = null
+        stackOverviewMotion = null
+        stackOverviewMotionProgress.snapTo(1f)
+        openStackFolderId = null
+    }
+    LaunchedEffect(
+        controller.activeTabs.map(BrowserTab::id),
+        controller.activeTabStacks.map { stack -> stack.id to stack.tabIds },
+    ) {
+        val motion = stackOverviewMotion ?: return@LaunchedEffect
+        val currentStack = controller.activeTabStacks
+            .firstOrNull { stack -> stack.id == motion.stackId }
+        val currentMemberIds = currentStack?.let { stack ->
+            controller.activeTabs
+                .filter { tab -> tab.id in stack.tabIds }
+                .map(BrowserTab::id)
+        }
+        if (currentMemberIds != motion.memberIds) {
+            stackOverviewMotionSession += 1
+            stackOverviewMotionJob?.cancelAndJoin()
+            stackOverviewMotionJob = null
+            stackOverviewMotion = null
+            stackOverviewMotionProgress.snapTo(1f)
+        }
+    }
     val exitHeroProgress = remember { Animatable(0f) }
     val pinnedTabsVisible by remember(controller.tabOverviewMode, controller.activeProfileId) {
         derivedStateOf {
             val activeTabs = controller.activeTabs
             when (controller.tabOverviewMode) {
                 TabOverviewMode.Hero -> pagerState.layoutInfo.visiblePagesInfo.any { page ->
-                    activeTabs.getOrNull(page.index)?.isPinned == true
+                    controller.stackAwareOverviewTabs.getOrNull(page.index)?.isPinned == true
                 }
                 TabOverviewMode.Grid -> gridState.layoutInfo.visibleItemsInfo.any { item ->
                     activeTabs.any { tab -> tab.isPinned && item.key == tab.id }
@@ -462,7 +591,7 @@ internal fun TabOverview(
             }
     }
     LaunchedEffect(
-        controller.activeTabs.size,
+        stackAwareTabs.map(BrowserTab::id),
         controller.activeProfileId,
         controller.selectedTabId,
         dismissingTabId,
@@ -475,12 +604,11 @@ internal fun TabOverview(
             !visible ||
             dismissingTabId != null ||
             profileSwitching ||
-            activeTabReorder != null
+            activeTabReorder != null || stackOverviewMotion != null
         ) {
             return@LaunchedEffect
         }
-        val selectedIndex = controller.activeTabs.indexOfFirst { it.id == controller.selectedTabId }
-            .coerceAtLeast(0)
+        val selectedIndex = stackAwareIndexFor(controller.selectedTabId)
         if (
             controller.activeTabs.isNotEmpty() &&
             pagerState.currentPage != selectedIndex
@@ -495,9 +623,7 @@ internal fun TabOverview(
         }
         if (profileSwitching) return@LaunchedEffect
         profileSwitchProgress.snapTo(0f)
-        val selectedIndex = controller.activeTabs
-            .indexOfFirst { it.id == controller.selectedTabId }
-            .coerceAtLeast(0)
+        val selectedIndex = stackAwareIndexFor(controller.selectedTabId)
         if (
             controller.tabOverviewMode == TabOverviewMode.Hero &&
             pagerState.currentPage != selectedIndex
@@ -537,7 +663,7 @@ internal fun TabOverview(
         val rootWidthPx = with(density) { maxWidth.toPx() }
         val rootHeightPx = with(density) { maxHeight.toPx() }
         val heroTarget = heroTargetBounds?.takeIf {
-            heroTargetMode == controller.tabOverviewMode && heroTargetTabId == initialTabId
+            heroTargetMode == controller.tabOverviewMode && heroTargetTabId == (if (controller.tabOverviewMode == TabOverviewMode.List) initialTabId else initialStackAwareTabId)
         }
         val entryHeroVisible = heroTarget != null && heroVisible
         val isExiting = exitHero != null
@@ -556,10 +682,46 @@ internal fun TabOverview(
         val gridColumnPitchPx = with(density) { gridLayout.columnPitch.dp.toPx() }
         val gridRowPitchPx = with(density) { gridLayout.rowPitch.dp.toPx() }
         val gridLeadingEmptyCellCount = TabOverviewGridRules.leadingEmptyCellCount(
-            tabCount = controller.activeTabs.size,
+            tabCount = stackAwareTabs.size,
             columnCount = gridLayout.columnCount,
             startsAtBottom = controller.tabListStartsAtBottom,
         )
+        val stackCardFrame: @Composable (BrowserTab, Float, @Composable () -> Unit) -> Unit = { tab, ratio, content ->
+            val stack = controller.tabStackFor(tab.id)
+            val hiddenDuringFold = controller.tabOverviewMode == TabOverviewMode.Hero &&
+                stackOverviewMotion?.phase == TabStackMotionPhase.Collapsing &&
+                tab.id in stackOverviewMotion?.memberIds.orEmpty() &&
+                tab.id != stackOverviewMotion?.anchorTabId
+            TabStackCardFrame(
+                stack = stack,
+                previewAspectRatio = ratio,
+                modifier = Modifier
+                    .tabStackOverviewMotion(tab.id, stackOverviewMotion) { stackOverviewMotionProgress.value }
+                    .graphicsLayer { if (hiddenDuringFold) alpha = 0f },
+            ) {
+                content()
+                if (stack != null && heroCompleted && !heroVisible) {
+                    TabStackMarker(
+                        stack = stack,
+                        tabId = tab.id,
+                        onToggleCollapsed = {
+                            if (dismissingTabId == null && exitHero == null && activeTabReorder == null) {
+                                if (toggleStackWithMotion(stack, tab.id) { anchorTabId ->
+                                    val index = stackAwareIndexFor(anchorTabId)
+                                    if (controller.tabOverviewMode == TabOverviewMode.Hero) pagerState.scrollToPage(index)
+                                    else gridState.scrollToItem(index + TabOverviewGridRules.leadingEmptyCellCount(
+                                        tabCount = controller.stackAwareOverviewTabs.size,
+                                        columnCount = gridLayout.columnCount,
+                                        startsAtBottom = controller.tabListStartsAtBottom,
+                                    ))
+                                }) rootView.performConfirmHaptic()
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+                    )
+                }
+            }
+        }
         val listRowPitchPx = with(density) { 72.dp.toPx() }
         val heroPagerTopOverflow = TAB_OVERVIEW_TOP_SPACING +
             if (controller.profilesEnabled) {
@@ -889,7 +1051,7 @@ internal fun TabOverview(
                 !TabOverviewHeroRules.canStart(
                     heroTargetBounds != null &&
                         heroTargetMode == controller.tabOverviewMode &&
-                        heroTargetTabId == initialTabId,
+                        heroTargetTabId == (if (controller.tabOverviewMode == TabOverviewMode.List) initialTabId else initialStackAwareTabId),
                 )
             ) {
                 delay(16)
@@ -899,7 +1061,7 @@ internal fun TabOverview(
             val hasStableTarget = TabOverviewHeroRules.canStart(
                 heroTargetBounds != null &&
                     heroTargetMode == controller.tabOverviewMode &&
-                    heroTargetTabId == initialTabId,
+                    heroTargetTabId == (if (controller.tabOverviewMode == TabOverviewMode.List) initialTabId else initialStackAwareTabId),
             )
             heroStarted = true
             onEntryHeroStarted(hasStableTarget)
@@ -939,12 +1101,112 @@ internal fun TabOverview(
                 },
         )
 
+        stackOverviewMotion
+            ?.takeIf { motion ->
+                controller.tabOverviewMode == TabOverviewMode.Hero &&
+                    motion.phase == TabStackMotionPhase.Collapsing
+            }
+            ?.let { motion ->
+                val rootBounds = overviewRootBounds
+                val anchorBounds = motion.boundsByTabId[motion.anchorTabId]
+                    ?: tabCardBounds[motion.anchorTabId]
+                val currentStack = controller.activeTabStacks
+                    .firstOrNull { stack -> stack.id == motion.stackId }
+                val currentMemberIds = currentStack?.let { stack ->
+                    controller.activeTabs
+                        .filter { tab -> tab.id in stack.tabIds }
+                        .map(BrowserTab::id)
+                }
+                if (
+                    rootBounds != null &&
+                    anchorBounds != null &&
+                    currentMemberIds == motion.memberIds
+                ) {
+                    val anchorIndex = motion.memberIds.indexOf(motion.anchorTabId)
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        TabStackMotionRules.heroMotionMemberIds(
+                            memberIds = motion.memberIds,
+                            anchorTabId = motion.anchorTabId,
+                        )
+                            .forEachIndexed { memberIndex, tabId ->
+                                val tab = controller.activeTabs.firstOrNull { it.id == tabId }
+                                    ?: return@forEachIndexed
+                                val tabIndex = motion.memberIds.indexOf(tabId)
+                                val visibleBounds = motion.boundsByTabId[tabId]
+                                    ?.takeIf { bounds ->
+                                        bounds.right > rootBounds.left &&
+                                            bounds.left < rootBounds.right
+                                    }
+                                val sourceBounds = visibleBounds ?: run {
+                                    val centerX = TabStackMotionRules.heroEdgeCenterX(
+                                        viewportLeft = rootBounds.left,
+                                        viewportRight = rootBounds.right,
+                                        cardWidth = anchorBounds.width,
+                                        startsBeforeAnchor = tabIndex < anchorIndex,
+                                    )
+                                    Rect(
+                                        left = centerX - anchorBounds.width / 2f,
+                                        top = anchorBounds.top,
+                                        right = centerX + anchorBounds.width / 2f,
+                                        bottom = anchorBounds.bottom,
+                                    )
+                                }
+                                val deltaX = anchorBounds.center.x - sourceBounds.center.x
+                                val deltaY = anchorBounds.center.y - sourceBounds.center.y
+                                TabCard(
+                                    cardWidth = tabCardWidth,
+                                    cardAspectRatio = coverflowCardLayout.aspectRatio,
+                                    onClick = {},
+                                    modifier = Modifier
+                                        .offset {
+                                            IntOffset(
+                                                x = (sourceBounds.left - rootBounds.left)
+                                                    .roundToInt(),
+                                                y = (sourceBounds.top - rootBounds.top).roundToInt(),
+                                            )
+                                        }
+                                        .graphicsLayer {
+                                            val transform = TabStackMotionRules.overviewTransform(
+                                                phase = motion.phase,
+                                                progress = stackOverviewMotionProgress.value,
+                                                deltaX = deltaX,
+                                                deltaY = deltaY,
+                                                memberIndex = memberIndex,
+                                                isAnchor = false,
+                                            )
+                                            translationX = transform.translationX
+                                            translationY = transform.translationY
+                                            scaleX = transform.scale
+                                            scaleY = transform.scale
+                                            rotationZ = transform.rotationZ
+                                            alpha = transform.alpha
+                                        }
+                                        .semantics { invisibleToUser() }
+                                        .testTag(TabStackTestTags.motionCard(tab.id)),
+                                ) {
+                                    TabPreviewContent(
+                                        tab = tab,
+                                        preview = controller.previews[tab.id],
+                                        favicon = controller.favicons[tab.id],
+                                        favorites = controller.favorites,
+                                        favoriteLibrary = controller.favoriteLibrary,
+                                        favoriteFavicons = controller.favoriteFavicons,
+                                    )
+                                }
+                            }
+                    }
+                }
+            }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .longPressTabOverviewReorder(
                     enabled = visible &&
                         !controller.automaticTabSortingEnabled &&
+                        stackOverviewMotion == null &&
+                        (controller.tabOverviewMode == TabOverviewMode.List ||
+                            controller.activeTabStacks.none(TabStack::isCollapsed)) &&
                         heroCompleted &&
                         !heroVisible &&
                         dismissingTabId == null &&
@@ -1048,9 +1310,7 @@ internal fun TabOverview(
                                 controller.requestProfileSelection(profileId, selection::complete)
                                 if (selection.await()) {
                                     controller.loadActiveProfileTabSwitcherWallpaper()
-                                    val selectedIndex = controller.activeTabs
-                                        .indexOfFirst { it.id == controller.selectedTabId }
-                                        .coerceAtLeast(0)
+                                    val selectedIndex = stackAwareIndexFor(controller.selectedTabId)
                                     if (
                                         controller.tabOverviewMode == TabOverviewMode.Hero &&
                                         pagerState.currentPage != selectedIndex
@@ -1118,7 +1378,7 @@ internal fun TabOverview(
                 TabOverviewMode.Hero -> TabOverviewHeroPager(
                     pagerState = pagerState,
                     tabs = pagerTabs,
-                    initialTabId = initialTabId,
+                    initialTabId = initialStackAwareTabId,
                     tabCardWidth = tabCardWidth,
                     cardAspectRatio = coverflowCardLayout.aspectRatio,
                     pageSlotWidth = pageSlotWidth,
@@ -1154,7 +1414,7 @@ internal fun TabOverview(
                         dropAnimating = heroReorderDropAnimating,
                     ),
                     operationScope = overviewScope,
-                    currentTabs = { controller.activeTabs },
+                    currentTabs = { controller.stackAwareOverviewTabs },
                     selectedTabId = { controller.selectedTabId },
                     onDismissingTabChanged = { tabId ->
                         if (tabId == null) {
@@ -1187,23 +1447,46 @@ internal fun TabOverview(
                             tabReorderBounds.remove(tab.id)
                         }
                     },
-                    canDelete = TabDeletionRules::canDelete,
+                    canDelete = { tab ->
+                        controller.tabStackFor(tab.id)?.isCollapsed != true &&
+                            TabDeletionRules.canDelete(tab)
+                    },
                     haptics = TabOverviewHeroPagerHaptics(
                         startRubberband = rootView::startRubberbandHaptic,
                         stopRubberband = rootView::stopRubberbandHaptic,
                         confirm = rootView::performConfirmHaptic,
                     ),
-                    previewContent = { tab ->
-                        TabPreviewContent(
-                            tab = tab,
-                            preview = controller.previews[tab.id],
-                            favicon = controller.favicons[tab.id],
-                            favorites = controller.favorites,
-                            favoriteLibrary = controller.favoriteLibrary,
-                            favoriteFavicons = controller.favoriteFavicons,
-                        )
+                    previewContent = { anchor ->
+                        val stack = controller.tabStackFor(anchor.id)
+                        val tab = if (stack?.isCollapsed == true) {
+                            controller.activeTabs.firstOrNull { it.id == stack.previewTabId } ?: anchor
+                        } else anchor
+                        Box(Modifier.fillMaxSize()) {
+                            TabPreviewContent(
+                                tab = tab,
+                                preview = controller.previews[tab.id],
+                                favicon = controller.favicons[tab.id],
+                                favorites = controller.favorites,
+                                favoriteLibrary = controller.favoriteLibrary,
+                                favoriteFavicons = controller.favoriteFavicons,
+                            )
+                            if (stack?.isCollapsed == true) {
+                                // A live blank-page preview has disabled child controls which
+                                // still consume taps. The collapsed cover is one folder target.
+                                Box(Modifier.matchParentSize().clickable(
+                                    enabled = stackOverviewMotion == null && exitHero == null &&
+                                        dismissingTabId == null && movingTabId == null &&
+                                        reorderAnimation == null && activeTabReorder == null &&
+                                        tabActionsTabId == null && !profileSwitching,
+                                ) { openStackFolderId = stack.id })
+                            }
+                        }
                     },
-                    titleContent = { tab, isInitialCard, modifier ->
+                    titleContent = { anchor, isInitialCard, modifier ->
+                        val stack = controller.tabStackFor(anchor.id)
+                        val tab = if (stack?.isCollapsed == true) {
+                            controller.activeTabs.firstOrNull { it.id == stack.previewTabId } ?: anchor
+                        } else anchor
                         TabTitleRow(
                             tab = tab,
                             visuals = tabOverviewHeroVisuals(
@@ -1221,6 +1504,16 @@ internal fun TabOverview(
                             },
                             modifier = modifier,
                         )
+                    },
+                    interactionsEnabled = stackOverviewMotion == null,
+                    onCardClick = { tab ->
+                        if (stackOverviewMotion != null) true else controller.tabStackFor(tab.id)?.takeIf(TabStack::isCollapsed)?.let {
+                            openStackFolderId = it.id
+                            true
+                        } ?: false
+                    },
+                    cardFrame = { tab, content ->
+                        stackCardFrame(tab, coverflowCardLayout.aspectRatio, content)
                     },
                     cardModifier = { tab ->
                         Modifier.testTag(SnoozeTestTags.overviewTab(tab.id))
@@ -1242,30 +1535,46 @@ internal fun TabOverview(
                 TabOverviewMode.Grid -> CompactTabGrid(
                     gridState = gridState,
                     layout = gridLayout,
-                    tabs = controller.activeTabs,
+                    tabs = stackAwareTabs,
                     startsAtBottom = controller.tabListStartsAtBottom,
                     visible = visible,
-                    selectedTabId = controller.selectedTabId,
-                    initialTabId = initialTabId,
+                    selectedTabId = controller.stackAwareOverviewTabId(controller.selectedTabId),
+                    initialTabId = initialStackAwareTabId,
                     visuals = { tab ->
                         tabOverviewHeroVisuals(tab, controller.favicons[tab.id])
                     },
-                    previewContent = { tab ->
-                        TabPreviewContent(
-                            tab = tab,
-                            preview = controller.previews[tab.id],
-                            favicon = controller.favicons[tab.id],
-                            favorites = controller.favorites,
-                            favoriteLibrary = controller.favoriteLibrary,
-                            favoriteFavicons = controller.favoriteFavicons,
-                        )
+                    previewContent = { anchor ->
+                        val stack = controller.tabStackFor(anchor.id)
+                        val tab = if (stack?.isCollapsed == true) {
+                            controller.activeTabs.firstOrNull { it.id == stack.previewTabId } ?: anchor
+                        } else anchor
+                        Box(Modifier.fillMaxSize()) {
+                            TabPreviewContent(
+                                tab = tab,
+                                preview = controller.previews[tab.id],
+                                favicon = controller.favicons[tab.id],
+                                favorites = controller.favorites,
+                                favoriteLibrary = controller.favoriteLibrary,
+                                favoriteFavicons = controller.favoriteFavicons,
+                            )
+                            if (stack?.isCollapsed == true) {
+                                // A live blank-page preview has disabled child controls which
+                                // still consume taps. The collapsed cover is one folder target.
+                                Box(Modifier.matchParentSize().clickable(
+                                    enabled = stackOverviewMotion == null && exitHero == null &&
+                                        dismissingTabId == null && movingTabId == null &&
+                                        reorderAnimation == null && activeTabReorder == null &&
+                                        tabActionsTabId == null && !profileSwitching,
+                                ) { openStackFolderId = stack.id })
+                            }
+                        }
                     },
                     heroProgress = { heroProgress.value },
                     heroCompleted = heroCompleted,
                     heroVisible = entryHeroVisible,
                     exitHeroTabId = exitHero?.tabId,
                     dismissResistanceFraction = controller.dismissResistancePercent / 100f,
-                    interactionsEnabled = dismissingTabId == null &&
+                    interactionsEnabled = stackOverviewMotion == null && dismissingTabId == null &&
                         movingTabId == null &&
                         exitHero == null &&
                         reorderAnimation == null &&
@@ -1301,7 +1610,10 @@ internal fun TabOverview(
                         )
                     },
                     viewportSize = { IntSize(rootView.width, rootView.height) },
-                    canDelete = TabDeletionRules::canDelete,
+                    canDelete = { tab ->
+                        controller.tabStackFor(tab.id)?.isCollapsed != true &&
+                            TabDeletionRules.canDelete(tab)
+                    },
                     haptics = TabOverviewHeroPagerHaptics(
                         startRubberband = rootView::startRubberbandHaptic,
                         stopRubberband = rootView::stopRubberbandHaptic,
@@ -1313,7 +1625,7 @@ internal fun TabOverview(
                     },
                     onPreviewBounds = { tab, bounds ->
                         tabCardBounds[tab.id] = bounds
-                        if (tab.id == initialTabId && !heroCompleted) {
+                        if (tab.id == initialStackAwareTabId && !heroCompleted) {
                             heroTargetBounds = bounds
                             heroTargetMode = TabOverviewMode.Grid
                             heroTargetTabId = tab.id
@@ -1322,7 +1634,14 @@ internal fun TabOverview(
                     onPreviewBoundsDisposed = { tab, bounds ->
                         if (tabCardBounds[tab.id] == bounds) tabCardBounds.remove(tab.id)
                     },
-                    onSelect = { tab, bounds -> startExitHero(tab, bounds, 22.dp) },
+                    onSelect = { tab, bounds ->
+                        val stack = controller.tabStackFor(tab.id)
+                        if (stack?.isCollapsed == true) { openStackFolderId = stack.id }
+                        else startExitHero(tab, bounds, 22.dp)
+                    },
+                    cardFrame = { tab, content ->
+                        stackCardFrame(tab, gridLayout.previewAspectRatio, content)
+                    },
                     onCloseTab = { tab -> closeCompactTab(tab, emitHaptic = true) },
                     onSwipeDismissStart = { tab ->
                         if (dismissingTabId == null) {
@@ -1398,7 +1717,7 @@ internal fun TabOverview(
                     onRowBounds = { tab, bounds ->
                         tabCardBounds[tab.id] = bounds
                         tabReorderBounds[tab.id] = bounds
-                        if (tab.id == initialTabId && !heroCompleted) {
+                        if (tab.id == initialStackAwareTabId && !heroCompleted) {
                             heroTargetBounds = bounds
                             heroTargetMode = TabOverviewMode.List
                             heroTargetTabId = tab.id
@@ -1422,7 +1741,7 @@ internal fun TabOverview(
                 )
             }
             val actionTargetId = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
-                controller.activeTabs.getOrNull(pagerState.currentPage)?.id
+                pagerTabs.getOrNull(pagerState.currentPage)?.id
             } else {
                 controller.selectedTabId
             }
@@ -2147,6 +2466,31 @@ internal fun TabOverview(
             },
             onDismiss = { tabStackEditorTabId = null },
         )
+
+        val openStackFolder = openStackFolderId?.let { stackId ->
+            controller.activeTabStacks.firstOrNull { it.id == stackId }
+        }
+        if (openStackFolder != null) {
+            TabStackFolderDialog(
+                stack = openStackFolder,
+                tabs = controller.activeTabs.filter { it.id in openStackFolder.tabIds },
+                mode = controller.tabStackFolderMode,
+                previews = controller.previews,
+                favicons = controller.favicons,
+                favorites = controller.favorites,
+                onSelectTab = { tabId ->
+                    openStackFolderId = null
+                    onSelect(tabId)
+                    onClose()
+                },
+                onPreviewTabChanged = { tabId ->
+                    if (controller.setTabStackPreview(openStackFolder.id, tabId)) {
+                        rootView.performConfirmHaptic()
+                    }
+                },
+                onDismiss = { openStackFolderId = null },
+            )
+        }
 
         val actionProfile = profileActionsProfileId?.let { profileId ->
             controller.localBrowserProfiles.firstOrNull { it.id == profileId }

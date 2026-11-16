@@ -21,6 +21,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -29,6 +31,9 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.TabStackColor
@@ -358,6 +363,10 @@ class TabOverviewReorderInstrumentedTest {
         composeRule.onNodeWithTag(TabStackTestTags.collapsedCard(stackId)).assertIsDisplayed()
 
         composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onNodeWithTag(TabStackTestTags.Folder).isDisplayed()
+        }
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(TabStackTestTags.Folder).assertIsDisplayed()
         composeRule.onNodeWithTag(TabStackTestTags.FolderGrid).assertIsDisplayed()
         composeRule.onNodeWithTag(TabStackTestTags.folderTab(stackedTabId)).assertIsDisplayed()
@@ -376,7 +385,17 @@ class TabOverviewReorderInstrumentedTest {
     }
 
     @Test
-    fun overflowMenuCreatesStack() {
+    fun overflowMenuCreatesStack() = verifyOverflowStackCreation(TabOverviewMode.List)
+
+    @Test
+    fun heroOverflowCreatedStackCanCollapseOpenAndExpand() =
+        verifyOverflowStackCreation(TabOverviewMode.Hero)
+
+    @Test
+    fun gridOverflowCreatedStackCanCollapseOpenAndExpand() =
+        verifyOverflowStackCreation(TabOverviewMode.Grid)
+
+    private fun verifyOverflowStackCreation(mode: TabOverviewMode) {
         lateinit var browserController: BrowserController
         lateinit var selectedTabId: String
         lateinit var secondTabId: String
@@ -388,7 +407,7 @@ class TabOverviewReorderInstrumentedTest {
             secondTabId = requireNotNull(
                 browserController.createBackgroundTab("https://stack-candidate.example"),
             )
-            browserController.updateTabOverviewMode(TabOverviewMode.List)
+            browserController.updateTabOverviewMode(mode)
         }
         setOverviewContent(browserController)
         composeRule.waitForIdle()
@@ -402,12 +421,84 @@ class TabOverviewReorderInstrumentedTest {
         composeRule.onNodeWithTag(TabStackTestTags.candidate(secondTabId)).performClick()
         composeRule.onNodeWithTag(TabStackTestTags.DialogConfirm).performClick()
 
+        lateinit var stackId: String
         composeRule.runOnIdle {
             val stack = browserController.activeTabStacks.single()
+            stackId = stack.id
             assertEquals("Research", stack.name)
             assertEquals(setOf(selectedTabId, secondTabId), stack.tabIds.toSet())
         }
         composeRule.onNodeWithTag(TabStackTestTags.Dialog).assertDoesNotExist()
+        composeRule.waitForIdle()
+
+        captureStackEvidence(mode, "created")
+
+        if (mode == TabOverviewMode.List) {
+            composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertIsDisplayed()
+            composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(secondTabId)).assertIsDisplayed()
+            composeRule.onNodeWithTag(TabStackTestTags.marker(stackId, selectedTabId))
+                .assertDoesNotExist()
+            // Even a stack collapsed in another layout must not hide List members.
+            composeRule.runOnIdle {
+                assertTrue(browserController.toggleTabStackCollapsed(stackId, selectedTabId))
+            }
+            composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).assertIsDisplayed()
+            composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(secondTabId)).assertIsDisplayed()
+            composeRule.onNodeWithTag(TabStackTestTags.collapsedCard(stackId)).assertDoesNotExist()
+            return
+        }
+
+        composeRule.onNodeWithTag(TabStackTestTags.marker(stackId, selectedTabId))
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertTrue(browserController.activeTabStacks.single().isCollapsed)
+        }
+        captureStackEvidence(mode, "collapsed")
+        composeRule.onNodeWithTag(TabStackTestTags.collapsedCard(stackId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(secondTabId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId)).performClick()
+        composeRule.waitUntil(5_000) {
+            composeRule.onNodeWithTag(TabStackTestTags.Folder).isDisplayed()
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(TabStackTestTags.Folder).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(selectedTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.folderTab(secondTabId)).assertIsDisplayed()
+        captureStackEvidence(mode, "folder")
+
+        composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.action_cancel))
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(TabStackTestTags.Folder).assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(selectedTabId, browserController.selectedTabId)
+        }
+        composeRule.onNodeWithTag(TabStackTestTags.marker(stackId, selectedTabId)).performClick()
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertFalse(browserController.activeTabStacks.single().isCollapsed)
+        }
+        composeRule.onNodeWithTag(TabStackTestTags.collapsedCard(stackId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(secondTabId)).assertIsDisplayed()
+    }
+
+    private fun captureStackEvidence(mode: TabOverviewMode, stage: String) {
+        if (InstrumentationRegistry.getArguments().getString("issue357Evidence") != "true") return
+        composeRule.waitForIdle()
+        android.os.SystemClock.sleep(600) // Wait for Android window/IME compositor after Compose idle.
+        val screenshot = requireNotNull(
+            InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot(),
+        )
+        try {
+            val directory = requireNotNull(composeRule.activity.getExternalFilesDir(null))
+            File(directory, "issue357-${mode.name.lowercase()}-$stage.png").outputStream().use {
+                assertTrue(screenshot.compress(Bitmap.CompressFormat.PNG, 100, it))
+            }
+        } finally {
+            screenshot.recycle()
+        }
     }
 
     @Test
@@ -547,6 +638,10 @@ class TabOverviewReorderInstrumentedTest {
         composeRule
             .onNodeWithTag(SnoozeTestTags.overviewTab(selectedTabId))
             .performTouchInput { click(center) }
+        composeRule.waitUntil(5_000) {
+            composeRule.onNodeWithTag(TabStackTestTags.Folder).isDisplayed()
+        }
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(TabStackTestTags.Folder).assertIsDisplayed()
         composeRule.onNodeWithTag(TabStackTestTags.folderTab(selectedTabId)).assertIsDisplayed()
         composeRule.onNodeWithTag(TabStackTestTags.folderTab(stackedTabId)).assertIsDisplayed()
@@ -902,6 +997,56 @@ class TabOverviewReorderInstrumentedTest {
         verifySelectedCloseRoutesReplacement(TabOverviewMode.List)
 
     @Test
+    fun gridHiddenSelectedStackMemberUsesAnchorForEntryHero() {
+        lateinit var browserController: BrowserController
+        lateinit var hiddenSelectedTabId: String
+        lateinit var anchorTabId: String
+        lateinit var stackId: String
+        val entryStartedWithStableTarget = AtomicBoolean()
+        val entryCompleted = AtomicBoolean()
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            anchorTabId = browserController.selectedTabId
+            hiddenSelectedTabId = requireNotNull(
+                browserController.createBackgroundTab("https://hidden-stack-member.example"),
+            )
+            browserController.createBackgroundTab("https://outside-stack.example")
+            stackId = requireNotNull(
+                browserController.createTabStack(
+                    tabIds = listOf(anchorTabId, hiddenSelectedTabId),
+                    name = "Hidden selected member",
+                    color = TabStackColor.Blueberry,
+                    previewTabId = hiddenSelectedTabId,
+                ),
+            )
+            assertTrue(browserController.toggleTabStackCollapsed(stackId, anchorTabId))
+            browserController.selectTab(hiddenSelectedTabId)
+            browserController.previews[hiddenSelectedTabId] = solidPreview(android.graphics.Color.GREEN)
+            browserController.updateTabOverviewMode(TabOverviewMode.Grid)
+            assertEquals(anchorTabId, browserController.stackAwareOverviewTabId(hiddenSelectedTabId))
+        }
+        setOverviewContent(
+            browserController = browserController,
+            onEntryHeroStarted = { stable -> entryStartedWithStableTarget.set(stable) },
+            onEntryHeroCompleted = { entryCompleted.set(true) },
+        )
+        composeRule.waitForIdle()
+
+        assertTrue("Entry hero fell back despite a visible collapsed anchor", entryStartedWithStableTarget.get())
+        assertTrue("Entry hero did not finish", entryCompleted.get())
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(anchorTabId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(hiddenSelectedTabId)).assertDoesNotExist()
+        composeRule.onNodeWithTag(TabStackTestTags.collapsedCard(stackId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabStackTestTags.marker(stackId, anchorTabId)).assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(hiddenSelectedTabId, browserController.selectedTabId)
+            assertTrue(browserController.activeTabStacks.single().isCollapsed)
+        }
+    }
+
+    @Test
     fun gridNeighborPreviewFadesInBeforeEntryHeroCompletes() {
         lateinit var browserController: BrowserController
         lateinit var neighborTabId: String
@@ -1235,6 +1380,7 @@ class TabOverviewReorderInstrumentedTest {
     private fun setOverviewContent(
         browserController: BrowserController,
         visible: () -> Boolean = { true },
+        onEntryHeroStarted: (Boolean) -> Unit = {},
         onEntryHeroCompleted: () -> Unit = {},
         onOpenSettings: () -> Unit = {},
         onNewTab: () -> Unit = {},
@@ -1254,7 +1400,7 @@ class TabOverviewReorderInstrumentedTest {
                     onNewTab = onNewTab,
                     onOpenSettings = onOpenSettings,
                     destinationChromeVisible = true,
-                    onEntryHeroStarted = {},
+                    onEntryHeroStarted = onEntryHeroStarted,
                     onEntryHeroCompleted = onEntryHeroCompleted,
                     onExitHeroVisibilityChanged = onExitHeroVisibilityChanged,
                     candyTrailTabId = null,
