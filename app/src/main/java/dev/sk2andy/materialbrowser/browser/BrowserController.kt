@@ -644,6 +644,8 @@ private data class PendingExternalAppPrompt(
     val isRedirect: Boolean,
     val sourceNavigationGeneration: Int,
     val sourcePageUrl: String?,
+    val sourceDocumentGeneration: Long,
+    val sourceRequestGeneration: Long,
 )
 
 private enum class ExternalAppNavigationHandling {
@@ -5755,6 +5757,7 @@ class BrowserController(
                         grant = grant,
                         isRedirect = false,
                         allowStoppedSourceNavigation = true,
+                        requireChoiceWithoutDefault = false,
                     )
                     return
                 }
@@ -8238,7 +8241,7 @@ class BrowserController(
             val navigationGeneration = currentExternalAppSourceNavigationGeneration(source)
             val pageUrl = currentExternalAppSourcePageUrl(source)
             mainHandler.post {
-                if (!destroyed && isAutomaticExternalAppSourceCurrent(
+                if (!destroyed && isExternalAppRequestSourceCurrent(
                         source, documentGeneration, requestGeneration, navigationGeneration, pageUrl,
                     )
                 ) {
@@ -8275,6 +8278,12 @@ class BrowserController(
             isRedirect = isRedirect,
             sourceNavigationGeneration = currentExternalAppSourceNavigationGeneration(source),
             sourcePageUrl = currentExternalAppSourcePageUrl(source),
+            sourceDocumentGeneration = browserEngineDocumentGenerations.getOrDefault(source.policyTabId(), 0L),
+            sourceRequestGeneration = when (source) {
+                is ExternalAppHandoffSource.Tab ->
+                    browserEngineNavigationRequestGenerations.getOrDefault(source.tabId, 0L)
+                is ExternalAppHandoffSource.Preview -> 0L
+            },
         )
         externalAppPrompt = prompt
         externalNavigationGrants.remove(source.policyTabId())
@@ -8290,6 +8299,7 @@ class BrowserController(
         isRedirect: Boolean,
         nativePopupResponse: BrowserEngineBooleanResponse? = null,
         allowStoppedSourceNavigation: Boolean = false,
+        requireChoiceWithoutDefault: Boolean = true,
     ) {
         val policyTabId = source.policyTabId()
         cancelPendingAutomaticExternalAppRequest(policyTabId)
@@ -8336,7 +8346,7 @@ class BrowserController(
             if (
                 destroyed ||
                 externalAppLinkHandling != ExternalAppLinkHandling.Automatic ||
-                !isAutomaticExternalAppSourceCurrent(
+                !isExternalAppRequestSourceCurrent(
                     source = source,
                     documentGeneration = sourceDocumentGeneration,
                     requestGeneration = sourceRequestGeneration,
@@ -8351,8 +8361,12 @@ class BrowserController(
                 return
             }
             val result = if (safeHttpUrl != null) {
-                prepared?.let(externalApps::openWebUrlInChosenApp)
-                    ?: ExternalLaunchResult.Unsupported
+                prepared?.let {
+                    externalApps.openWebUrlInChosenApp(
+                        it,
+                        requireChoiceWithoutDefault = requireChoiceWithoutDefault,
+                    )
+                } ?: ExternalLaunchResult.Unsupported
             } else {
                 externalApps.open(Uri.parse(requestUrl))
             }
@@ -8509,7 +8523,7 @@ class BrowserController(
         }
     }
 
-    private fun isAutomaticExternalAppSourceCurrent(
+    private fun isExternalAppRequestSourceCurrent(
         source: ExternalAppHandoffSource,
         documentGeneration: Long,
         requestGeneration: Long,
@@ -8531,8 +8545,10 @@ class BrowserController(
     }
 
     private fun isExternalAppPromptCurrent(pending: PendingExternalAppPrompt): Boolean =
-        isExternalAppSourceSnapshotCurrent(
+        isExternalAppRequestSourceCurrent(
             source = pending.source,
+            documentGeneration = pending.sourceDocumentGeneration,
+            requestGeneration = pending.sourceRequestGeneration,
             navigationGeneration = pending.sourceNavigationGeneration,
             pageUrl = pending.sourcePageUrl,
         )

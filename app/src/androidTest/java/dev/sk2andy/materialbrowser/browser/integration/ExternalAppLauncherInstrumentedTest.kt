@@ -247,6 +247,36 @@ class ExternalAppLauncherInstrumentedTest {
     }
 
     @Test
+    fun automaticHandoffDoesNotSilentlyChooseOnlyUnpreferredHandler() {
+        val prepared = PreparedWebAppLaunch(
+            url = "https://x.com/example",
+            matchingPackages = listOf("org.example.downloader"),
+            hasDefaultHandler = false,
+        )
+        assertEquals(
+            ExternalLaunchResult.AppChooserShown,
+            launcher.openWebUrlInChosenApp(prepared, requireChoiceWithoutDefault = true),
+        )
+        val chooser = requireNotNull(context.lastIntent)
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        val target = chooser.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+        assertEquals("org.example.downloader", target?.`package`)
+        assertEquals("https://x.com/example", target?.dataString)
+    }
+
+    @Test
+    fun automaticHandoffKeepsPreferredDefaultDirect() {
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.openWebUrlInChosenApp(
+                PreparedWebAppLaunch("https://x.com/example", emptyList(), hasDefaultHandler = true),
+                requireChoiceWithoutDefault = true,
+            ),
+        )
+        assertEquals(Intent.ACTION_VIEW, context.lastIntent?.action)
+    }
+
+    @Test
     fun preferredDefaultOpensImmediatelyWithoutScanningOtherInstalledApps() {
         val chosenLauncher = ExternalAppLauncher(
             context = context,

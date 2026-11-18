@@ -2989,10 +2989,16 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
 
         composeRule.waitUntil(timeoutMillis = 5_000L) {
-            recordingContext.lastIntent?.dataString == targetUrl
+            recordingContext.lastIntent != null
         }
         composeRule.runOnIdle {
-            assertEquals(expectedPackage, recordingContext.lastIntent?.`package`)
+            val intent = requireNotNull(recordingContext.lastIntent)
+            val target = if (expectedPackage == "com.android.vending") intent else {
+                assertEquals(Intent.ACTION_CHOOSER, intent.action)
+                requireNotNull(intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java))
+            }
+            assertEquals(targetUrl, target.dataString)
+            assertEquals(expectedPackage, target.`package`)
             browserController.onResume()
             assertEquals(sourceUrl, browserController.selectedTab.url)
             assertEquals(if (sourceCommitted) "Search" else "", browserController.selectedTab.title)
@@ -3699,7 +3705,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @Test
     fun previewOpenInCandyAcceptsYesBeforeEngineReportsTarget() {
-        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val fixture = composeRule.runOnIdle { createAddressAppFixture(hasDefaultHandler = true) }
         val target = "https://github.com/sk2andy/candy-browser/issues/329?source=preview#details"
         val (opened, previewSession) = launchPreviewAppFeedback(fixture, target)
         composeRule.runOnIdle {
@@ -3724,7 +3730,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @Test
     fun previewCloseInvalidatesOpenedFeedbackAndItsActions() {
-        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val fixture = composeRule.runOnIdle { createAddressAppFixture(hasDefaultHandler = true) }
         val (opened, _) = launchPreviewAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
         composeRule.runOnIdle {
             val previewId = requireNotNull(fixture.browser.externalLinkPreviewState).sessionId
@@ -3742,7 +3748,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @Test
     fun previewBackInvalidatesAlwaysInCandyConfirmation() {
-        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val fixture = composeRule.runOnIdle { createAddressAppFixture(hasDefaultHandler = true) }
         val (opened, _) = launchPreviewAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
         composeRule.runOnIdle {
             fixture.browser.openExternalAppInCandy(opened.id)
@@ -4402,7 +4408,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
-    fun automaticAppLinkUsesInstalledAppEvenWhenAndroidHasNoDefault() {
+    fun automaticAppLinkAsksBeforeUsingUnpreferredInstalledApp() {
         val redditUrl = "https://www.reddit.com/r/candy/"
         lateinit var recordingContext: RecordingContext
         lateinit var lookupThreadName: String
@@ -4459,8 +4465,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             recordingContext.lastIntent != null
         }
         assertEquals("external-app-lookup", lookupThreadName)
-        assertEquals(redditUrl, recordingContext.lastIntent?.dataString)
-        assertEquals("com.reddit.frontpage", recordingContext.lastIntent?.`package`)
+        val chooser = requireNotNull(recordingContext.lastIntent)
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        val target = chooser.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+        assertEquals(redditUrl, target?.dataString)
+        assertEquals("com.reddit.frontpage", target?.`package`)
     }
 
     @Test
@@ -4586,6 +4595,151 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             browserController.confirmExternalAppPrompt(prompt.id)
 
             assertEquals(APP_HANDOFF_TARGET_URL, recordingContext.lastIntent?.dataString)
+            assertNull(browserController.externalAppPrompt)
+        }
+    }
+
+    @Test
+    fun askEveryTimeConfirmationSurvivesBlockedTargetFailure() {
+        verifyAskConfirmationAfterBlockedTarget()
+    }
+
+    @Test
+    fun newerEngineRequestInvalidatesRecoveredAppConfirmation() {
+        verifyAskConfirmationAfterBlockedTarget(shouldLaunch = false) { browser ->
+            browser.dispatchSelectedGeckoNavigationRequestForTesting(
+                GeckoMainFrameNavigationRequest(
+                    url = "https://www.google.com/search?q=new",
+                    isRedirect = false,
+                    hasUserGesture = true,
+                    isDirectNavigation = false,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun replacementDocumentInvalidatesRecoveredAppConfirmation() {
+        verifyAskConfirmationAfterBlockedTarget(shouldLaunch = false) { browser ->
+            browser.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = browser.selectedTabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun tabSwitchInvalidatesRecoveredAppConfirmation() {
+        verifyAskConfirmationAfterBlockedTarget(shouldLaunch = false) { it.createTab() }
+    }
+
+    @Test
+    fun profileSwitchInvalidatesRecoveredAppConfirmation() {
+        var profileId: String? = null
+        try {
+            verifyAskConfirmationAfterBlockedTarget(shouldLaunch = false) { browser ->
+                profileId = requireNotNull(browser.createProfile("🧪"))
+                assertEquals(profileId, browser.activeProfileId)
+            }
+        } finally {
+            composeRule.runOnIdle { profileId?.let { controller?.deleteProfile(it) } }
+        }
+    }
+
+    private fun verifyAskConfirmationAfterBlockedTarget(
+        shouldLaunch: Boolean = true,
+        beforeConfirm: (BrowserController) -> Unit = {},
+    ) {
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { true },
+                ),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(
+                tabId = tabId, onFirstAttach = {},
+                historyUrls = mapOf(0 to APP_HANDOFF_SOURCE_URL),
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_TARGET_URL,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.Current,
+                    ),
+                ),
+            )
+            assertNull(recordingContext.lastIntent)
+            val prompt = requireNotNull(browserController.externalAppPrompt)
+            assertEquals("chatgpt.com", prompt.destination)
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationFailed,
+                    address = APP_HANDOFF_TARGET_URL,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = "Navigation intercepted for app confirmation",
+                ),
+            )
+            assertEquals(APP_HANDOFF_SOURCE_URL, browserController.selectedTab.url)
+            beforeConfirm(browserController)
+            browserController.confirmExternalAppPrompt(prompt.id)
+
+            if (shouldLaunch) {
+                assertEquals(APP_HANDOFF_TARGET_URL, recordingContext.lastIntent?.dataString)
+            } else {
+                assertNull(recordingContext.lastIntent)
+            }
             assertNull(browserController.externalAppPrompt)
         }
     }

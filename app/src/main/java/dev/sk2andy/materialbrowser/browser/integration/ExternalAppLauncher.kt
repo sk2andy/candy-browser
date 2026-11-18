@@ -104,7 +104,13 @@ class ExternalAppLauncher(
         )
     }
 
-    fun openWebUrlInChosenApp(prepared: PreparedWebAppLaunch): ExternalLaunchResult {
+    fun openWebUrlInChosenApp(prepared: PreparedWebAppLaunch): ExternalLaunchResult =
+        openWebUrlInChosenApp(prepared, requireChoiceWithoutDefault = false)
+
+    fun openWebUrlInChosenApp(
+        prepared: PreparedWebAppLaunch,
+        requireChoiceWithoutDefault: Boolean,
+    ): ExternalLaunchResult {
         val appUrl = ExternalAppWebUrlRules.forAndroidApp(prepared.url)
             ?: return ExternalLaunchResult.Unsupported
         if (prepared.hasDefaultHandler) {
@@ -118,7 +124,8 @@ class ExternalAppLauncher(
                 .setPackage(packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER)
         }
-        val chosenIntent = if (appIntents.size == 1) {
+        val showChooser = requireChoiceWithoutDefault || appIntents.size > 1
+        val chosenIntent = if (!showChooser) {
             appIntents.single()
         } else {
             Intent.createChooser(appIntents.first(), null).apply {
@@ -126,7 +133,7 @@ class ExternalAppLauncher(
             }
         }
         val result = launchDirect(chosenIntent, fallbackUrl = null)
-        return if (result == ExternalLaunchResult.Launched && appIntents.size > 1) {
+        return if (result == ExternalLaunchResult.Launched && showChooser) {
             ExternalLaunchResult.AppChooserShown
         } else {
             result
