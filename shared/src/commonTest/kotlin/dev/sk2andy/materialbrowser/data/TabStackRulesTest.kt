@@ -18,6 +18,30 @@ class TabStackRulesTest {
     )
 
     @Test
+    fun `new tabs inherit only when enabled and source belongs to a stack`() {
+        val existing = listOf(stack(tabIds = listOf("one", "two")))
+        assertEquals(existing, TabStackRules.inheritForNewTab(existing, tabs, "one", "three", false))
+        assertEquals(existing, TabStackRules.inheritForNewTab(existing, tabs, "four", "three", true))
+        assertEquals(existing, TabStackRules.inheritForNewTab(existing, tabs, "missing", "three", true))
+        val result = TabStackRules.inheritForNewTab(existing, tabs, "one", "three", true)
+        assertEquals(listOf("one", "two", "three"), result.single().tabIds)
+        assertEquals(result, TabStackRules.inheritForNewTab(result, tabs, "one", "three", true))
+    }
+
+    @Test
+    fun `automatic inheritance preserves profile privacy and pin boundaries`() {
+        val existing = listOf(stack(tabIds = listOf("one", "two")))
+        for (id in listOf("work", "private", "missing")) {
+            assertEquals(existing, TabStackRules.inheritForNewTab(existing, tabs, "one", id, true))
+        }
+        val pinnedTabs = tabs.map { if (it.id == "three") it.copy(isPinned = true) else it }
+        assertEquals(existing, TabStackRules.inheritForNewTab(existing, pinnedTabs, "one", "three", true))
+        val privateTabs = tabs.map { it.copy(isIncognito = true) }
+        assertEquals(listOf("one", "two", "three"),
+            TabStackRules.inheritForNewTab(existing, privateTabs, "one", "three", true).single().tabIds)
+    }
+
+    @Test
     fun `create normalizes name and moves tab out of previous stack`() {
         val existing = stack(id = "old", tabIds = listOf("one", "two"))
 

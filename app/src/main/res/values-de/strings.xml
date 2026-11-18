@@ -1607,4 +1607,6 @@
     <string name="settings_home_pages_internal">Interne Startseite</string>
     <string name="settings_home_pages_empty">Leer = interne Startseite</string>
     <string name="settings_home_pages_invalid">Eine gültige HTTP- oder HTTPS-Webadresse eingeben.</string>
+    <string name="settings_new_tabs_in_current_stack_title">Neue Tabs im aktuellen Stack öffnen</string>
+    <string name="settings_new_tabs_in_current_stack_summary">Wenn der aktuelle Tab in einem Stack liegt, kompatible neue Tabs dort hinzufügen. Standardmäßig aus.</string>
 </resources>

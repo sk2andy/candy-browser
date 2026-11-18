@@ -33,6 +33,75 @@ class BrowserControllerTabStackInstrumentedTest {
     }
 
     @Test
+    fun candyTrailNewAndReopenedForksInheritOriginStack() {
+        val originId = java.util.UUID.randomUUID().toString()
+        activityRule.scenario.onActivity { activity ->
+            seedTabs(activity)
+            BrowserSessionStore(activity).saveTabs(
+                listOf(
+                    BrowserTab(id = originId, lastAccessedAt = 1L),
+                    BrowserTab(id = "two", lastAccessedAt = 2L),
+                    BrowserTab(id = "three", lastAccessedAt = 3L),
+                ),
+                selectedTabId = originId,
+            )
+            val trail = CandyTrailRules.recordNavigation(
+                null, originId, "https://example.com/research", "Research", System.currentTimeMillis(),
+            )
+            assertTrue(dev.sk2andy.materialbrowser.data.CandyTrailStore(activity).save(originId, trail))
+            controller = BrowserController(activity)
+        }
+        val deadline = android.os.SystemClock.uptimeMillis() + 10_000
+        var restored = false
+        while (!restored && android.os.SystemClock.uptimeMillis() < deadline) {
+            activityRule.scenario.onActivity {
+                restored = requireNotNull(controller).candyTrail(originId).nodes.isNotEmpty()
+            }
+            if (!restored) android.os.SystemClock.sleep(50)
+        }
+        assertTrue("Persisted trail must restore before forking", restored)
+        activityRule.scenario.onActivity {
+            val browser = requireNotNull(controller)
+            browser.createTabStack(listOf(originId, "two"), "Research", TabStackColor.Blueberry)
+            browser.updateNewTabsInCurrentStackEnabled(true)
+            browser.selectTab("three")
+            val forkTabId = requireNotNull(browser.forkCandyTrailNode(originId, browser.candyTrail(originId).nodes.first().id))
+            assertTrue(forkTabId in browser.activeTabStacks.single().tabIds)
+            val forkId = browser.candyTrail(originId).forks.single().id
+            browser.closeTab(forkTabId)
+            browser.selectTab("three")
+            val reopenedTabId = requireNotNull(browser.activateCandyTrailFork(originId, forkId))
+            assertTrue(reopenedTabId in browser.activeTabStacks.single().tabIds)
+        }
+    }
+
+    @Test
+    fun newTabsInheritStackOnlyAfterOptInAndPreferenceSurvivesRestore() {
+        activityRule.scenario.onActivity { activity ->
+            seedTabs(activity)
+            val browser = BrowserController(activity).also { controller = it }
+            browser.createTabStack(listOf("one", "two"), "Research", TabStackColor.Blueberry)
+            browser.selectTab("one")
+            assertEquals(false, browser.newTabsInCurrentStackEnabled)
+            val ungrouped = browser.createTab()
+            assertTrue(ungrouped !in browser.activeTabStacks.single().tabIds)
+            browser.updateNewTabsInCurrentStackEnabled(true)
+            browser.selectTab("one")
+            val foreground = browser.createTab()
+            assertTrue(foreground in browser.activeTabStacks.single().tabIds)
+            browser.selectTab("three")
+            val background = browser.createBackgroundTab(BLANK_URL, openerTabId = "one")
+            assertTrue(background in browser.activeTabStacks.single().tabIds)
+            val outside = browser.createTab()
+            assertTrue(outside !in browser.activeTabStacks.single().tabIds)
+            browser.destroy()
+            val restored = BrowserController(activity).also { controller = it }
+            assertTrue(restored.newTabsInCurrentStackEnabled)
+            assertTrue(foreground in restored.activeTabStacks.single().tabIds)
+        }
+    }
+
+    @Test
     fun collapsedStackUsesChosenPreviewAndSelectedIdentityAfterRestore() {
         activityRule.scenario.onActivity { activity ->
             seedTabs(activity)

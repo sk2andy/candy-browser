@@ -51,3 +51,13 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 | Home-screen search widget | `CandySearchWidgetRulesTest`, `LauncherShortcutInstrumentedTest` |
 | Tab overview layout and reorder | `TabOverviewReorderInstrumentedTest` |
 | Candy Stacks shared rules, Android controller, persistence adapter and UI | common `TabStackRulesTest`; Android `BrowserControllerTabStackInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `TabStackUiInstrumentedTest`, `TabOverviewReorderInstrumentedTest` (real overflow-create → marker → collapse → folder → expand in Coverflow/Grid, List stays flat) |
+
+## Optional new-tab stack inheritance (Android)
+
+| Concern | Contract |
+| --- | --- |
+| Setting | Tabs & gestures → Tabs → **Open new tabs in the current stack**; disabled by default. |
+| Creation | Foreground new tabs, background links, engine-created popups, promoted previews and new/reopened Candy Trail forks inherit the opener’s existing stack, or the selected tab’s stack when no opener is supplied. |
+| Boundaries | Never creates a stack, changes profile/privacy mode, or pins a tab. Incompatible profile, privacy or pinned state leaves membership unchanged. Explicit “open in new stack” still moves the resulting tab into the new stack. |
+| Persistence | The global preference persists; private stack membership retains its existing memory-only boundary. |
+| Tests | Shared `TabStackRulesTest`; Android `BrowserControllerTabStackInstrumentedTest` (opt-in, persistence, new/reopened Trail forks) and `TabStackPreviewPromotionInstrumentedTest` (live preview promotion). |

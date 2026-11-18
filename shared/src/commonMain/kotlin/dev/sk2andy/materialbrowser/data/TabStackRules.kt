@@ -108,6 +108,21 @@ object TabStackRules {
         )
     }
 
+    /** Inherits membership only; never creates a stack or crosses existing stack boundaries. */
+    fun inheritForNewTab(
+        stacks: List<TabStack>,
+        tabs: Collection<BrowserTab>,
+        sourceTabId: String?,
+        newTabId: String,
+        enabled: Boolean,
+    ): List<TabStack> {
+        if (!enabled || sourceTabId == null || sourceTabId == newTabId) return stacks
+        if (tabs.none { it.id == sourceTabId }) return stacks
+        if (stacks.any { newTabId in it.tabIds }) return stacks
+        val sourceStack = stacks.firstOrNull { sourceTabId in it.tabIds } ?: return stacks
+        return addTab(stacks, tabs, newTabId, sourceStack.id) ?: stacks
+    }
+
     fun addTab(
         stacks: List<TabStack>,
         tabs: Collection<BrowserTab>,

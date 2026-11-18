@@ -858,6 +858,9 @@ class BrowserController(
         private set
     var tabListStartsAtBottom by mutableStateOf(false)
         private set
+    var newTabsInCurrentStackEnabled by mutableStateOf(false)
+        private set
+
     var automaticTabSortingEnabled by mutableStateOf(false)
         private set
     var isClosedTabUndoEnabled by mutableStateOf(false)
@@ -2900,6 +2903,7 @@ class BrowserController(
         tabOverviewMode = store.loadTabOverviewMode()
         tabStackFolderMode = store.loadTabStackFolderMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
+        newTabsInCurrentStackEnabled = store.loadNewTabsInCurrentStackEnabled()
         automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isClosedTabUndoEnabled = store.loadClosedTabUndoEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
@@ -4774,6 +4778,7 @@ class BrowserController(
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         tabs += tab
+        inheritCurrentTabStack(tab, tab.openerTabId)
         browserEngineSessions[tab.id] = session
         session.promoteToRegularTab()
         navigationGenerations[tab.id] = runtime.safeAreaNavigationGeneration
@@ -6760,6 +6765,7 @@ class BrowserController(
             owner = appLogPrivacyOwner,
         )
         tabs += tab
+        inheritCurrentTabStack(tab, openerTabId ?: selectedTabId)
         markSyncedTabPending(tab)
         updateSelectedTabId(tab.id)
         rememberSelectedTab(activeProfileId, tab.id)
@@ -6821,6 +6827,7 @@ class BrowserController(
             owner = appLogPrivacyOwner,
         )
         tabs += tab
+        inheritCurrentTabStack(tab, openerTabId ?: selectedTabId)
         if (!transientPopup) {
             markSyncedTabPending(tab)
             enqueueSyncedTab(tab.id)
@@ -10199,6 +10206,7 @@ class BrowserController(
 
         touchTab(selectedTabId, nowMillis)
         tabs += destinationTab
+        inheritCurrentTabStack(destinationTab, originTab.id)
         setCandyTrail(originTab, forkedTrail)
         updateSelectedTabId(destinationTab.id)
         rememberSelectedTab(activeProfileId, destinationTab.id)
@@ -10243,6 +10251,7 @@ class BrowserController(
 
         touchTab(selectedTabId, nowMillis)
         tabs += destinationTab
+        inheritCurrentTabStack(destinationTab, originTab.id)
         setCandyTrail(originTab, reopenedTrail)
         updateSelectedTabId(destinationTab.id)
         rememberSelectedTab(activeProfileId, destinationTab.id)
@@ -12057,6 +12066,22 @@ class BrowserController(
     fun updateTabListStartsAtBottom(enabled: Boolean) {
         tabListStartsAtBottom = enabled
         store.saveTabListStartsAtBottom(enabled)
+    }
+
+    fun updateNewTabsInCurrentStackEnabled(enabled: Boolean) {
+        newTabsInCurrentStackEnabled = enabled
+        store.saveNewTabsInCurrentStackEnabled(enabled)
+    }
+
+    private fun inheritCurrentTabStack(tab: BrowserTab, sourceTabId: String?) {
+        val updated = TabStackRules.inheritForNewTab(
+            stacks = tabStacks,
+            tabs = tabs,
+            sourceTabId = sourceTabId,
+            newTabId = tab.id,
+            enabled = newTabsInCurrentStackEnabled,
+        )
+        if (updated != tabStacks) tabStacks.replaceWith(updated)
     }
 
     fun updateAutomaticTabSortingEnabled(enabled: Boolean) {

@@ -82,6 +82,7 @@ internal fun TabsAndGesturesSettingsPage(
     tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
+    newTabsInCurrentStackEnabled: Boolean = false,
     isClosedTabUndoEnabled: Boolean = false,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
@@ -98,6 +99,7 @@ internal fun TabsAndGesturesSettingsPage(
     onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
+    onNewTabsInCurrentStackEnabledChanged: (Boolean) -> Unit = {},
     onClosedTabUndoEnabledChanged: (Boolean) -> Unit = {},
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
@@ -170,6 +172,14 @@ internal fun TabsAndGesturesSettingsPage(
                     title = stringResource(R.string.settings_tab_stack_folder_mode),
                     value = tabStackFolderMode.displayName(), onClick = onTabStackFolder, enabled = true,
                     modifier = Modifier.testTag(TabSettingsTestTags.StackFolderMode),
+                )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_new_tabs_in_current_stack_title),
+                    subtitle = stringResource(R.string.settings_new_tabs_in_current_stack_summary),
+                    checked = newTabsInCurrentStackEnabled,
+                    onCheckedChange = onNewTabsInCurrentStackEnabledChanged,
+                    modifier = Modifier.testTag("tab_settings_new_tabs_in_current_stack"),
                 )
                 SettingsPreferenceDivider()
                 SettingsSwitch(

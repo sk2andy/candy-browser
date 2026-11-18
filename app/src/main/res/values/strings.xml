@@ -1625,4 +1625,6 @@
     <string name="settings_home_pages_internal" tools:ignore="MissingTranslation">Internal start page</string>
     <string name="settings_home_pages_empty" tools:ignore="MissingTranslation">Empty = internal start page</string>
     <string name="settings_home_pages_invalid" tools:ignore="MissingTranslation">Enter a valid HTTP or HTTPS website address.</string>
+    <string name="settings_new_tabs_in_current_stack_title" tools:ignore="MissingTranslation">Open new tabs in the current stack</string>
+    <string name="settings_new_tabs_in_current_stack_summary" tools:ignore="MissingTranslation">When the current tab belongs to a stack, add compatible new tabs to it. Off by default.</string>
 </resources>
