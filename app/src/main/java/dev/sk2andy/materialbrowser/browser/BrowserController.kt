@@ -13554,6 +13554,9 @@ class BrowserController(
                 return GeckoNavigationRequestDecision.Deny
             }
         }
+        if (scheme == "intent" || BrowserUriPolicy.canOpenExternally(scheme)) {
+            return GeckoNavigationRequestDecision.Deny
+        }
         if (request.target == BrowserEngineNavigationTarget.New) {
             if ((safeHttpUrl == null && request.url != BLANK_URL) || !request.hasUserGesture) {
                 return GeckoNavigationRequestDecision.Deny

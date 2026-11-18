@@ -302,6 +302,43 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun passiveAppLinksNeverReachTheBrowserEngine() {
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity).also { controller = it }
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = browserController.selectedTabId, onFirstAttach = {}),
+            )
+
+            for (url in listOf("fb://fullscreen_video/1857665505467831", "intent://example#Intent;end")) {
+                assertEquals(
+                    GeckoNavigationRequestDecision.Deny,
+                    browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                        GeckoMainFrameNavigationRequest(
+                            url = url,
+                            isRedirect = true,
+                            hasUserGesture = false,
+                            isDirectNavigation = false,
+                        ),
+                    ),
+                )
+            }
+            for (url in listOf("https://example.com/", "about:blank")) {
+                assertEquals(
+                    GeckoNavigationRequestDecision.Allow,
+                    browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                        GeckoMainFrameNavigationRequest(
+                            url = url,
+                            isRedirect = false,
+                            hasUserGesture = false,
+                            isDirectNavigation = false,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
+
+    @Test
     fun userOpenedWebPopupAllowsGeckoNewSession() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)

@@ -362,6 +362,36 @@ class SystemWebViewBrowserEngineInstrumentedTest {
     }
 
     @Test
+    fun passiveAppLinkLeavesPageAvailableForWebFallback() {
+        lateinit var browserController: BrowserController
+        composeRule.runOnIdle {
+            val (createdController, webView) = createControllerWithView()
+            browserController = createdController
+            controller = browserController
+            webView.loadDataWithBaseURL(
+                "https://example.com/",
+                """
+                    <html><head><title>Original page</title></head><body>
+                      <script>
+                        setTimeout(() => {
+                          location.href = 'fb://fullscreen_video/1857665505467831';
+                          setTimeout(() => { document.title = 'Web fallback'; }, 500);
+                        }, 500);
+                      </script>
+                    </body></html>
+                """.trimIndent(),
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Web fallback"
+        }
+    }
+
+    @Test
     fun mainFrame404IsCommittedWithNotFoundStatus() {
         NotFoundServer().use { server ->
             lateinit var browserController: BrowserController

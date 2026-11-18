@@ -287,7 +287,7 @@
 - Carry user intent across script-driven handoffs with a short-lived, tab- and engine-session-bound grant
   after a tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff,
   ends on page completion or error, and is consumed by the first accepted external launch attempt.
-  A passive special-scheme redirect without this grant stays blocked.
+  A passive special-scheme redirect without this grant stays blocked and never reaches the engine.
 - Treat a newly delivered accepted `ACTION_VIEW` or `ACTION_SEND` as the same bounded user
   intent for its initial redirect chain, with or without external preview. Preserve only its original
   expiry across Activity recreation; replacing, reloading, stopping, or navigating away from its
