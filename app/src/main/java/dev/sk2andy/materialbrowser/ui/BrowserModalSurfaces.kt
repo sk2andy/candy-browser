@@ -214,13 +214,7 @@ internal fun BoxScope.BrowserModalSurfaces(
         )
     }
 
-    controller.webPrompt?.let { prompt ->
-        BrowserWebPromptDialog(
-            prompt = prompt,
-            onConfirm = { value -> controller.confirmWebPrompt(prompt.id, value) },
-            onCancel = { controller.cancelWebPrompt(prompt.id) },
-        )
-    }
+    BrowserWebPromptSurface(controller)
 
     controller.externalAppPrompt?.let { prompt ->
         ExternalAppPromptDialog(

@@ -47,6 +47,54 @@ class GeckoSiteCapsuleTransitionInstrumentedTest {
     }
 
     @Test
+    fun selectInCapsuleShowsOptionsAndReturnsSelection() {
+        FixtureServer().use { server ->
+            awaitGeckoRuntimeReadiness()
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    val capsule = SiteCapsule(
+                        id = "b2082ab1-b0cb-4a2a-92ab-d3487a6d4af1",
+                        name = "Gecko Capsule",
+                        startUrl = server.url("select"),
+                        profileId = controller.activeProfileId,
+                        createdAtMillis = 1L,
+                        updatedAtMillis = 1L,
+                    )
+                    controller.siteCapsules += capsule
+                    assertTrue(controller.openSiteCapsule(capsule.id))
+                }
+                awaitCondition(scenario) { controller ->
+                    controller.selectedTab.url == server.url("select") &&
+                        !controller.selectedTab.isLoading &&
+                        controller.selectedGeckoViewForTesting()?.isAttachedToWindow == true
+                }
+                var lastTapAt = 0L
+                awaitCondition(scenario) { controller ->
+                    if (controller.webPrompt == null && SystemClock.elapsedRealtime() - lastTapAt >= 500L) {
+                        val view = requireNotNull(controller.selectedGeckoViewForTesting())
+                        val location = IntArray(2)
+                        view.getLocationOnScreen(location)
+                        instrumentation.uiAutomation.executeShellCommand(
+                            "input tap ${location[0] + view.width / 2} ${location[1] + view.height / 2}",
+                        ).close()
+                        lastTapAt = SystemClock.elapsedRealtime()
+                    }
+                    controller.webPrompt != null
+                }
+                assertTrue("Select option was not shown", clickNode("Freizeit"))
+                assertTrue(
+                    "Confirm button was not shown",
+                    clickNode(context.getString(R.string.web_prompt_ok)),
+                )
+                awaitCondition(scenario) { controller ->
+                    controller.selectedTab.title == "selected-freizeit"
+                }
+            }
+        }
+    }
+
+    @Test
     fun openFullCandyKeepsSelectedGeckoPageAndBrowserState() {
         FixtureServer().use { server ->
             awaitGeckoRuntimeReadiness()
@@ -216,8 +264,20 @@ class GeckoSiteCapsuleTransitionInstrumentedTest {
                             // Consume request headers.
                         }
                         val title = if (path == "/full") "Full Candy" else "Capsule Page"
-                        val body = "<html><head><title>$title</title></head><body>$title</body></html>"
-                            .toByteArray()
+                        val body = if (path == "/select") {
+                            """
+                            <!doctype html><meta name="viewport" content="width=device-width">
+                            <select class="form-field__input" name="category[parent_id]" id="category_parent_id"
+                                style="position:fixed;inset:0;width:100%;height:100%"
+                                onchange="document.title='selected-'+this.value">
+                              <option value="">(unassigned)</option>
+                              <option value="anlage">Anlagebeiträge</option>
+                              <option value="freizeit">Freizeit</option>
+                            </select>
+                            """.trimIndent().toByteArray()
+                        } else {
+                            "<html><head><title>$title</title></head><body>$title</body></html>".toByteArray()
+                        }
                         connection.getOutputStream().apply {
                             write("HTTP/1.1 200 OK\r\n".toByteArray())
                             write("Content-Type: text/html; charset=utf-8\r\n".toByteArray())

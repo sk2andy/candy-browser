@@ -21,10 +21,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserWebPrompt
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptChoice
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptKind
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptRules
+
+@Composable
+internal fun BrowserWebPromptSurface(controller: BrowserController) {
+    controller.webPrompt?.let { prompt ->
+        BrowserWebPromptDialog(
+            prompt = prompt,
+            onConfirm = { value -> controller.confirmWebPrompt(prompt.id, value) },
+            onCancel = { controller.cancelWebPrompt(prompt.id) },
+        )
+    }
+}
 
 @Composable
 internal fun BrowserWebPromptDialog(

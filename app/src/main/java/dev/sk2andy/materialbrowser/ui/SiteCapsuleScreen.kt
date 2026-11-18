@@ -149,6 +149,7 @@ fun SiteCapsuleBrowserScreen(
             statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
             showStatusBarOverlay = !videoOnlyPresentation,
         )
+        BrowserWebPromptSurface(controller)
         tab.error?.takeIf {
             !videoOnlyPresentation && capsule.chromeMode.showsControls
         }?.let { error ->

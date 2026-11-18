@@ -9,7 +9,7 @@
 | Icon pack | `CapsuleIconPackPickerActivity`, `CapsuleIconPackRepository`, `CapsuleIconPackRules` | Discover compatible installed packs through targeted theme intents, read bounded `drawable.xml` or `appfilter.xml` catalogs from `res/xml`, `res/raw` or assets, search unique drawables, and render the selected resource off-main |
 | Create/update | `BrowserController` + `SiteCapsuleRules` + `CapsuleIconUpdateRules` | Persist normalized Capsule-owned icon settings, resolve legacy source availability, and re-render the icon/shortcut |
 | Launch | `CapsuleIntentRules` → `SiteCapsuleLauncherActivity` → `MainActivity` / `SiteCapsuleActivity` | Resolve current settings for a known opaque Capsule ID; optionally open its own Android task |
-| Runtime | `BrowserController` + `SiteCapsuleScreen` | Bind one capsule/profile/tab and apply capsule navigation/chrome |
+| Runtime | `BrowserController` + `SiteCapsuleScreen` | Bind one capsule/profile/tab, apply capsule navigation/chrome, and show website prompts using the browser's dialog |
 | Delete | `CapsuleDeletionRules` | Disable shortcut; delete dedicated profile only after confirmation and last-owner check |
 
 ## Storage and shortcut bounds
