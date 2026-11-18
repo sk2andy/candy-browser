@@ -101,7 +101,8 @@ fun BrowserMenuBottomSheetContent(
             pagerState.scrollToPage(0)
         }
     }
-    Column(modifier = modifier.then(if (wrapContentHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())) {
+    val wrapHeight = wrapContentHeight && contentLayout != BrowserMenuBottomSheetContentLayout.SwipePages
+    Column(modifier = modifier.then(if (wrapHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())) {
         Box(
             modifier = fadingContent
                 .then(handleModifier)
@@ -229,14 +230,14 @@ fun BrowserMenuBottomSheetContent(
                 state = pagerState,
                 modifier = Modifier
                     .then(fadingContent)
-                    .weight(1f, fill = !wrapContentHeight)
+                    .weight(1f, fill = !wrapHeight)
                     .fillMaxWidth()
                     .testTag(BrowserMenuBottomSheetTestTags.Pager),
                 verticalAlignment = Alignment.Top,
             ) { page ->
                 Column(
                     Modifier
-                        .then(if (wrapContentHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+                        .then(if (wrapHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .testTag(
@@ -269,7 +270,7 @@ fun BrowserMenuBottomSheetContent(
             Column(
                 Modifier
                     .then(fadingContent)
-                    .weight(1f, fill = !wrapContentHeight)
+                    .weight(1f, fill = !wrapHeight)
                     .fillMaxWidth()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 8.dp)

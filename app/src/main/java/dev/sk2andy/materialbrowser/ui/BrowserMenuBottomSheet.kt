@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -31,7 +32,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -144,7 +144,17 @@ internal fun BrowserMenuBottomSheet(
         ),
     ) {
         val window = (LocalView.current.parent as DialogWindowProvider).window
-        SideEffect { window.setDimAmount(0f) }
+        DisposableEffect(window) {
+            window.setDimAmount(0f)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            window.attributes = window.attributes.apply {
+                height = android.view.WindowManager.LayoutParams.MATCH_PARENT
+                fitInsetsTypes = fitInsetsTypes and android.view.WindowInsets.Type.navigationBars().inv()
+            }
+            onDispose {}
+        }
         val density = LocalDensity.current
         Box(Modifier.fillMaxSize()) {
             Box(
@@ -197,7 +207,13 @@ internal fun BrowserMenuBottomSheet(
                 Box(
                     modifier = Modifier
                         .width(expandedWidth - horizontalInset * 2)
-                        .heightIn(max = sheetHeight)
+                        .then(
+                            if (contentLayout == BrowserMenuBottomSheetContentLayout.SwipePages) {
+                                Modifier.height(sheetHeight)
+                            } else {
+                                Modifier.heightIn(max = sheetHeight)
+                            },
+                        )
                         .onSizeChanged { measuredSheetHeightPx = it.height }
                         .draggable(
                             state = rememberDraggableState { delta ->

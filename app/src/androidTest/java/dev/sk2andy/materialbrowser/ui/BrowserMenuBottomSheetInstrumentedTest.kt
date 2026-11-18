@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.ui
 import android.content.res.Configuration
 import android.graphics.Color as AndroidColor
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -141,7 +143,7 @@ class BrowserMenuBottomSheetInstrumentedTest {
     }
 
     @Test
-    fun emptySwipeMenuWrapsItsContentAndSeparatesTabs() {
+    fun emptySwipeMenuKeepsItsHeightAndSeparatesTabs() {
         showMenu(
             contentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
             menuLayout = emptySectionLayout(emptyPageActions = true, emptyPageControls = true).copy(
@@ -153,7 +155,7 @@ class BrowserMenuBottomSheetInstrumentedTest {
             .fetchSemanticsNode().boundsInRoot
         val scrim = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Scrim)
             .fetchSemanticsNode().boundsInRoot
-        assertTrue("empty menu should not fill the screen", menu.height < scrim.height * 0.7f)
+        assertTrue("swipe menu keeps a consistent height", menu.height > scrim.height * 0.7f)
 
         val actions = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.pageTab(0))
             .fetchSemanticsNode().boundsInRoot
@@ -207,7 +209,7 @@ class BrowserMenuBottomSheetInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Pin).assertIsDisplayed()
         val tallHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot.height
-        assertTrue("menu grows for the taller page", tallHeight > shortHeight)
+        assertEquals("menu height stays fixed", shortHeight, tallHeight, 1f)
 
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_page_actions))
             .performClick()
@@ -258,6 +260,26 @@ class BrowserMenuBottomSheetInstrumentedTest {
     }
 
     @Test
+    fun sheetSurfaceCoversNavigationBarArea() {
+        composeRule.runOnUiThread { composeRule.activity.enableEdgeToEdge() }
+        showMenu()
+        openMenu()
+        val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        val screenshot = checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+        val sheetColor = screenshot.getPixel(20, device.displayHeight - 100)
+        val navigationColor = screenshot.getPixel(100, device.displayHeight - 4)
+        screenshot.recycle()
+        listOf(AndroidColor::red, AndroidColor::green, AndroidColor::blue).forEach { channel ->
+            assertEquals(
+                "sheet surface covers navigation bar",
+                channel(sheetColor).toFloat(),
+                channel(navigationColor).toFloat(),
+                12f,
+            )
+        }
+    }
+
+    @Test
     fun scrollKeepsAddressShortcutsAndPageActionsFixed() {
         showMenu()
         openMenu()
@@ -269,7 +291,12 @@ class BrowserMenuBottomSheetInstrumentedTest {
             .fetchSemanticsNode().boundsInRoot
         val sheetBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
             .fetchSemanticsNode().boundsInRoot
-        assertEquals("scrim covers screen height", device.displayHeight.toFloat(), scrimBounds.height, 1f)
+        assertEquals(
+            "scrim reaches screen bottom",
+            device.displayHeight.toFloat(),
+            screenBounds(BrowserMenuBottomSheetTestTags.Scrim).bottom,
+            1f,
+        )
         assertEquals("sheet reaches lower window edge", scrimBounds.bottom, sheetBounds.bottom, 1f)
         val fixedTags = listOf(
             BrowserMenuBottomSheetTestTags.Handle,
@@ -463,6 +490,47 @@ class BrowserMenuBottomSheetInstrumentedTest {
             ).assertIsDisplayed().performClick()
             composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
             assertEquals(1, count.get())
+        }
+    }
+
+    @Test
+    fun swipePagesKeepSheetAndHeaderPositionWhenControlsAreEmpty() {
+        showMenu(
+            contentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            menuLayout = emptySectionLayout(emptyPageControls = true).copy(
+                bottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            ),
+        )
+        openMenu()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab).assertIsDisplayed()
+        val fixedTags = listOf(
+            BrowserMainMenuTestTags.Menu,
+            BrowserMenuBottomSheetTestTags.AddressBar,
+            BrowserMenuBottomSheetTestTags.Shortcuts,
+            BrowserMenuBottomSheetTestTags.Pager,
+            BrowserMenuBottomSheetTestTags.Footer,
+        )
+        val boundsBefore = fixedTags.associateWith { tag ->
+            composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        }
+
+        composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Pager)
+            .performTouchInput { swipeLeft() }
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_empty_section_message))
+            .assertIsDisplayed()
+        fixedTags.forEach { tag ->
+            val after = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            assertEquals("$tag top", boundsBefore.getValue(tag).top, after.top, 1f)
+            assertEquals("$tag bottom", boundsBefore.getValue(tag).bottom, after.bottom, 1f)
+        }
+
+        composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Pager)
+            .performTouchInput { swipeRight() }
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab).assertIsDisplayed()
+        fixedTags.forEach { tag ->
+            val after = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            assertEquals("$tag top after return", boundsBefore.getValue(tag).top, after.top, 1f)
+            assertEquals("$tag bottom after return", boundsBefore.getValue(tag).bottom, after.bottom, 1f)
         }
     }
 
@@ -745,9 +813,7 @@ class BrowserMenuBottomSheetInstrumentedTest {
         assertEquals("collapsed address top matches original", anchor.top, collapsed.top, 1f)
         assertEquals("collapsed address left matches original", anchor.left, collapsed.left, 1f)
         assertEquals("collapsed address right matches original", anchor.right, collapsed.right, 1f)
-        val scrimBounds = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Scrim)
-            .fetchSemanticsNode().boundsInRoot
-        val pageColor = screenshotColorAt(scrimBounds.center)
+        val pageColor = screenshotColorAt(screenBounds(BrowserMenuBottomSheetTestTags.Scrim).center)
         val handleColor = colorAtHandleSide()
         assertEquals(
             "collapsed handle red matches page",
@@ -813,14 +879,21 @@ class BrowserMenuBottomSheetInstrumentedTest {
 
     private fun redAtHandleSide(): Int = AndroidColor.red(colorAtHandleSide())
 
+    private fun screenBounds(tag: String): Rect {
+        val node = composeRule.onNodeWithTag(tag).fetchSemanticsNode()
+        return Rect(
+            offset = node.positionOnScreen,
+            size = Size(node.size.width.toFloat(), node.size.height.toFloat()),
+        )
+    }
+
     private fun colorAtHandleSide(): Int {
-        val bounds = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Handle)
-            .fetchSemanticsNode().boundsInRoot
+        val bounds = screenBounds(BrowserMenuBottomSheetTestTags.Handle)
         return screenshotColorAt(Offset(bounds.left + bounds.width * 0.25f, bounds.center.y))
     }
 
     private fun redAtAddressBottom(): Int {
-        val bounds = addressBounds()
+        val bounds = screenBounds(BrowserMenuBottomSheetTestTags.AddressBar)
         return screenshotRedAt(Offset(bounds.left + bounds.width * 0.3f, bounds.bottom - 12f))
     }
 
