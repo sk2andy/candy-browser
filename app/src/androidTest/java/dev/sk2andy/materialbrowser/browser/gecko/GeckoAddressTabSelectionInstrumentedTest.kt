@@ -22,6 +22,8 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.R
@@ -114,7 +116,11 @@ class GeckoAddressTabSelectionInstrumentedTest {
                 awaitCondition("Initial Gecko surface did not measure") {
                     geometry(scenario).let { it.hostHeight > 0 && it.engineHeight > 0 && it.surfaceHeight > 0 }
                 }
+                val device = UiDevice.getInstance(instrumentation)
                 awaitCondition("Initial website pixels did not appear") {
+                    if (immersive && device.hasObject(By.res("android", "immersive_cling_title"))) {
+                        device.findObject(By.res("android", "ok"))?.click()
+                    }
                     screenshot().let { pixels ->
                         try {
                             stripePixelsVisible(pixels)
