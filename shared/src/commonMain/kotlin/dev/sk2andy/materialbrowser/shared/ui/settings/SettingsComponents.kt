@@ -81,6 +81,7 @@ fun SettingsPage(
     backContentDescription: String,
     onBack: () -> Unit,
     actions: @Composable () -> Unit = {},
+    pinnedContent: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -91,7 +92,7 @@ fun SettingsPage(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
             .padding(bottom = 24.dp)
-            .verticalScroll(rememberScrollState())
+            .then(if (pinnedContent == null) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .imePadding(),
     ) {
         Row(
@@ -113,7 +114,14 @@ fun SettingsPage(
             )
             actions()
         }
-        content()
+        if (pinnedContent == null) {
+            content()
+        } else {
+            pinnedContent()
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                content()
+            }
+        }
     }
 }
 

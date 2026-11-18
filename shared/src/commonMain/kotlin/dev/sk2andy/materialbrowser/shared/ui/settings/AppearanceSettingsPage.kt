@@ -129,6 +129,7 @@ fun AppearanceSettingsPage(
     section: AppearanceSettingsSection = AppearanceSettingsSection.All,
     navigationContent: @Composable ColumnScope.() -> Unit = {},
     additionalAppearanceContent: @Composable ColumnScope.() -> Unit = {},
+    preview: (@Composable () -> Unit)? = null,
 ) {
     var customAddressBarColorDialogVisible by remember { mutableStateOf(false) }
     var pendingCustomAddressBarColor by remember(settings.addressBarCustomColorHex) {
@@ -142,16 +143,28 @@ fun AppearanceSettingsPage(
         title = strings.title,
         backContentDescription = strings.back,
         onBack = onBack,
+        pinnedContent = if (preview != null && section == AppearanceSettingsSection.Surfaces) {
+            {
+                preview()
+                SettingsPageSpacer()
+            }
+        } else {
+            null
+        },
     ) {
         if (section == AppearanceSettingsSection.All || section == AppearanceSettingsSection.Theme) {
-            SettingsHeaderIllustration(SettingsHeaderArtwork.Appearance)
+            if (preview != null) {
+                preview()
+            } else {
+                SettingsHeaderIllustration(SettingsHeaderArtwork.Appearance)
+            }
             SettingsPageSpacer()
         }
         if (section in setOf(
                 AppearanceSettingsSection.Colors,
                 AppearanceSettingsSection.Surfaces,
                 AppearanceSettingsSection.AddressBar,
-            )
+            ) && (preview == null || section != AppearanceSettingsSection.Surfaces)
         ) {
             if (section == AppearanceSettingsSection.AddressBar) {
                 SettingsAddressBarIllustration()

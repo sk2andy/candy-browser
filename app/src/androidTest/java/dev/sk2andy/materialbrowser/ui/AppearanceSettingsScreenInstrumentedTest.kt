@@ -5,10 +5,21 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assert
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -36,6 +47,7 @@ import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
+import dev.sk2andy.materialbrowser.shared.ui.settings.AppearanceSettingsSection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -49,6 +61,100 @@ class AppearanceSettingsScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun surfaceSlidersUpdatePinnedPreview() {
+        var settings by mutableStateOf(AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted))
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = settings) {
+                AppearanceSettingsPage(
+                    settings = settings,
+                    section = AppearanceSettingsSection.Surfaces,
+                    browserEngineKind = AndroidBrowserEngineKind.SystemWebView,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        fun preview(): PixelMap = composeRule.onNodeWithTag(AppearancePreviewTestTags.Preview)
+            .assertIsDisplayed().captureToImage().toPixelMap()
+
+        fun setSlider(tag: String, value: Float) {
+            composeRule.onNodeWithTag(tag).performScrollTo()
+                .performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+            composeRule.waitForIdle()
+            composeRule.mainClock.advanceTimeByFrame()
+        }
+
+        fun assertChanged(before: PixelMap, after: PixelMap) {
+            var changed = 0
+            for (y in 0 until before.height step 4) {
+                for (x in 0 until before.width step 4) {
+                    if (before[x, y] != after[x, y]) changed++
+                }
+            }
+            assertTrue("Slider must visibly change the preview", changed > 20)
+        }
+
+        setSlider(AppearanceSettingsTestTags.FrostedTransparency, 0f)
+        val opaqueChrome = preview()
+        setSlider(AppearanceSettingsTestTags.FrostedTransparency, 80f)
+        assertChanged(opaqueChrome, preview())
+
+        setSlider(AppearanceSettingsTestTags.FrostedAddressBarTransparency, 0f)
+        val opaqueAddress = preview()
+        setSlider(AppearanceSettingsTestTags.FrostedAddressBarTransparency, 80f)
+        assertChanged(opaqueAddress, preview())
+
+        setSlider(AppearanceSettingsTestTags.FrostedBlur, 0f)
+        val unblurred = preview()
+        setSlider(AppearanceSettingsTestTags.FrostedBlur, 100f)
+        assertChanged(unblurred, preview())
+    }
+
+    @Test
+    fun geckoPreviewOmitsWebsiteBlurWhenUnavailable() {
+        if (android.os.Build.VERSION.SDK_INT >= 37) return
+        composeRule.setContent {
+            val settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted)
+            MaterialBrowserTheme(settings = settings) {
+                AppearanceSettingsPage(
+                    settings = settings,
+                    section = AppearanceSettingsSection.Surfaces,
+                    browserEngineKind = AndroidBrowserEngineKind.GeckoView,
+                    onSettingsChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+        composeRule.onNodeWithTag(AppearancePreviewTestTags.Preview).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserChromeSurfaceTestTags.BackdropBlur, useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun pinnedPreviewKeepsSlidersReachableAtLargeTextSize() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                val settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted)
+                MaterialBrowserTheme(settings = settings) {
+                    Box(Modifier.width(320.dp)) {
+                        AppearanceSettingsPage(
+                            settings = settings,
+                            section = AppearanceSettingsSection.Surfaces,
+                            onSettingsChanged = {},
+                            onBack = {},
+                        )
+                    }
+                }
+            }
+        }
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.FrostedBlur)
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag(AppearancePreviewTestTags.Preview).assertIsDisplayed()
+    }
 
     @Test
     fun appIconChoiceSwitchesLauncherAliasAndCanRestoreClassic() {

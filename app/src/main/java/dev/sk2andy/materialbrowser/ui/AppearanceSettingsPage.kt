@@ -52,6 +52,7 @@ internal fun AppearanceSettingsPage(
     SharedAppearanceSettingsPage(
         settings = settings,
         section = section,
+        preview = { AppearanceAddressBarPreview(browserEngineKind) },
         navigationContent = navigationContent,
         strings = AppearanceSettingsStrings(
             title = stringResource(when (section) {

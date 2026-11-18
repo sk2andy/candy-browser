@@ -93,7 +93,7 @@ class SettingsHeaderArtworkInstrumentedTest {
         }
 
         val evidence = StringBuilder("screen,palette,mode,width,height\n")
-        for (kind in SettingsHeaderArtwork.entries) {
+        for (kind in SettingsHeaderArtwork.entries.filterNot { it == SettingsHeaderArtwork.Appearance }) {
             composeRule.runOnIdle { artwork = kind }
             var firstHeader: PixelMap? = null
             for (palette in BrowserColorPalette.entries) {
@@ -163,7 +163,7 @@ class SettingsHeaderArtworkInstrumentedTest {
                 }
             }
         }
-        for (kind in SettingsHeaderArtwork.entries) {
+        for (kind in SettingsHeaderArtwork.entries.filterNot { it == SettingsHeaderArtwork.Appearance }) {
             composeRule.runOnIdle { artwork = kind }
             composeRule.onNodeWithTag(tag(kind)).performScrollTo().assertIsDisplayed()
             composeRule.mainClock.advanceTimeByFrame()
