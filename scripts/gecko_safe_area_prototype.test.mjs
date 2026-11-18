@@ -1427,6 +1427,56 @@ test('animated YouTube-shaped custom headers use the native inset', () => {
   assert.equal(late.fallbacks.length, 1, 'A hydrated topbar also receives native protection');
 });
 
+function viewportAppFixture({ height = 800, parentOverflow = 'hidden' } = {}) {
+  const f = fixture({ themeColor: '#123456' });
+  const root = f.element('static', 'auto');
+  root.computed.overflowY = parentOverflow;
+  const app = root.append(f.element('relative', 'auto'));
+  app.computed.overflowY = 'hidden';
+  for (const [element, appHeight] of [[root, false], [app, true]]) {
+    Object.defineProperty(element, 'rect', { get() {
+      const top = Number.parseFloat(f.computed(f.body).paddingTop);
+      const boxHeight = appHeight && height !== null ? height : 800 - top;
+      return { top, left: 0, width: 800, height: boxHeight, right: 800, bottom: top + boxHeight };
+    } });
+  }
+  return { f, app };
+}
+
+test('body inset clipping a full viewport-height app requests native top protection', () => {
+  const { f, app } = viewportAppFixture();
+  assert.equal(app.getBoundingClientRect().bottom, 800);
+  f.start();
+
+  assert.equal(app.getBoundingClientRect().bottom, 832, 'Body padding pushes the app footer below its clipped parent');
+  assert.deepEqual(f.fallbacks, [[1, 1, '#123456', true]]);
+});
+
+test('a fitting percentage-height app retains CSS body protection', () => {
+  const { f, app } = viewportAppFixture({ height: null });
+  f.start();
+
+  assert.equal(app.getBoundingClientRect().bottom, 800);
+  assert.deepEqual(f.fallbacks, []);
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+});
+
+test('ordinary long page flow does not request native viewport protection', () => {
+  const { f, app } = viewportAppFixture({ height: 1600, parentOverflow: 'visible' });
+  app.computed.overflowY = 'visible';
+  f.start();
+
+  assert.deepEqual(f.fallbacks, []);
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+});
+
+test('viewport-height content without a clipping parent retains CSS body protection', () => {
+  const { f } = viewportAppFixture({ parentOverflow: 'visible' });
+  f.start();
+
+  assert.deepEqual(f.fallbacks, []);
+});
+
 test('fixed semantic headers with a top transition use the native inset before CSS corrections accumulate', () => {
   const animated = fixture({ themeColor: '#123abc' });
   const header = animated.element('fixed', '0px', 'header');

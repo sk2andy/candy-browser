@@ -482,6 +482,10 @@
         return false;
       }
     }
+    return requestNativeTopFallback(element, style);
+  }
+
+  function requestNativeTopFallback(element, style) {
     nativeFallbackRequested = true;
     nativeFallbackThemeColor = headerThemeColor(element, style);
     document.documentElement.setAttribute("data-candy-browser-native-top-header", "true");
@@ -492,6 +496,26 @@
       true,
     );
     return true;
+  }
+
+  function requestNativeFallbackForClippedApp(element, style) {
+    if (nativeFallbackRequested || !configuration?.active || configuration.cover ||
+        !["static", "relative"].includes(style.position) ||
+        !["hidden", "clip"].includes(style.overflowY)) return false;
+    const rect = element.getBoundingClientRect();
+    const height = globalThis.innerHeight;
+    if (Math.abs(rect.top - inset) > 2 || Math.abs(rect.height - height) > 2 ||
+        rect.width < globalThis.innerWidth - 2 || rect.bottom <= height + 1) return false;
+    // A viewport-height app cannot absorb body padding when its root clips the footer.
+    let clipped = false;
+    let parent = element.parentElement;
+    for (let depth = 0; parent && parent !== document.body && depth < 4;
+        depth++, parent = parent.parentElement) {
+      if (!["hidden", "clip"].includes(getComputedStyle(parent).overflowY)) continue;
+      const parentRect = parent.getBoundingClientRect();
+      if (Math.abs(parentRect.bottom - height) <= 2 && parentRect.bottom < rect.bottom - 1) clipped = true;
+    }
+    return parent === document.body && clipped && requestNativeTopFallback(element, style);
   }
 
   function verifyFixedHeaderCandidates() {
@@ -1756,6 +1780,7 @@
     if (entry && (!layer?.isConnected || element.getAttribute(entry.attribute) !== entry.id)) releaseRule(element);
     style ??= getComputedStyle(element);
     if (isSideDrawer(element) && !sideDrawers.has(element)) queueViewportOverlayCandidate(element);
+    if (requestNativeFallbackForClippedApp(element, style)) return;
     if (style.position !== "fixed") fixedHeaderCandidates.delete(element);
     const top = pixels(style.top);
     const rootAbsoluteHeader = isRootAbsoluteHeader(element, style, top);
