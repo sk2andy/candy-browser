@@ -2,10 +2,12 @@
     ExperimentalMaterial3Api::class,
     ExperimentalFoundationApi::class,
     ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
 )
 
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -46,12 +48,18 @@ import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.key.key
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -129,9 +137,16 @@ internal fun AddressSuggestions(
     bottomBarTopPx: FloatState,
     backdropSource: CandyChromeBackdropSource? = null,
     modifier: Modifier = Modifier,
+    animationsEnabled: Boolean = true,
+    onSelectionBounds: (AddressSuggestionItem, Rect) -> Unit = { _, _ -> },
 ) {
     if (suggestions.isEmpty()) return
     val listState = rememberLazyListState()
+    val entryProgress = remember { Animatable(if (animationsEnabled) 0f else 1f) }
+    val entrySpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    LaunchedEffect(Unit) {
+        if (animationsEnabled) entryProgress.animateTo(1f, entrySpec)
+    }
     LaunchedEffect(highlightedIndex, suggestions.map(AddressSuggestionItem::stableId)) {
         if (highlightedIndex in suggestions.indices) {
             listState.scrollToItem(highlightedIndex)
@@ -163,7 +178,11 @@ internal fun AddressSuggestions(
         modifier = modifier
             .padding(horizontal = 12.dp)
             .padding(bottom = bottomPadding)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = entryProgress.value
+                translationY = 8.dp.toPx() * (1f - entryProgress.value)
+            },
         shape = MaterialTheme.shapes.extraLarge,
     ) {
         LazyColumn(
@@ -176,6 +195,11 @@ internal fun AddressSuggestions(
                 items = suggestions,
                 key = { _, suggestion -> suggestion.stableId },
             ) { index, suggestion ->
+                var bounds by remember(suggestion.stableId) { mutableStateOf(Rect.Zero) }
+                val select = {
+                    onSelectionBounds(suggestion, bounds)
+                    onSelect(suggestion)
+                }
                 Column {
                     if (
                         suggestion is AddressSuggestionItem.Recall &&
@@ -194,34 +218,36 @@ internal fun AddressSuggestions(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    when (suggestion) {
-                    is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
-                        suggestion = suggestion.suggestion,
-                        highlighted = index == highlightedIndex,
-                        onHighlight = { onHighlight(index) },
-                        onClick = { onSelect(suggestion) },
-                        onFill = { onFill(suggestion) },
-                    )
-                    is AddressSuggestionItem.Command -> CommandSuggestionRow(
-                        suggestion = suggestion.suggestion,
-                        highlighted = index == highlightedIndex,
-                        onHighlight = { onHighlight(index) },
-                        onClick = { onSelect(suggestion) },
-                    )
-                    is AddressSuggestionItem.Search -> SearchSuggestionRow(
-                        query = suggestion.query,
-                        highlighted = index == highlightedIndex,
-                        onHighlight = { onHighlight(index) },
-                        onClick = { onSelect(suggestion) },
-                        onFill = { onFill(suggestion) },
-                    )
-                    is AddressSuggestionItem.Recall -> RecallSuggestionRow(
-                        match = suggestion.match,
-                        highlighted = index == highlightedIndex,
-                        onHighlight = { onHighlight(index) },
-                        onClick = { onSelect(suggestion) },
-                        onFill = { onFill(suggestion) },
-                    )
+                    Box(Modifier.onGloballyPositioned { bounds = it.boundsInRoot() }) {
+                        when (suggestion) {
+                            is AddressSuggestionItem.Navigation -> NavigationSuggestionRow(
+                                suggestion = suggestion.suggestion,
+                                highlighted = index == highlightedIndex,
+                                onHighlight = { onHighlight(index) },
+                                onClick = select,
+                                onFill = { onFill(suggestion) },
+                            )
+                            is AddressSuggestionItem.Command -> CommandSuggestionRow(
+                                suggestion = suggestion.suggestion,
+                                highlighted = index == highlightedIndex,
+                                onHighlight = { onHighlight(index) },
+                                onClick = select,
+                            )
+                            is AddressSuggestionItem.Search -> SearchSuggestionRow(
+                                query = suggestion.query,
+                                highlighted = index == highlightedIndex,
+                                onHighlight = { onHighlight(index) },
+                                onClick = select,
+                                onFill = { onFill(suggestion) },
+                            )
+                            is AddressSuggestionItem.Recall -> RecallSuggestionRow(
+                                match = suggestion.match,
+                                highlighted = index == highlightedIndex,
+                                onHighlight = { onHighlight(index) },
+                                onClick = select,
+                                onFill = { onFill(suggestion) },
+                            )
+                        }
                     }
                 }
             }
