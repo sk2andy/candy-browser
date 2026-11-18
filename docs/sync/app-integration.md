@@ -262,6 +262,10 @@ push immediately; offline writes remain durable and replay after a later refresh
 an explicit recovery action. Android does not keep a permanent background socket and does not wake a
 closed app continuously. REST remains durable truth; realtime is a foreground latency accelerator.
 
+On Android, a new offline tab reorder replaces earlier queued reorders for the same device and goes
+to the end of the queue. When sync resumes, Candy applies any already queued tab opens and closes
+before applying the latest order.
+
 ## Protocol floor
 
 Android selects v2 only when discovery advertises version 2, `tab-mutations-v2`, and `realtime`.
