@@ -1,14 +1,18 @@
 package dev.sk2andy.materialbrowser.browser
 
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
+import java.net.URI
 
 /** Engine-neutral admission rules for a user-initiated pull to refresh. */
 internal object BrowserPullToRefreshRules {
-    private val topZoneHosts = setOf("instagram.com", "tiktok.com", "youtube.com")
+    private val topZoneHosts = setOf("instagram.com", "tiktok.com")
 
     fun restrictPullToTopZone(pageUrl: String?): Boolean {
         val host = CandyHostCanonicalizer.webHost(pageUrl) ?: return false
-        return topZoneHosts.any { CandyHostCanonicalizer.matches(host, it) }
+        if (topZoneHosts.any { CandyHostCanonicalizer.matches(host, it) }) return true
+        if (!CandyHostCanonicalizer.matches(host, "youtube.com")) return false
+        val path = runCatching { URI(pageUrl).path }.getOrNull() ?: return false
+        return path == "/watch" || path == "/shorts" || path.startsWith("/shorts/")
     }
 
     fun shouldCollectScrollMetrics(

@@ -13,7 +13,9 @@ class BrowserPullToRefreshRulesTest {
             "https://tiktok.com/",
             "https://www.tiktok.com/@creator/video/123",
             "https://youtube.com/shorts/123",
-            "https://m.youtube.com/",
+            "https://m.youtube.com/shorts/123",
+            "https://m.youtube.com/shorts/123?feature=share#video",
+            "https://youtube.com/shorts",
             "http://WWW.YOUTUBE.COM.:8080/watch?v=123",
         ).forEach { url ->
             assertTrue(url, BrowserPullToRefreshRules.restrictPullToTopZone(url))
@@ -24,11 +26,15 @@ class BrowserPullToRefreshRulesTest {
     fun `other pages keep full page pulls without matching lookalike hosts or URL text`() {
         listOf(
             "https://example.com/",
+            "https://m.youtube.com/",
+            "https://m.youtube.com/results?search_query=android",
+            "https://m.youtube.com/shortshop",
             "https://example.com/instagram.com?next=https://youtube.com/",
             "https://instagram.com.example.com/",
             "https://notinstagram.com/",
             "https://nottiktok.com/",
             "https://notyoutube.com/",
+            "https://notyoutube.com/shorts/123",
             "https://youtube.com@other.test/",
         ).forEach { url ->
             assertFalse(url, BrowserPullToRefreshRules.restrictPullToTopZone(url))
