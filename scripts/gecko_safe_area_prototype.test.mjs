@@ -1216,6 +1216,39 @@ test('disabling safe-area policy clears the reported status-bar backdrop', () =>
   assert.deepEqual(f.backdrops, [[1, 1, '#123456'], [1, 2, null]]);
 });
 
+test('fixed semantic headers with a top transition use the native inset before CSS corrections accumulate', () => {
+  const animated = fixture({ themeColor: '#123abc' });
+  const header = animated.element('fixed', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  header.computed.transitionProperty = 'opacity, top';
+  header.computed.transitionDuration = '0.1s, 0.3s';
+  animated.start();
+  assert.deepEqual(animated.fallbacks, [[1, 1, '#123abc', true]]);
+
+  const late = fixture();
+  const lateHeader = late.element('fixed', '0px', 'header');
+  lateHeader.rect = header.rect;
+  late.start();
+  lateHeader.computed.transitionProperty = 'top';
+  lateHeader.computed.transitionDuration = '0.3s';
+  lateHeader.computed.backgroundColor = 'rgb(18, 52, 86)';
+  lateHeader.classes = ['animated'];
+  late.mutate(lateHeader, 'class');
+  late.flush();
+  assert.deepEqual(late.fallbacks, [[1, 1, '#123456', true]],
+    'A later stylesheet update switches to native protection and keeps the header color');
+
+  for (const [property, duration] of [['opacity', '0.3s'], ['top', '0s']]) {
+    const control = fixture();
+    const staticHeader = control.element('fixed', '0px', 'header');
+    staticHeader.rect = header.rect;
+    staticHeader.computed.transitionProperty = property;
+    staticHeader.computed.transitionDuration = duration;
+    control.start();
+    assert.deepEqual(control.fallbacks, [], `${property} ${duration} should retain CSS protection`);
+  }
+});
+
 test('sticky headers switch immediately while fixed headers must remain pinned after scrolling', () => {
   const sticky = fixture({ themeColor: '#123AbC' });
   const stickyHeader = sticky.element('sticky', '0px', 'header');

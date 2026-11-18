@@ -425,6 +425,13 @@
       candidate.minimumScrollDelta;
   }
 
+  function hasTopTransition(style) {
+    const properties = (style.transitionProperty || "").split(",");
+    const durations = (style.transitionDuration || "").split(",");
+    return properties.some((property, index) =>
+      ["top", "all"].includes(property.trim()) && parseFloat(durations[index % durations.length]) > 0);
+  }
+
   function requestNativeFallbackForHeader(element, style) {
     if (nativeFallbackRequested || !configuration?.active || configuration.cover) return false;
     if (style.position !== "fixed" && style.position !== "sticky") return false;
@@ -447,7 +454,7 @@
       if (style.position === "fixed") fixedHeaderCandidates.delete(element);
       return false;
     }
-    if (style.position === "fixed") {
+    if (style.position === "fixed" && !(element.matches(semanticSelector) && hasTopTransition(style))) {
       const scrollY = Number(globalThis.scrollY) || 0;
       let candidate = fixedHeaderCandidates.get(element);
       if (!candidate) {
@@ -874,12 +881,15 @@
     const samples = withAuthorTopStyles(() => headers.filter((header) => header.isConnected).map((header) => {
       const author = getComputedStyle(header);
       const style = {};
-      for (const name of ["position", "top", "bottom", "paddingTop", "display", "visibility", "opacity"]) style[name] = author[name];
+      for (const name of ["position", "top", "bottom", "paddingTop", "display", "visibility", "opacity", "backgroundColor",
+        "transitionProperty", "transitionDuration"]) style[name] = author[name];
       if (configuration.cover) style.authorChildTop = header.firstElementChild?.getBoundingClientRect().top;
       return [header, style];
     }));
     for (const [header, style] of samples) {
       if (globalThis.CandyRedditSafeArea?.owns(header)) continue;
+      if (style.position === "fixed" && hasTopTransition(style) &&
+          requestNativeFallbackForHeader(header, style)) continue;
       if (!configuration.cover && !headerTopSelectorOverrides.has(header)) {
         const entry = { attribute: headerTopMarker, id: "true", original: header.getAttribute(headerTopMarker) };
         headerTopSelectorOverrides.set(header, entry);
