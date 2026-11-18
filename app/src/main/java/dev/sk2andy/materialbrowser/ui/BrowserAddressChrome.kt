@@ -2,6 +2,7 @@
     ExperimentalMaterial3Api::class,
     ExperimentalFoundationApi::class,
     ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
 )
 
 package dev.sk2andy.materialbrowser.ui
@@ -9,6 +10,11 @@ package dev.sk2andy.materialbrowser.ui
 import android.view.HapticFeedbackConstants
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -24,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +49,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -196,7 +204,13 @@ internal fun BoxScope.BrowserAddressChrome(
         rootBottomInWindowPx = browserRootBottomInWindowPx,
         imeBottomPx = imeBottomPx,
     )
-    if (addressEditorVisible && !showInteractiveBlankStart) {
+    var suggestionLaunchBounds by remember { mutableStateOf<Rect?>(null) }
+    var departingSuggestions by remember { mutableStateOf(emptyList<AddressSuggestionItem>()) }
+    AnimatedVisibility(
+        visible = addressEditorVisible && !showInteractiveBlankStart,
+        enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
+        exit = ExitTransition.None,
+    ) {
         AddressEditorBackdrop(
             showStartContent = selectedTab.url == BLANK_URL,
             modeProgress = blankTabModeProgress,
@@ -204,19 +218,45 @@ internal fun BoxScope.BrowserAddressChrome(
             wallpaper = profileWallpaperRuntime.takeUnless { selectedTab.isIncognito },
             onDismiss = onAddressEditorDismiss,
         )
-        if (commandFeedback == null) {
-            AddressSuggestions(
-                suggestions = suggestionItems,
-                highlightedIndex = highlightedSuggestionIndex,
-                onHighlight = onHighlightedSuggestionChanged,
-                onSelect = selectSuggestion,
-                onFill = fillAddressFromSuggestion,
-                rootHeightPx = browserHeightPx,
-                bottomBarTopPx = bottomBarTopPx,
-                backdropSource = chromeBackdropSource,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
+    }
+    AnimatedVisibility(
+        visible = addressEditorVisible && !showInteractiveBlankStart &&
+            commandFeedback == null && suggestionItems.isNotEmpty(),
+        enter = EnterTransition.None,
+        exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec()),
+        modifier = Modifier.align(Alignment.BottomCenter),
+    ) {
+        AddressSuggestions(
+            suggestions = if (addressEditorVisible) suggestionItems else departingSuggestions,
+            highlightedIndex = highlightedSuggestionIndex,
+            onHighlight = { if (addressEditorVisible) onHighlightedSuggestionChanged(it) },
+            onSelect = { if (addressEditorVisible) selectSuggestion(it) },
+            onFill = { if (addressEditorVisible) fillAddressFromSuggestion(it) },
+            rootHeightPx = browserHeightPx,
+            bottomBarTopPx = bottomBarTopPx,
+            backdropSource = chromeBackdropSource,
+            animationsEnabled = controller.appearanceSettings.animationsEnabled,
+            onSelectionBounds = { item, bounds ->
+                if (addressEditorVisible && controller.appearanceSettings.animationsEnabled &&
+                    item !is AddressSuggestionItem.Command && !bounds.isEmpty
+                ) {
+                    departingSuggestions = suggestionItems
+                    suggestionLaunchBounds = bounds
+                }
+            },
+            modifier = if (addressEditorVisible) Modifier else Modifier.clearAndSetSemantics {},
+        )
+    }
+
+    suggestionLaunchBounds?.let { bounds ->
+        AddressSuggestionLaunchEffect(
+            origin = bounds,
+            onFinished = {
+                suggestionLaunchBounds = null
+                departingSuggestions = emptyList()
+            },
+            modifier = Modifier.fillMaxSize().zIndex(40f),
+        )
     }
 
     val addressBarDockingAvailable = AddressBarDockingRules.isAvailable(

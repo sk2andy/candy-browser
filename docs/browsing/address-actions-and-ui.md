@@ -1,5 +1,10 @@
 # Address actions and UI
 
+Address suggestions enter with a short fade and upward movement. Selecting a navigation or search
+suggestion fades the list while its surface expands briefly over the page; navigation or the
+existing-tab handoff starts immediately. Fill and command actions keep their existing behavior.
+The **Appearance → Animations** setting disables these effects.
+
 ## Cross-platform presentation
 
 The cross-platform contract shares browser tabs, engine commands/events, menu availability and gesture
