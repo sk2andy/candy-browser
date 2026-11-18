@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.net.ServerSocket
 import java.util.UUID
 import org.junit.After
 import org.junit.Before
@@ -94,6 +95,67 @@ class DownloadRepositoryInstrumentedTest {
         assertEquals(name, entry.name)
         assertEquals(source, entry.source)
         assertTrue(entry.id >= 0L)
+    }
+
+    @Test
+    fun keepsDifferentFilesWithMatchingNameAndSize() {
+        val name = "candy-same-${UUID.randomUUID()}.bin"
+        val manager = context.getSystemService(DownloadManager::class.java)
+        val server = ServerSocket(0)
+        val serverThread = Thread {
+            server.use { socket ->
+                socket.accept().use { client ->
+                    client.getOutputStream().write(
+                        "HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\ndata".encodeToByteArray(),
+                    )
+                }
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+        val id = manager.enqueue(
+            DownloadManager.Request(Uri.parse("http://127.0.0.1:${server.localPort}/$name"))
+                .setTitle(name)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "CandySystem/$name"),
+        )
+        managerIds += id
+        val deadline = android.os.SystemClock.elapsedRealtime() + 20_000
+        while (repository.snapshot().none { it.id == id && it.status == DownloadStatus.Successful } &&
+            android.os.SystemClock.elapsedRealtime() < deadline
+        ) {
+            android.os.SystemClock.sleep(100)
+        }
+        assertEquals(DownloadStatus.Successful, repository.snapshot().single { it.id == id }.status)
+        serverThread.join(5_000)
+        val uri = requireNotNull(
+            resolver.insert(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, name)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                    put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/CandyTest")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                },
+            ),
+        )
+        mediaUris += uri
+        resolver.openOutputStream(uri, "w")!!.use { it.write("data".encodeToByteArray()) }
+        resolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
+        repository = DownloadRepository(context, ownerPackageName = ownerPackage(uri))
+
+        val matches = repository.snapshot().filter { it.name == name }
+        val systemUris = manager.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
+            check(cursor.moveToFirst())
+            listOf(DownloadManager.COLUMN_LOCAL_URI, DownloadManager.COLUMN_MEDIAPROVIDER_URI).map { column ->
+                cursor.getString(cursor.getColumnIndexOrThrow(column))
+            }
+        }
+        assertEquals(
+            "System URIs: $systemUris",
+            setOf(id, DownloadEntryIds.encodeMediaStoreId(ContentUris.parseId(uri))),
+            matches.map { it.id }.toSet(),
+        )
     }
 
     @Test

@@ -179,6 +179,7 @@ internal class GeckoDownloadTransferManager(
         @Volatile var response: WebResponse? = null
         @Volatile var entry: GeckoDownloadStreamEntry? = null
         var etag: String? = null
+        var expectedBytes: Long? = null
         var received = 0L
         var paused = false
         var restartRequired = false
@@ -403,6 +404,11 @@ internal class GeckoDownloadTransferManager(
             }
             operation.entry = entry
             operation.etag = etag.takeIf { canResume }
+            operation.expectedBytes = totalBytes.takeIf {
+                it >= 0L && response.header("content-encoding").let { encoding ->
+                    encoding == null || encoding.equals("identity", ignoreCase = true)
+                }
+            }
             operation.copying = true
             runCatching { ContentUris.parseId(entry.uri) }.getOrNull()?.let { mediaId ->
                 provenance.record(
@@ -507,7 +513,7 @@ internal class GeckoDownloadTransferManager(
             finishFailure(id, operation, listener, GeckoDownloadFailure.Cancelled)
         } else if (
             (result.isFailure && !(operation.restartRequired && operation.received == started.totalBytes)) ||
-            (operation.etag != null && operation.received != started.totalBytes)
+            (operation.expectedBytes?.let { operation.received != it } == true)
         ) {
             finishFailure(id, operation, listener, GeckoDownloadFailure.Network)
         } else {

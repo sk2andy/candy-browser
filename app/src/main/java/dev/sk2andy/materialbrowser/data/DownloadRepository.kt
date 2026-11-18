@@ -19,10 +19,10 @@ internal class DownloadRepository(
 
     fun snapshot(): List<DownloadEntry> {
         val provenance = DownloadProvenanceStore(applicationContext).snapshot().associateBy(DownloadProvenance::id)
-        val systemEntries = querySystemDownloads()
-        val mediaEntries = queryMediaStoreDownloads().filterNot { mediaEntry ->
-            systemEntries.any { systemEntry -> systemEntry.matchesIndexedMedia(mediaEntry) }
-        }
+        val indexedMediaIds = mutableSetOf<Long>()
+        val systemPaths = mutableSetOf<String>()
+        val systemEntries = querySystemDownloads(indexedMediaIds = indexedMediaIds, systemPaths = systemPaths)
+        val mediaEntries = queryMediaStoreDownloads(systemPaths).filterNot { it.id in indexedMediaIds }
         return (DownloadRuntimeRegistry.snapshot() + systemEntries + mediaEntries)
             .distinctBy(DownloadEntry::id)
             .map { entry ->
@@ -77,17 +77,38 @@ internal class DownloadRepository(
     fun completedSystemDownload(id: Long): DownloadEntry? = querySystemDownloads(id)
         .firstOrNull { it.status == DownloadStatus.Successful }
 
-    private fun querySystemDownloads(id: Long? = null): List<DownloadEntry> = runCatching {
+    private fun querySystemDownloads(
+        id: Long? = null,
+        indexedMediaIds: MutableSet<Long>? = null,
+        systemPaths: MutableSet<String>? = null,
+    ): List<DownloadEntry> = runCatching {
         val query = DownloadManager.Query()
         if (id != null) query.setFilterById(id)
         manager.query(query)?.use { cursor ->
             buildList {
-                while (cursor.moveToNext()) cursor.systemDownload()?.let(::add)
+                while (cursor.moveToNext()) {
+                    cursor.systemDownload()?.let { entry ->
+                        add(entry)
+                        cursor.string(DownloadManager.COLUMN_LOCAL_URI)?.let(Uri::parse)?.let { uri ->
+                            if (uri.scheme == ContentResolver.SCHEME_FILE) uri.path?.let { systemPaths?.add(it) }
+                        }
+                        cursor.string(DownloadManager.COLUMN_MEDIAPROVIDER_URI)?.let(Uri::parse)?.let { uri ->
+                            if (uri.scheme == ContentResolver.SCHEME_CONTENT && uri.authority == MediaStore.AUTHORITY &&
+                                uri.pathSegments.size == 3 && uri.pathSegments[0] in listOf("external", "external_primary") &&
+                                uri.pathSegments[1] in listOf("file", "downloads")
+                            ) {
+                                uri.lastPathSegment?.toLongOrNull()?.takeIf { it >= 0L }?.let { mediaId ->
+                                    indexedMediaIds?.add(DownloadEntryIds.encodeMediaStoreId(mediaId))
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }.orEmpty()
     }.getOrDefault(emptyList())
 
-    private fun queryMediaStoreDownloads(): List<DownloadEntry> = runCatching {
+    private fun queryMediaStoreDownloads(systemPaths: Set<String>): List<DownloadEntry> = runCatching {
         resolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             MEDIA_PROJECTION,
@@ -96,7 +117,11 @@ internal class DownloadRepository(
             "${MediaStore.Downloads.DATE_MODIFIED} DESC",
         )?.use { cursor ->
             buildList {
-                while (cursor.moveToNext()) cursor.mediaStoreDownload()?.let(::add)
+                while (cursor.moveToNext()) {
+                    if (cursor.string(MediaStore.Downloads.DATA) !in systemPaths) {
+                        cursor.mediaStoreDownload()?.let(::add)
+                    }
+                }
             }
         }.orEmpty()
     }.getOrDefault(emptyList())
@@ -153,11 +178,6 @@ internal class DownloadRepository(
         )
     }
 
-    private fun DownloadEntry.matchesIndexedMedia(mediaEntry: DownloadEntry): Boolean =
-        name == mediaEntry.name &&
-            bytes == mediaEntry.bytes &&
-            kotlin.math.abs(lastModified - mediaEntry.lastModified) <= INDEX_MATCH_WINDOW_MILLIS
-
     private fun Cursor.string(column: String): String? = getColumnIndex(column)
         .takeIf { index -> index >= 0 && !isNull(index) }
         ?.let(::getString)
@@ -180,7 +200,6 @@ internal class DownloadRepository(
         const val MAX_SOURCE_CHARS = 2_048
         const val MAX_MIME_CHARS = 128
         const val MILLIS_PER_SECOND = 1_000L
-        const val INDEX_MATCH_WINDOW_MILLIS = 5 * 60 * 1_000L
 
         val MEDIA_PROJECTION = arrayOf(
             MediaStore.Downloads._ID,
@@ -190,6 +209,7 @@ internal class DownloadRepository(
             MediaStore.Downloads.DATE_MODIFIED,
             MediaStore.Downloads.IS_PENDING,
             MediaStore.Downloads.OWNER_PACKAGE_NAME,
+            MediaStore.Downloads.DATA,
         )
 
     }

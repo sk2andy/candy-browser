@@ -1088,6 +1088,59 @@ class GeckoDownloadTransferInstrumentedTest {
     }
 
     @Test
+    fun shortOriginalResponseFailsAndAbortsPartialStorage() {
+        val finished = CountDownLatch(1)
+        val aborted = AtomicBoolean(false)
+        val committed = AtomicBoolean(false)
+        val failure = AtomicReference<GeckoDownloadFailure>()
+        val entry = object : GeckoDownloadStreamEntry {
+            override val uri = Uri.parse("content://media/external/downloads/46")
+            override val output = ByteArrayOutputStream()
+            override fun commit() { committed.set(true) }
+            override fun abort() { aborted.set(true) }
+            override fun close() = Unit
+        }
+        val managerRef = AtomicReference<GeckoDownloadTransferManager>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val manager = GeckoDownloadTransferManager(
+                context = context,
+                executor = testExecutor(),
+                sink = object : GeckoDownloadStreamSink {
+                    override fun open(fileName: String, mimeType: String): GeckoDownloadStreamEntry = entry
+                },
+            )
+            managerRef.set(manager)
+            manager.startResponse(
+                owner = GeckoDownloadOwner("test-profile", isPrivate = true, sessionKey = this),
+                response = WebResponse.Builder("https://example.com/short.bin")
+                    .statusCode(200)
+                    .header("Content-Length", "4")
+                    .body(ByteArrayInputStream(byteArrayOf(1, 2)))
+                    .build(),
+                referrer = null,
+                listener = object : GeckoDownloadTransferListener {
+                    override fun onStarted(start: GeckoDownloadTransferStart) = Unit
+                    override fun onComplete(bytesReceived: Long) { finished.countDown() }
+                    override fun onFailed(reason: GeckoDownloadFailure) {
+                        failure.set(reason)
+                        finished.countDown()
+                    }
+                },
+            )
+        }
+        val manager = requireNotNull(managerRef.get())
+        try {
+            assertTrue("transfer did not finish", finished.await(10, TimeUnit.SECONDS))
+            assertEquals(GeckoDownloadFailure.Network, failure.get())
+            assertTrue(aborted.get())
+            assertFalse(committed.get())
+        } finally {
+            DownloadRuntimeRegistry.clear(DownloadRuntimeRegistry.snapshot().filter { it.name == "short.bin" }.map { it.id })
+            manager.close()
+        }
+    }
+
+    @Test
     fun interruptedStreamFailsAndAbortsPartialStorage() {
         val failed = CountDownLatch(1)
         val aborted = AtomicBoolean(false)
