@@ -743,7 +743,7 @@ the bounded candidates cached by load, mutation or interaction discovery.
 | Override | Runtime behavior |
 | --- | --- |
 | Force vertical scrolling | Removes vertical page scroll locks without changing horizontal overflow |
-| Force page zooming | Removes viewport `user-scalable`, minimum-scale and maximum-scale restrictions while preserving other viewport directives |
+| Force page zooming | Gecko and System WebView remove viewport `user-scalable`, minimum-scale and maximum-scale restrictions for the selected host while preserving other viewport directives |
 | Force safe area | Keeps the Gecko renderer inside native safe-area margins and ignores `viewport-fit=cover` for that host |
 | Federated-login compatibility | Allows third-party cookies for the exact site host, removes embedded-browser user-agent markers, and permits user-initiated popups only to recognized identity-provider authentication paths |
 | CAPTCHA compatibility | Allows third-party cookies for the exact site host without changing the user agent or popup policy |

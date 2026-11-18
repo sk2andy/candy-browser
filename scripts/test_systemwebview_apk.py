@@ -31,9 +31,10 @@ FORBIDDEN_ASSET_PREFIXES = (
     "assets/candy_privacy/",
     "assets/gecko_default_extensions/",
 )
-SHARED_SAFE_AREA_ASSETS = {
+SHARED_CANDY_ASSETS = {
     "assets/candy_privacy/content_safe_area_prototype.js",
     "assets/candy_privacy/content_safe_area_reddit.js",
+    "assets/candy_privacy/force_page_zoom.js",
 }
 FORBIDDEN_NATIVE_LIBRARIES = {
     "libfreebl3.so",
@@ -146,7 +147,7 @@ class SystemWebViewApkTest(unittest.TestCase):
             for name in names
             if (
                 name.startswith(FORBIDDEN_ASSET_PREFIXES)
-                and name not in SHARED_SAFE_AREA_ASSETS
+                and name not in SHARED_CANDY_ASSETS
             )
             or name.endswith(".xpi")
             or Path(name).name in FORBIDDEN_NATIVE_LIBRARIES
@@ -154,10 +155,10 @@ class SystemWebViewApkTest(unittest.TestCase):
         )
         self.assertEqual([], violations)
 
-    def test_shared_safe_area_scripts_are_bundled(self):
-        missing = sorted(SHARED_SAFE_AREA_ASSETS - set(self.archive.namelist()))
+    def test_shared_candy_scripts_are_bundled(self):
+        missing = sorted(SHARED_CANDY_ASSETS - set(self.archive.namelist()))
         self.assertEqual([], missing)
-        for name in sorted(SHARED_SAFE_AREA_ASSETS):
+        for name in sorted(SHARED_CANDY_ASSETS):
             self.assertGreater(self.archive.getinfo(name).file_size, 0, name)
 
     def test_dex_contains_no_geckoview_references(self):

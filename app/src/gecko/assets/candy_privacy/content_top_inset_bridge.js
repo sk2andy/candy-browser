@@ -173,6 +173,7 @@ function applyPolicy(policy) {
   const revision = Number.isSafeInteger(policy.revision) ? Math.max(0, policy.revision) : 0;
   if (revision < state.revision) return;
   policyReady = true;
+  globalThis.CandyForcePageZoom.setEnabled(policy.forcePageZooming === true);
   if (policyRetryTimer) clearTimeout(policyRetryTimer);
   policyRetryTimer = 0;
   const safeAreaLayoutQuietPeriodMillis =

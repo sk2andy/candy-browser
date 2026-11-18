@@ -113,6 +113,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
+| Forced page zoom | `scripts/force_page_zoom.test.mjs`, `ForcePageZoomInstrumentedTest` |
 | Native predictive Back shrink, cancellation, nested settings parents and Snoozed dismissal | `PredictiveBackMotionTest`, `SettingsBackRulesTest`, `PredictiveBackSurfaceInstrumentedTest`, `NativeScreenBackHandlerInstrumentedTest` |
 | Optional viewport swipe pill mode | `BrowserChromeSwipeRulesTest`, `BrowserChromeSwipeTouchObserverInstrumentedTest`, focused `GeckoBottomBarScrollInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `TabSettingsScreenInstrumentedTest` |
 | Gecko keyboard viewport, focused input, chrome-owned IME and new-tab suggestion handoff | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `GeckoAddressTabSelectionInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |

@@ -73,6 +73,7 @@ internal data class GeckoPrivacyPolicy(
     val blockAdsAndTrackers: Boolean,
     val hideCookieConsent: Boolean,
     val cookieBannerRemovalDisabled: Boolean,
+    val forcePageZooming: Boolean = false,
     val pausedHosts: Set<String>,
     val candyRules: List<CandyRule>,
     val doNotTrackEnabled: Boolean = true,
@@ -239,6 +240,8 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("blockAds", blockAdsAndTrackers)
     .put("hideConsent", hideCookieConsent)
     .put("cookieBannerRemovalDisabled", cookieBannerRemovalDisabled)
+    .put("forcePageZooming", forcePageZooming)
+    .put("forcePageZoomHost", pageHost.takeIf { forcePageZooming })
     .put("doNotTrackEnabled", doNotTrackEnabled)
     .put("globalPrivacyControlEnabled", globalPrivacyControlEnabled)
     .put("privacySignalRevision", privacySignalRevision)

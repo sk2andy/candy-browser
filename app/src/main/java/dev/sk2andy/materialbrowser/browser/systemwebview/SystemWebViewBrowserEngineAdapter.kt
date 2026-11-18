@@ -472,6 +472,7 @@ private class SystemWebViewBrowserEngineSession(
     private var safeAreaScriptHandler: ScriptHandler? = null
     private var mediaScriptHandler: ScriptHandler? = null
     private var desktopViewportScriptHandler: ScriptHandler? = null
+    private var forcePageZoomScriptHandler: ScriptHandler? = null
     private val antiFingerprintingSeed = UUID.randomUUID().toString().replace("-", "")
     private val mediaBridgeToken = UUID.randomUUID().toString().replace("-", "")
     private var customFullscreenView: View? = null
@@ -525,6 +526,7 @@ private class SystemWebViewBrowserEngineSession(
         installPrivacySignalPolicy()
         installWebRtcPolicy()
         installSafeAreaScript()
+        installForcePageZoomPolicy()
         installToppings(initialScripts)
         setGlobalThirdPartyCookieBlocking(blockThirdPartyCookies)
         applyPrivacyPolicy()
@@ -1056,6 +1058,8 @@ private class SystemWebViewBrowserEngineSession(
             privacyPolicy.doNotTrackEnabled != policy.doNotTrackEnabled ||
                 privacyPolicy.globalPrivacyControlEnabled != policy.globalPrivacyControlEnabled
         val animationPolicyChanged = privacyPolicy.animationsEnabled != policy.animationsEnabled
+        val zoomPolicyChanged = privacyPolicy.forcePageZooming != policy.forcePageZooming ||
+            privacyPolicy.pageHost != policy.pageHost
         val matcher = if (privacyPolicy.candyRules == policy.candyRules) {
             requestPrivacyState.candyMatcher
         } else {
@@ -1078,6 +1082,12 @@ private class SystemWebViewBrowserEngineSession(
                 WebContentAnimationPolicyScript.script(policy.animationsEnabled),
                 null,
             )
+        }
+        if (zoomPolicyChanged) {
+            installForcePageZoomPolicy()
+            forcePageZoomScript().takeIf(String::isNotEmpty)?.let { script ->
+                webView.evaluateJavascript(script, null)
+            }
         }
         applyPrivacyPolicy()
         if (reloadOnCookiePermissionChange && cookiePolicyChanged) reloadWithPrivacySignals()
@@ -1154,6 +1164,7 @@ private class SystemWebViewBrowserEngineSession(
         webRtcScriptHandler?.remove()
         safeAreaScriptHandler?.remove()
         desktopViewportScriptHandler?.remove()
+        forcePageZoomScriptHandler?.remove()
         formDrafts.close()
         annotations.close()
         removeMediaBridge()
@@ -1410,6 +1421,9 @@ private class SystemWebViewBrowserEngineSession(
             }
             if (safeAreaScriptHandler == null) {
                 view.evaluateJavascript(host.safeAreaInstallScript, null)
+            }
+            forcePageZoomScript().takeIf(String::isNotEmpty)?.let { script ->
+                view.evaluateJavascript(script, null)
             }
             applyDocumentCosmetics(url)
         }
@@ -2013,6 +2027,23 @@ private class SystemWebViewBrowserEngineSession(
         }
         webRtcScriptHandler = addDocumentStartScript(WebRtcBlockerScript.installScript)
         webView.settings.javaScriptEnabled = webRtcScriptHandler != null
+    }
+
+    private fun forcePageZoomScript(): String {
+        val host = privacyPolicy.pageHost
+        if (!privacyPolicy.forcePageZooming || host == null) return ""
+        val script = webView.context.assets.open("candy_privacy/force_page_zoom.js")
+            .bufferedReader(Charsets.UTF_8).use { it.readText() }
+        return "if (window.top === window && location.hostname.toLowerCase() === " +
+            org.json.JSONObject.quote(host) + ") {\nif (!globalThis.CandyForcePageZoom) {\n" + script +
+            "\n}\nCandyForcePageZoom.setEnabled(true);\n}"
+    }
+
+    private fun installForcePageZoomPolicy() {
+        forcePageZoomScriptHandler?.remove()
+        forcePageZoomScriptHandler = null
+        val script = forcePageZoomScript()
+        if (script.isNotEmpty()) forcePageZoomScriptHandler = addDocumentStartScript(script)
     }
 
     private fun installDesktopViewportPolicy() {

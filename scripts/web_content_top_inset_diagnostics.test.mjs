@@ -75,6 +75,7 @@ function bridgeHarness(performance) {
   const listeners = [];
   const context = vm.createContext({
     performance,
+    CandyForcePageZoom: { setEnabled() {} },
     browser: {
       runtime: {
         sendMessage: () => Promise.resolve({ ready: false, type: 'content-policy' }),
@@ -379,6 +380,20 @@ test('background content policy does not coerce truthy diagnostic input', () => 
     assert.equal(context.contentPolicy({ performanceDiagnosticsEnabled: value })
       .performanceDiagnosticsEnabled, false);
   }
+});
+
+test('force zoom stays bound to its host across navigation', () => {
+  const source = readFileSync(new URL(
+    '../app/src/gecko/assets/candy_privacy/background.js', import.meta.url,
+  ), 'utf8');
+  const body = source.split('function contentPolicy(policy) {')[1]
+    .split('function publishContentPolicy')[0];
+  const context = vm.createContext({});
+  vm.runInContext(`function contentPolicy(policy) {${body}`, context);
+  const policy = { pageHost: 'a.example', forcePageZoomHost: 'a.example', forcePageZooming: true };
+  assert.equal(context.contentPolicy(policy).forcePageZooming, true);
+  policy.pageHost = 'b.example';
+  assert.equal(context.contentPolicy(policy).forcePageZooming, false);
 });
 
 test('Gecko CSS configuration is bounded, hot-applied and independent of the dormant legacy inset', () => {

@@ -419,6 +419,8 @@ function contentPolicy(policy) {
     type: "content-policy",
     ready: Boolean(policy),
     pageHost: typeof policy?.pageHost === "string" ? policy.pageHost : null,
+    forcePageZooming: policy?.forcePageZooming === true &&
+      typeof policy.forcePageZoomHost === "string" && policy.forcePageZoomHost === policy.pageHost,
     revision: Number.isSafeInteger(policy?.revision) ? Math.max(0, policy.revision) : 0,
     topInsetPx: Number.isSafeInteger(policy?.topInsetPx) ? Math.max(0, policy.topInsetPx) : 0,
     cssSafeAreaTopInsetPx: Number.isSafeInteger(policy?.cssSafeAreaTopInsetPx) ?

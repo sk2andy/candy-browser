@@ -14674,10 +14674,14 @@ class BrowserController(
                 developerSettings.safeAreaLayoutQuietPeriodMillis,
             safeAreaRequiredFailureCount = developerSettings.safeAreaRequiredFailureCount,
         )
+        val zoomPolicy = policy.copy(
+            forcePageZooming = PrivacyRequestSanitizer.webHost(pageUrl)
+                ?.let { host -> isPageZoomingForced(tab, host) } == true,
+        )
         return if (usesGeckoEngine) {
-            policy
+            zoomPolicy
         } else {
-            policy.copy(
+            zoomPolicy.copy(
                 federatedLoginCompatibilityEnabled = federatedLoginCompatibilityEnabled,
                 blockAdsAndTrackers = workerSettings.blockAdsAndTrackers &&
                     !siteProtectionPaused,
@@ -18957,26 +18961,6 @@ class BrowserController(
         if (pageHost != null && SitePrivacyOverrideRules.forceVerticalScrolling(
                 overrides = overridesByHost[pageHost],
                 bundledDefault = bundledSitePrivacyDefaults.forceVerticalScrolling(pageHost),
-            )
-        ) {
-            forcedHosts += pageHost
-        }
-        return forcedHosts
-    }
-
-    private fun forcedPageZoomHostsForTab(
-        tabId: String,
-        pageUrl: String? = null,
-    ): Set<String> {
-        val tab = tabs.firstOrNull { it.id == tabId } ?: return emptySet()
-        val overridesByHost = sitePrivacyOverridesFor(tab)
-        val forcedHosts = overridesByHost.asSequence()
-            .filter { (_, overrides) -> overrides.forcePageZooming == true }
-            .map { (host, _) -> host }
-            .toMutableSet()
-        val pageHost = PrivacyRequestSanitizer.webHost(pageUrl ?: pageUrls[tabId] ?: tab.url)
-        if (pageHost != null && SitePrivacyOverrideRules.forcePageZooming(
-                overridesByHost[pageHost],
             )
         ) {
             forcedHosts += pageHost
