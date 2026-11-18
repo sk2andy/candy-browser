@@ -2,8 +2,8 @@ uBlock Origin uAssets attribution and license
 ============================================
 
 Candy Browser contains modified, compiled network and cosmetic subsets from uAssets.
-Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/05bc031ad40c2270223f068f052970201ca1bf14/filters/filters.txt
-Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
+Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/b0190a2003f870536b8bd1058013f6dc4d435de0/filters/filters.txt
+Source revision: b0190a2003f870536b8bd1058013f6dc4d435de0
 Upstream project: https://github.com/uBlockOrigin/uAssets
 License: GNU General Public License version 3
 

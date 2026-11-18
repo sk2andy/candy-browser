@@ -4,15 +4,15 @@
     {
       "id": "uBlock0@raymondhill.net",
       "name": "uBlock Origin",
-      "version": "1.75.0",
+      "version": "1.76.4",
       "delivery": "bundled",
-      "installUri": "resource://android/assets/gecko_default_extensions/ublock_origin-1.75.0.xpi",
-      "assetPath": "gecko_default_extensions/ublock_origin-1.75.0.xpi",
-      "sourceUrl": "https://addons.mozilla.org/firefox/downloads/file/5034826/ublock_origin-1.75.0.xpi",
-      "sourceCodeUrl": "https://github.com/gorhill/uBlock/tree/21f0e686506bb21b514b451c8c6cb9bf8c82d232",
+      "installUri": "resource://android/assets/gecko_default_extensions/ublock_origin-1.76.4.xpi",
+      "assetPath": "gecko_default_extensions/ublock_origin-1.76.4.xpi",
+      "sourceUrl": "https://addons.mozilla.org/firefox/downloads/file/5257481/ublock_origin-1.76.4.xpi",
+      "sourceCodeUrl": "https://github.com/gorhill/uBlock/tree/3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db",
       "license": "GPL-3.0-only",
-      "sha256": "5b74415860456370644bd80f16125e865b0e6c356bb5dfcfb84069967eaa5287",
-      "size": 4650100
+      "sha256": "66d0e3f21ce3b32b1bc0a9399b93cb2c9aa598ef18805d92118c76f66e266c1e",
+      "size": 6332093
     },
     {
       "id": "idcac-pub@guus.ninja",

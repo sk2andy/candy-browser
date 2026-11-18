@@ -767,11 +767,16 @@ internal class GeckoViewExtensionRuntime(
         permissions: Array<String>,
         origins: Array<String>,
         dataCollectionPermissions: Array<String>,
+        automaticResponse: suspend () -> T? = { null },
         mapper: (GeckoExtensionPermissionDecision) -> T,
     ): GeckoResult<T> {
         val result = GeckoResult<T>()
         callbackScope.launch {
             val decision = try {
+                automaticResponse()?.let { response ->
+                    result.complete(response)
+                    return@launch
+                }
                 permissionPrompt.decide(
                     GeckoExtensionPermissionRequest(
                         kind = kind,
@@ -810,23 +815,21 @@ internal class GeckoViewExtensionRuntime(
             origins: Array<String>,
             dataCollectionPermissions: Array<String>,
         ): GeckoResult<WebExtension.PermissionPromptResponse> {
-            val automatic = defaultExtensionInstaller.automaticPermissionDecision(extension)
-            if (automatic != null) {
-                return GeckoResult.fromValue(
-                    WebExtension.PermissionPromptResponse(
-                        automatic.grantPermissions,
-                        automatic.allowInPrivateBrowsing,
-                        // Bundled defaults never silently opt into technical/interaction telemetry.
-                        false,
-                    ),
-                )
-            }
             return promptResult(
                 extension = extension,
                 kind = GeckoExtensionPermissionRequestKind.Install,
                 permissions = permissions,
                 origins = origins,
                 dataCollectionPermissions = dataCollectionPermissions,
+                automaticResponse = {
+                    defaultExtensionInstaller.automaticPermissionDecision(extension)?.let { decision ->
+                        WebExtension.PermissionPromptResponse(
+                            decision.grantPermissions,
+                            decision.allowInPrivateBrowsing,
+                            false,
+                        )
+                    }
+                },
             ) { decision ->
                 WebExtension.PermissionPromptResponse(
                     decision.grantPermissions,

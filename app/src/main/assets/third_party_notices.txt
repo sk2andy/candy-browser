@@ -85,10 +85,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Gecko default extensions
 ------------------------
 
-The original Mozilla-signed uBlock Origin 1.75.0 XPI is redistributed unmodified under
-GPL-3.0-only. SHA-256: 5b74415860456370644bd80f16125e865b0e6c356bb5dfcfb84069967eaa5287
-Corresponding source is pinned to commit 21f0e686506bb21b514b451c8c6cb9bf8c82d232:
-https://github.com/gorhill/uBlock/tree/21f0e686506bb21b514b451c8c6cb9bf8c82d232
+The original Mozilla-signed uBlock Origin 1.76.4 XPI is redistributed unmodified under
+GPL-3.0-only. SHA-256: 66d0e3f21ce3b32b1bc0a9399b93cb2c9aa598ef18805d92118c76f66e266c1e
+Corresponding source is pinned to commit 3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db:
+https://github.com/gorhill/uBlock/tree/3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db
 The complete GPL-3.0 text is present inside the unmodified XPI and in uassets.LICENSE.txt; the full
 redistribution record is in gecko_default_extensions.NOTICE.txt.
 

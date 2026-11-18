@@ -23,13 +23,13 @@ object CandyLegalSources {
     const val DEVELOPER_NAME = "André Naumann"
     const val GITHUB_PROFILE_URL = "https://github.com/sk2andy"
     const val PRIVACY_POLICY_URL = "https://sk2andy.github.io/candy-browser/privacy/"
-    const val UASSETS_REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
-    const val UASSETS_SHORT_REVISION = "05bc031ad40c"
+    const val UASSETS_REVISION = "b0190a2003f870536b8bd1058013f6dc4d435de0"
+    const val UASSETS_SHORT_REVISION = "b0190a2003f8"
     const val UASSETS_SOURCE_URL =
         "https://github.com/uBlockOrigin/uAssets/blob/$UASSETS_REVISION/filters/filters.txt"
     const val UASSETS_LICENSE_URL =
         "https://github.com/uBlockOrigin/uAssets/blob/$UASSETS_REVISION/LICENSE"
-    const val UBLOCK_ORIGIN_REVISION = "21f0e686506bb21b514b451c8c6cb9bf8c82d232"
+    const val UBLOCK_ORIGIN_REVISION = "3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db"
     const val UBLOCK_ORIGIN_SOURCE_URL =
         "https://github.com/gorhill/uBlock/tree/$UBLOCK_ORIGIN_REVISION"
     const val UBLOCK_ORIGIN_LICENSE_URL =

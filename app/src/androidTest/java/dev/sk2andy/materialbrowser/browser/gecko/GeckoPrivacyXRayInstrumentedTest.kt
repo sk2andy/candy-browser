@@ -239,7 +239,7 @@ class GeckoPrivacyXRayInstrumentedTest {
         const val U_BLOCK_ID = "uBlock0@raymondhill.net"
         const val PAGE_HOST = "page.candy.localhost"
         const val REQUEST_HOST = "tracker.ads.localhost"
-        // Exact rule /ads/cbr.js$script ships inside signed uBlock 1.75.0 EasyList.
+        // Exact rule /ads/cbr.js$script ships in the EasyList bundled with signed uBlock Origin.
         const val BLOCKED_PATH = "/ads/cbr.js"
         const val CONTROL_PATH = "/control.js"
     }

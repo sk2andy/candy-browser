@@ -1,18 +1,18 @@
 candy-uassets-cosmetic:2
 # Generated uAssets scoped and bounded generic cosmetic rules. Do not edit by hand.
 # Source: https://github.com/uBlockOrigin/uAssets
-# Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
+# Source revision: b0190a2003f870536b8bd1058013f6dc4d435de0
 # License: GPL-3.0; see uassets.LICENSE.txt
-# Hide rules: 8630
-# Exception rules: 467
-# Generic rules: 272
-# Generic hide exceptions: 1168
-# Maximum hide rules for one pattern: 222
-# Maximum resolved host: www.chip.de
-# Maximum resolved hide selectors: 250
+# Hide rules: 8970
+# Exception rules: 471
+# Generic rules: 293
+# Generic hide exceptions: 1184
+# Maximum hide rules for one pattern: 243
+# Maximum resolved host: pornhub.com
+# Maximum resolved hide selectors: 270
 # Skipped generic rules: 0
-# Skipped unsupported rules: 10394
-# Skipped conditional lines: 899
+# Skipped unsupported rules: 10699
+# Skipped conditional lines: 988
 A	*	-	I2FkQ29udGV4dA
 A	*	-	I2FkU3BlY2lhbA
 A	*	-	I2FkXzMwMA
@@ -144,6 +144,7 @@ A	call2friends.com	-	LmFkV3JhcHBlcg
 A	cap3.*	-	I2FkLXdyYXBwZXI
 A	cdrab.com	-	LmFkYi10b3A
 A	chavesnamao.com.br	-	I2FudW5jaW8
+A	cinefreak.net	-	LnNwb25zb3JlZC1hZA
 A	cointiply.arkadiumarena.com	-	ZGlzcGxheS1hZC1jb21wb25lbnQ
 A	colonist.io	-	LmFkc2J5dmxp
 A	comidoc.net	-	Lmdvb2dsZWFk
@@ -266,6 +267,7 @@ A	genialne.pl	-	LmFk
 A	genialne.pl	-	LmFkcw
 A	genialne.pl	-	W2NsYXNzXj0iYWQtIl0
 A	genialne.pl	-	W2NsYXNzXj0iYWR2ZXJ0aXNlbWVudCJd
+A	genshin-soku.com	-	Lmdvb2dsZS1hZDpub3QoLnRlc3RBZCk
 A	greenwichtime.com	-	W25hbWVePSJnb29nbGVfYWRzX2lmcmFtZSJd
 A	h-flash.com	-	Lmdvb2dsZS1hZHM
 A	hatenablog.com	-	I2FkZnJhbWU6bm90KGZyYW1lc2V0KTpub3QoW3N0eWxlXj0icG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAtNTAwMHB4Il0p
@@ -330,6 +332,7 @@ A	money.pl	-	LmFk
 A	money.pl	-	LmFkcw
 A	money.pl	-	W2NsYXNzXj0iYWQtIl0
 A	money.pl	-	W2NsYXNzXj0iYWR2ZXJ0aXNlbWVudCJd
+A	monhan-soku.com	-	Lmdvb2dsZS1hZDpub3QoLnRlc3RBZCk
 A	mrt.com	-	W25hbWVePSJnb29nbGVfYWRzX2lmcmFtZSJd
 A	musmus.main.jp	-	I2FkX3NwYWNlOm5vdChbc3R5bGVePSJwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IC01MDAwcHgiXSk
 A	myjournalcourier.com	-	W25hbWVePSJnb29nbGVfYWRzX2lmcmFtZSJd
@@ -360,12 +363,11 @@ A	play.aidungeon.io	-	aW5zLmFkc2J5Z29vZ2xlW2RhdGEtYWQtY2xpZW50XQ
 A	play.aidungeon.io	-	aW5zLmFkc2J5Z29vZ2xlW2RhdGEtYWQtc2xvdF0
 A	play.dictionary.com	-	ZGlzcGxheS1hZC1jb21wb25lbnQ
 A	plutomovies.com	-	LmFkLXNsb3Q6bm90KC5hZHNib3gpOm5vdCguYWRzYnlnb29nbGUp
-A	pogoda.wp.pl	-	LmRlc2t0b3AgPiBkaXZbY2xhc3MqPSIgIl06aGFzKGRpdik
 A	polygamia.pl	-	LmFk
 A	polygamia.pl	-	LmFkcw
 A	polygamia.pl	-	W2NsYXNzXj0iYWQtIl0
 A	polygamia.pl	-	W2NsYXNzXj0iYWR2ZXJ0aXNlbWVudCJd
-A	pornohexen.com	-	I2Fkc2JveA
+A	polygon.com	-	LnZpZGVv
 A	porntn.com	-	LmJhbm5lcl9hZA
 A	pudelek.pl	-	LmFk
 A	pudelek.pl	-	LmFkcw
@@ -476,6 +478,8 @@ A	wp.pl	-	W2NsYXNzXj0iYWQtIl0
 A	wp.pl	-	W2NsYXNzXj0iYWR2ZXJ0aXNlbWVudCJd
 A	wp.pl	-	W2NsYXNzXj0iY3NzLSJd
 A	wp.pl	-	Ym9keSA-IGRpdjpudGgtb2YtdHlwZSgxKVtzdHlsZV49ImRpc3BsYXk6IGJsb2NrOyJdOm5vdCgjcGFnZSk
+A	xn--gckdevd5myivf.site	-	Lmdvb2dsZS1hZDpub3QoLnRlc3RBZCk
+A	yamiisoku.com	-	Lmdvb2dsZS1hZDpub3QoLnRlc3RBZCk
 A	yiv.com	-	I2Fkc0NvbnRhaW5lcg
 A	yourconroenews.com	-	W25hbWVePSJnb29nbGVfYWRzX2lmcmFtZSJd
 A	yourmomdoesporn.com	-	W2RhdGEtcmV2aXZlLXpvbmVpZF0
@@ -543,6 +547,7 @@ D	androidacy.com	-	-
 D	anghami.com	-	-
 D	anime-king.com	-	-
 D	anime-loads.org	-	-
+D	anime3rb.com	-	-
 D	animefire.plus	-	-
 D	animesanka.*	-	-
 D	animevietsub.tv	-	-
@@ -656,6 +661,7 @@ D	ceesty.com	-	-
 D	cety.app	-	-
 D	challenge.place	-	-
 D	charbelnemnom.com	-	-
+D	chaturflix.cam	-	-
 D	chd4.com	-	-
 D	cheat.hax4you.net	-	-
 D	chiaseapk.com	-	-
@@ -667,6 +673,7 @@ D	cinewatch.top	-	-
 D	claimbits.io	-	-
 D	classic-retro-games.com	-	-
 D	click-me.today	-	-
+D	clksz.com	-	-
 D	closermag.fr	-	-
 D	cloudfam.io	-	-
 D	cloudnovel.net	-	-
@@ -719,7 +726,6 @@ D	daihatsu-club.net	-	-
 D	dailyjobposting.xyz	-	-
 D	dailymotion.com	-	-
 D	dailyparliamenttimes.com	-	-
-D	dailythanthi.com	-	-
 D	damnripped.com	-	-
 D	darkw.pl	-	-
 D	dash3.cashvib.com	-	-
@@ -735,6 +741,7 @@ D	derstandard.at	-	-
 D	derstandard.de	-	-
 D	designoptimal.com	-	-
 D	destyy.com	-	-
+D	devuploads.com	-	-
 D	dfbplay.tv	-	-
 D	diariodenavarra.es	-	-
 D	diariosur.es	-	-
@@ -759,7 +766,6 @@ D	dotnet.guide	-	-
 D	douploads.*	-	-
 D	down.fast-down.com	-	-
 D	down.mdiaload.com	-	-
-D	downfile.site	-	-
 D	downloader.la	-	-
 D	downloadfreecourse.com	-	-
 D	dragons.com.au	-	-
@@ -865,7 +871,6 @@ D	foroactivo.com	www.activo.mx,www.foroactivo.com	-
 D	forum.iptvkalite.com	-	-
 D	fotoblogia.pl	-	-
 D	foxella.com	-	-
-D	foxgreat.com	-	-
 D	foxseotools.com	-	-
 D	fplstatistics.com	-	-
 D	fr.de	-	-
@@ -880,7 +885,6 @@ D	freevstplugins.net	-	-
 D	freewatchserialonline.com	-	-
 D	freex2line.online	-	-
 D	frkn64modding.com	-	-
-D	fruitlab.com	-	-
 D	fun--seiten-de.translate.goog	-	-
 D	fun-seiten.de	-	-
 D	fzm.*	-	-
@@ -918,6 +922,7 @@ D	gmx.*	-	-
 D	goalad.com	-	-
 D	gocolumbialions.com	-	-
 D	godstoryinfo.com	-	-
+D	goplay.su	-	-
 D	gozd-les.com	-	-
 D	gplinks.*	-	-
 D	gps--cache-de.translate.goog	-	-
@@ -928,6 +933,7 @@ D	granadaesnoticia.com	-	-
 D	granthamjournal.co.uk	-	-
 D	greekfun.net	-	-
 D	growgritly.com	-	-
+D	gsmarena.com	-	-
 D	gsmware.com	-	-
 D	guiamuriae.com.br	-	-
 D	guided.news	-	-
@@ -999,11 +1005,13 @@ D	indiamaja.com	-	-
 D	indianwebseries.*	-	-
 D	inews.co.uk	-	-
 D	info-desk.co.za	-	-
+D	infomatricula.pt	-	-
 D	inforge.net	-	-
 D	inkagames.com	-	-
 D	innsalzach24.de	-	-
 D	insideedition.com	-	-
 D	insurancesfact.com	-	-
+D	intercelestial.com	-	-
 D	iphonetweak.fr	-	-
 D	iplsc.com	-	-
 D	is2btc.com	-	-
@@ -1045,7 +1053,6 @@ D	kryptografie-de.translate.goog	-	-
 D	kryptografie.de	-	-
 D	kupujemprodajem.com	-	-
 D	kwamkidhen.com	-	-
-D	kwik.*	-	-
 D	l2top.co	-	-
 D	la7.it	-	-
 D	lablue.de	-	-
@@ -1058,6 +1065,7 @@ D	lauterbacher-anzeiger.de	-	-
 D	laweducationinfo.com	-	-
 D	league-funny.com	-	-
 D	leak.sx	-	-
+D	leakgallery.com	-	-
 D	learnmarketinfo.com	-	-
 D	leaveadvice.com	-	-
 D	lecturel.com	-	-
@@ -1072,6 +1080,7 @@ D	lg-firmwares.com	-	-
 D	libero.it	-	-
 D	ligainsider.de	-	-
 D	limetorrents.*	-	-
+D	linegee.net	-	-
 D	link-to.net	-	-
 D	linkjust.com	-	-
 D	linkvertise.*	-	-
@@ -1085,13 +1094,13 @@ D	lutontoday.co.uk	-	-
 D	lynnnews.co.uk	-	-
 D	m.kuku.lu	-	-
 D	m.photos.timesofindia.com	-	-
-D	maalaimalar.com	-	-
 D	mabzicle.com	-	-
 D	madarascans.com	-	-
 D	magiclen.org	-	-
 D	mahitimanch.in	-	-
 D	mailtool-de.translate.goog	-	-
 D	mailtool.de	-	-
+D	maimuna.to	-	-
 D	main-spitze.de	-	-
 D	makeincomeinfo.com	-	-
 D	mangfall24.de	-	-
@@ -1136,11 +1145,13 @@ D	momo-net.com	-	-
 D	money.it	-	-
 D	money.pl	-	-
 D	moonline.*	-	-
+D	morrowplay.com	-	-
 D	motogpstream.*	-	-
 D	motoroids.com	-	-
 D	mrfreemium.blogspot.com	-	-
 D	mrsbrownsb.blogspot.com	-	-
 D	mtabrasil.com.br	-	-
+D	multishows.top	-	-
 D	my5.tv	-	-
 D	myfxbook.com	-	-
 D	mygoodstream.pw	-	-
@@ -1163,6 +1174,7 @@ D	net--tools-de.translate.goog	-	-
 D	net--tours-de.translate.goog	-	-
 D	net-tools.de	-	-
 D	net-tours.de	-	-
+D	net77.cc	-	-
 D	newarkadvertiser.co.uk	-	-
 D	newcastleknights.com.au	-	-
 D	news.bg	-	-
@@ -1177,7 +1189,6 @@ D	nonsensediamond.*	-	-
 D	nosey.com	-	-
 D	notepad.pw	-	-
 D	novelgo.id	-	-
-D	novelmultiverse.com	-	-
 D	now.gg	-	-
 D	now.us	-	-
 D	nreer.com	-	-
@@ -1212,6 +1223,7 @@ D	overgal.com	-	-
 D	overtakefans.com	-	-
 D	oztoml.com	-	-
 D	pahe.*	-	-
+D	pahe.plus	-	-
 D	paktech2.com	-	-
 D	pandamovies.pw	-	-
 D	paraphraser.io	-	-
@@ -1241,6 +1253,7 @@ D	plyvdo.*	-	-
 D	poedb.tw	-	-
 D	pogo.com	-	-
 D	polygamia.pl	-	-
+D	polygon.com	-	-
 D	pomponik.pl	-	-
 D	ponselharian.com	-	-
 D	poring.world	-	-
@@ -1286,7 +1299,6 @@ D	rangerboard.com	-	-
 D	rawstory.com	-	-
 D	rcbinfo.com	-	-
 D	reactgo.com	-	-
-D	readcomicsonline.ru	-	-
 D	realmofdarkness.net	-	-
 D	receivetxt.com	-	-
 D	rechtschreibpruefung24.de	-	-
@@ -1322,6 +1334,7 @@ D	sabishare.com	-	-
 D	sadeempc.com	-	-
 D	safelink-jozz.blogspot.com	-	-
 D	safetxt.*	-	-
+D	samplette.io	-	-
 D	sanadegreecollege.in	-	-
 D	sarapbabe.com	-	-
 D	satoshilabs.net	-	-
@@ -1361,15 +1374,16 @@ D	silenthub.net	-	-
 D	simplebits.io	-	-
 D	simply-debrid.com	-	-
 D	simply-hentai.com	-	-
+D	simpmusic.org	-	-
 D	sinonimos.de	-	-
 D	siouxcityjournal.com	-	-
 D	skmedix.pl	-	-
 D	smallseo.tools	-	-
+D	smartfeecalculator.com	-	-
 D	smarthomebeginner.com	-	-
 D	smashresume.com	-	-
 D	sme.sk	-	-
 D	sms-anonyme.net	-	-
-D	sms24.*	-	-
 D	smscodeonline.com	-	-
 D	socceronline.*	-	-
 D	software-on.com	-	-
@@ -1387,6 +1401,7 @@ D	spite.cz	-	-
 D	splitshire.com	-	-
 D	sportnews.to	-	-
 D	sportshub.to	-	-
+D	srnky.com	-	-
 D	sshkit.com	-	-
 D	stamfordmercury.co.uk	-	-
 D	stape.*	-	-
@@ -1410,6 +1425,7 @@ D	streamta.*	-	-
 D	streamtape.*	-	-
 D	streamtapeadblock.*	-	-
 D	strimek.tv	-	-
+D	striphub.cam	-	-
 D	strtape.*	-	-
 D	strtpe.*	-	-
 D	subhashyadav.org	-	-
@@ -1441,6 +1457,7 @@ D	techperiod.com	-	-
 D	techprice.pk	-	-
 D	tecnoaldia.net	-	-
 D	tekfiz.com	-	-
+D	teknoasian.com	-	-
 D	teknolojiprojeleri.com	-	-
 D	tel-emporio10.blogspot.com	-	-
 D	telecinco.es	-	-
@@ -1494,6 +1511,7 @@ D	toutes-les-solutions.fr	-	-
 D	toyota-club.eu	-	-
 D	tpayr.xyz	-	-
 D	tradingfact4u.co	-	-
+D	tradingref.com	-	-
 D	tranimeci.com	-	-
 D	transpassions.com	-	-
 D	travellingdetail.com	-	-
@@ -1501,7 +1519,6 @@ D	trueid.net	-	-
 D	tsubasa.im	-	-
 D	tube8-pornos.com	-	-
 D	tumblr.com	-	-
-D	turkanime.*	-	-
 D	turkdown.com	-	-
 D	tutflix.org	-	-
 D	tutoriales-virales.blogspot.com	-	-
@@ -1534,6 +1551,10 @@ D	upfilesgo.com	-	-
 D	upfion.com	-	-
 D	uploadrar.*	-	-
 D	uploadshare.net	-	-
+D	upns.ink	-	-
+D	upns.live	-	-
+D	upns.one	-	-
+D	upns.xyz	-	-
 D	uppit.com	-	-
 D	uprot.net	-	-
 D	upshrink.com	-	-
@@ -1544,7 +1565,6 @@ D	usandoapp.com	-	-
 D	userstyles.org	-	-
 D	userupload.*	-	-
 D	ustv247.tv	-	-
-D	vacation-et.work	-	-
 D	valueyourmusic.com	-	-
 D	vandaaginside.nl	-	-
 D	vectr.com	-	-
@@ -1671,6 +1691,8 @@ H	*	-	I2FkdmVydC1oZWFkZXI6bm90KDplbXB0eSk
 H	*	-	I2FkeWVz
 H	*	-	I2FkemVyazpub3QoOmVtcHR5KQ
 H	*	-	I2FudW5jaW8
+H	*	-	I2FwcCBhW2hyZWZePSJodHRwczovL3Muc21hcnRmbG9yYWxhYi5jb20vIl0
+H	*	-	I2FwcCBhW2hyZWZePSJodHRwczovL3QubmV0dHJjay5zdG9yZS8iXQ
 H	*	-	I2FwcC1yb290IH4gYVtocmVmXVt0YXJnZXQ9Il9ibGFuayJdW3N0eWxlPSJwb3NpdGlvbjogZml4ZWQ7dG9wOiAwO2xlZnQ6IDA7d2lkdGg6IDEwMCU7aGVpZ2h0OiAxMDAlO2Rpc3BsYXk6IGJsb2NrO3otaW5kZXg6IDk5OTk5OTk7Y3Vyc29yOiBhdXRvIl0
 H	*	-	I2Jhbm5lcjQ2ODpub3QoW3N0eWxlXj0icG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAtNTAwMHB4Il0p
 H	*	-	I2Jhbm5lcjcyOHg5MDpub3QoW3N0eWxlXj0icG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAtNTAwMHB4Il0p
@@ -1689,6 +1711,7 @@ H	*	-	I2ludmlkZW9fZGF0YQ
 H	*	-	I2ludmlkZW9fbmV3
 H	*	-	I2t0X3BsYXllciAjYWRzX2lmcmFtZQ
 H	*	-	I2t0X3BsYXllciAuZnAtYnJhbmQ
+H	*	-	I2t0X3BsYXllciB-ICNzcC1wbGF5ZXI
 H	*	-	I2xlYWRlcl9hZDpub3QoOmVtcHR5KQ
 H	*	-	I21haW4tY29udGVudCBhW2hyZWZePSJodHRwczovL2h1Yi5idXp6YWZmaWxpYXRlcy5jb20vIl0
 H	*	-	I21pY2FzdF9hZHM
@@ -1712,12 +1735,16 @@ H	*	-	I3ZpZGNsb3VkLXBsYXllciA-ICNvdmVybGF5LWNvbnRhaW5lcg
 H	*	-	I3ZpZGVvLWlkX2ZsdWlkX2h0bWxfb25fcGF1c2U
 H	*	-	I3ZpZGVvX3BsYXllciB-IGRpdltpZF0gZGl2W3N0eWxlXj0icG9zaXRpb246Zml4ZWQ7aW5zZXQ6MHB4O3otaW5kZXg6Il0
 H	*	-	I3ZpZGVvanMgfiBkaXZbc3R5bGU9InBvc2l0aW9uOiBhYnNvbHV0ZTsgdG9wOiAwcHg7IGxlZnQ6IDBweDsgd2lkdGg6IDEwMCU7IGhlaWdodDogMTAwJTsgei1pbmRleDogMjE0NzQ4MzY0NjsiXQ
+H	*	-	I3ZwbGF5ZXIgfiBpbWdbaWRdW29uY2xpY2td
+H	*	-	I3ZzdHIgfiAjb3ZlcmxheQ
 H	*	-	I3dlYXRoZXJhZDpub3QoOmVtcHR5KQ
 H	*	-	I3dyYXBwZXIgfiBhW2hyZWZdW3RhcmdldD0iX2JsYW5rIl1bc3R5bGU9InBvc2l0aW9uOiBmaXhlZDt0b3A6IDA7bGVmdDogMDt3aWR0aDogMTAwJTtoZWlnaHQ6IDEwMCU7ZGlzcGxheTogYmxvY2s7ei1pbmRleDogOTk5OTk5OTtjdXJzb3I6IGF1dG8iXQ
 H	*	-	I3pkbi1hZGJsb2NrLW92ZXJsYXk
+H	*	-	LklEX2xpdmVfY2FtX2lubmVy
 H	*	-	LmFhbl9mYWtl
 H	*	-	LmFhbl9mYWtlX192aWRlby11bml0cw
 H	*	-	LmFkLTMwMHgyNTA6bm90KC5hZHMp
+H	*	-	LmFkLWJhbm5lci1zbG90
 H	*	-	LmFkLWNvbnRlbnQ6bm90KDplbXB0eSk
 H	*	-	LmFkLWxpbms6bm90KC5hZHNib3gp
 H	*	-	LmFkLXBsYWNlaG9sZGVyOm5vdCgjZGV0ZWN0LCAjZGV0ZWN0X2FkX2VtcGlyZSwgI2ZpbHRlcl9hZHNfYnlfY2xhc3NuYW1lLCAuYWRzYm94KQ
@@ -1740,6 +1767,7 @@ H	*	-	LmFmZi1pbm5lci1jb2w
 H	*	-	LmFmZi1pdGVtLWxpc3Q
 H	*	-	LmFtcC1hZC1pbm5lcg
 H	*	-	LmFyay1hZC1tZXNzYWdl
+H	*	-	LmFzc2lkZS1saW5r
 H	*	-	LmF2ZS1wbA
 H	*	-	LmJiIH4gbWFpbiNjb250YWluZXIgLmNvbnRhaW5lckFkcw
 H	*	-	LmJsb2MtcHVi
@@ -1752,13 +1780,18 @@ H	*	-	LmNsb3NlLWJ0bjJbb25jbGljaz0iY2xvc2VBZDIoKSJd
 H	*	-	LmNsb3NlLWJ0bjNbb25jbGljaz0iY2xvc2VBZDMoKSJd
 H	*	-	LmNsb3NlLWJ0bjRbb25jbGljaz0iY2xvc2VBZDQoKSJd
 H	*	-	LmNsb3NlLWJ0bltvbmNsaWNrPSJjbG9zZUFkKCkiXQ
+H	*	-	LmNvZGUtYmxvY2sgYVtocmVmXj0iaHR0cHM6Ly9ld3hlcmQuc2l0ZS8iXQ
+H	*	-	LmNvZGUtYmxvY2sgYVt0YXJnZXQ9Il9ibGFuayJdW2hyZWZePSJodHRwczovLyJdW2hyZWYqPSIuY29tLyJdW2hyZWYqPSI_a2V5PSJd
 H	*	-	LmNvbnRhaW5lciBhW2hyZWZePSJodHRwczovL2dvLm1hdnJ0cmFja3Rvci5jb20vIl0
+H	*	-	LmNvbnRhaW5lciBhW2hyZWZePSJodHRwczovL2luc2Vuc2l0aXZlc2hvd2VyYXVkaWJsZS5jb20vIl0
 H	*	-	LmNvbnRhaW5lciBhW2hyZWZePSJodHRwczovL3NlZHVjZWQuY29tIl1baHJlZio9InJlZj0iXQ
 H	*	-	LmNvbnRhaW5lciBhW3RpdGxlPSJBSSBKZXJrIE9GRiJdW2hyZWZdW3RhcmdldD0iX2JsYW5rIl0
 H	*	-	LmV4by1ob3Jpem9udGFs
 H	*	-	LmZhbmRvbS1hZC1zdGlja3ktY29udGFpbmVy
 H	*	-	LmZpbnRzLWJsb2NrX19yb3c
 H	*	-	LmZsZXggYVtocmVmXj0iaHR0cDovL2FkcG9zdHVwLmNvbS8iXQ
+H	*	-	LmZsZXggYVtocmVmXj0iaHR0cHM6Ly9zLnNtYXJ0ZmxvcmFsYWIuY29tLyJd
+H	*	-	LmZsZXggYVtocmVmXj0iaHR0cHM6Ly90dC5jdWxpbmFyOXN5bmMuY29tLyJd
 H	*	-	LmZwLXBsYXllciA-IGRpdltzdHlsZT0icG9zaXRpb246IGFic29sdXRlOyBpbnNldDogMHB4OyBvdmVyZmxvdzogaGlkZGVuOyB6LWluZGV4OiAxNjA7IGJhY2tncm91bmQ6IHRyYW5zcGFyZW50OyBkaXNwbGF5OiBibG9jazsiXQ
 H	*	-	LmZwLXVpID4gYVtocmVmXVt0YXJnZXQ9Il9ibGFuayJdW3N0eWxlXj0icG9zaXRpb246IGFic29sdXRlOyBpbnNldDogMHB4OyJd
 H	*	-	LmZ1bGwtYXZlLXBs
@@ -1771,6 +1804,7 @@ H	*	-	LmhhcHB5LWluc2lkZS1wbGF5ZXI
 H	*	-	LmhlYWRlciB-IGRpdltzdHlsZV49InBvc2l0aW9uOmZpeGVkO2luc2V0OjA7ei1pbmRleDoyMTQ3NDgzNjQ3O2JhY2tncm91bmQ6YmxhY2s7b3BhY2l0eTowLjAxO2hlaWdodDoiXQ
 H	*	-	LmhlYWRlci1jb250YWluZXIgYVtocmVmXj0iaHR0cHM6Ly9jYW5keWFpLmdnLyJd
 H	*	-	LmhlYWRlci1tZW51LWJvdHRvbS1hZHM
+H	*	-	LmhvbWUgYVtocmVmXj0iaHR0cHM6Ly9zLnpsaW5lMC5jb20vIl0
 H	*	-	Lmhvcl9iYW5uZXI
 H	*	-	LmluZmluaXRlYWRzX3BsYWNlaG9sZGVy
 H	*	-	LmlucGxheWVyLWFk
@@ -1781,7 +1815,10 @@ H	*	-	Lm1lbnUtaXRlbSBhW2hyZWZePSJodHRwczovL2dvLnJtaGZydG5kLmNvbSJd
 H	*	-	Lm5hdi1pdGVtW2hyZWZePSJodHRwczovL2NhbmR5YWkuZ2cvIl0
 H	*	-	Lm5pbmphLXJlY29tbWVuZC1ibG9jaw
 H	*	-	Lm92ZXJsYXktYWR2ZXJ0aXNpbmctbmV3
+H	*	-	LnBhZ2UtbGF5b3V0IGFbaHJlZl49Imh0dHBzOi8vaGFzaGNvdW50cy5jb20vIl0
 H	*	-	LnBsYXllci1ibnMtYmxvY2s
+H	*	-	LnBvc3QtdGVtcGxhdGUtZGVmYXVsdCBhW2hyZWZePSJodHRwczovL2dvLiJdW2hyZWYqPSIvc21hcnRwb3AvIl0
+H	*	-	LnBvc3QtdGVtcGxhdGUtZGVmYXVsdCBhW2hyZWZePSJodHRwczovL3d3dy5vdXJkcmVhbWVyc2FpMTMuY29tLyJd
 H	*	-	LnBwcHg
 H	*	-	LnByZXJvbGwtYmxvY2tlcg
 H	*	-	LnJla2xhbWE6bm90KC5hZHMp
@@ -1797,6 +1834,7 @@ H	*	-	LnZlcnRiYXJz
 H	*	-	LnZpZGVvLWJycw
 H	*	-	LndnQWRCbG9ja01lc3NhZ2U
 H	*	-	LndwLWJsb2NrLXNhdmFnZS1wbGF0Zm9ybS1wcmltaXMtdmlkZW8
+H	*	-	LndyYXBwZXIgYVtyZWx-PSJzcG9uc29yZWQiXVtocmVmXj0iaHR0cHM6Ly8iXVtocmVmKj0iLmNvbS8iXVtocmVmKj0iP2tleT0iXQ
 H	*	-	W2NsYXNzXj0iZGl2LWdwdC1hZCJdOm5vdChbc3R5bGVePSJ3aWR0aDogMXB4OyBoZWlnaHQ6IDFweDsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAtMTAwMDBweDsgdG9wOiAtIl0p
 H	*	-	W2RhdGEtYWQtbWFuYWdlci1pZF06bm90KFtzdHlsZSQ9ImxlZnQ6IC0xMDAwMHB4ICFpbXBvcnRhbnQ7IHRvcDogLTEwMDBweCAhaW1wb3J0YW50OyJdKTpub3QoLmFkc2J5Z29vZ2xlKQ
 H	*	-	W2RhdGEtYWQtbW9kdWxlXTpub3QoW3N0eWxlJD0ibGVmdDogLTEwMDAwcHggIWltcG9ydGFudDsgdG9wOiAtMTAwMHB4ICFpbXBvcnRhbnQ7Il0pOm5vdCguYWRzYnlnb29nbGUp
@@ -1847,10 +1885,13 @@ H	*	-	YVtpZF1baHJlZj0iaHR0cHM6Ly9oYW1yb2NzaXQuY29tIl1bcmVsXj0ibm9vcGVuZXIgbm9yZW
 H	*	-	YVtpZF1baHJlZj0iaHR0cHM6Ly90b29sa2l0c3Byby5jb20iXVtyZWxePSJub29wZW5lciBub3JlZmVycmVyIl0
 H	*	-	YVtvbmNsaWNrPSJvcGVuQXVjKCk7Il0
 H	*	-	Ym9keSA-ICNtZGwtcmVnaXN0ZXIubW9kYWwuYW5tLWUucmVnbm93
+H	*	-	Ym9keSA-IGEudmlzaWJsZVtpZF1baHJlZl1bdGFyZ2V0PSJfYmxhbmsiXQ
 H	*	-	Ym9keSA-IGRpdltzdHlsZSQ9InotaW5kZXg6IDIxNDc0ODM2NDc7IHRvcDogMHB4OyBsZWZ0OiAwcHg7IHBvc2l0aW9uOiBmaXhlZDsgZGlzcGxheTogYmxvY2s7Il0
+H	*	-	Ym9keSA-IGRpdltzdHlsZT0icG9zaXRpb246IGZpeGVkOyBpbnNldDogMHB4OyB6LWluZGV4OiAyMTQ3NDgzNjQ3OyBiYWNrZ3JvdW5kOiB0cmFuc3BhcmVudDsgY3Vyc29yOiBwb2ludGVyOyJd
 H	*	-	YnV0dG9uLmJ0bltkYXRhLW9wZW51cmkqPSIvNC8iXQ
 H	*	-	ZGl2I3Nwb3QtaG9sZGVyLnNwb3QtaG9sZGVyW3N0eWxlPSJkaXNwbGF5OiBibG9jazsiXQ
 H	*	-	ZGl2W2NsYXNzJD0icGxheWVyLXByb21vLWNvbCJd
+H	*	-	ZGl2W2RhdGEtYWQtc2xvdC1uYW1lXQ
 H	*	-	ZGl2W2lkXVtzdHlsZV49InBvc2l0aW9uOiBmaXhlZDsgaW5zZXQ6IDBweDsgei1pbmRleDogMjE0NzQ4MzY0NzsgYmFja2dyb3VuZDogYmxhY2siXVtzdHlsZSo9Im9wYWNpdHk6IDAuMDEiXQ
 H	*	hyperosthemes.org,kojodan.jp	ZGl2W2lkXj0iZGl2LWdwdC0iXTpub3QoW3N0eWxlXj0id2lkdGg6IDFweDsgaGVpZ2h0OiAxcHg7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogLTEwMDAwcHg7IHRvcDogLSJdKTpub3QoW3N0eWxlPSJwb2ludGVyLWV2ZW50czogbm9uZTsgaGVpZ2h0OiAxcHg7IHdpZHRoOiAwcHg7IG9wYWNpdHk6IDA7IHZpc2liaWxpdHk6IGhpZGRlbjsgcG9zaXRpb246IGZpeGVkOyBib3R0b206IDBweDsiXSk
 H	*	-	ZGl2W3N0eWxlPSJwb3NpdGlvbjogZml4ZWQ7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogMTAwJTsgaGVpZ2h0OiAxMDAlOyBpbnNldDogMHB4OyBiYWNrZ3JvdW5kLWNvbG9yOiByZ2JhKDAsIDAsIDAsIDApOyB6LWluZGV4OiAzMDAwMDA7Il0
@@ -1883,6 +1924,7 @@ H	1001tracklists.com	-	I2hlYWQgKyBkaXZbaWRdID4gZGl2Omxhc3QtY2hpbGQgPiBkaXYgPiBhO
 H	1001tracklists.com	-	ZGl2W2NsYXNzPSJuYXYgdGFiVG9wIl0gKyBkaXYgPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6Zmlyc3QtY2hpbGQgPiBhOmhhcyg-IGltZ1tzcmMqPSIvIl1bc3JjKj0iXyJdW2FsdF0p
 H	100bucksbabes.com	-	LnZkYQ
 H	1024tera.com	-	LmFkLWVnZ3BsYW50LCAub3BlcmF0ZS1ib3g
+H	1024teradl.com	-	c3BhbltjbGFzcyo9InRleHQtIl06aGFzKCsgLmFkLXVuaXQtY29udGFpbmVyKQ
 H	10play.com.au	-	LmNvbnRlbnRfX2FkX19jb250ZW50
 H	10short.*	-	LnRleHQtbGVmdA
 H	123animes.*	-	ZGl2W2lkXVtzdHlsZV49InBvc2l0aW9uOiBmaXhlZDsgaW5zZXQ6IDBweDsgei1pbmRleDogMjE0NzQ4MzY0NzsiXQ
@@ -1915,6 +1957,7 @@ H	1milf.com	-	LmRlc2t0b3AuYXNpZGVfbWVkaWEuYXNpZGU
 H	1primewire.com	-	W2lkXTpoYXMoPiBbY2xhc3M9ImNsb3NlIGljbyJdKQ
 H	1shortlink.com	-	W2lkKj0iU2NyaXB0Um9vdCJd
 H	1todaypk.*	-	W2hyZWY9Ii93YXRjaG5vdy5waHAiXQ
+H	1xfaucet.com	-	LmFkcw
 H	1xxx-tube.com	-	I2ludmlkZW9fMw
 H	20min.ch	-	ZGl2W2NsYXNzXj0iQ29udGVudFBhZ2VfY29udGVudFBhZ2UiXSA-IGRpdltjbGFzc106bm90KFtjbGFzc149IiJdKTpoYXMoPiBkaXYgPiBkaXYgPiBkaXZbZGF0YS1hZC11bml0LWlkXSk
 H	20min.ch	-	ZGl2W3R5cGU9ImFkIl0
@@ -1946,6 +1989,7 @@ H	4movierulz1.*	-	LmFkX2J0bi13aGl0ZQ
 H	4movierulz1.*	-	LmFkX3dhdGNoX25vdw
 H	4movierulz1.*	-	LmJ0bjE
 H	4movierulz1.*	-	W2hyZWZePSJodHRwczovL2FwaS53aGF0c2FwcC5jb20vc2VuZCJd
+H	4umods.com	-	LmVubW9kcy1hZC1zbG90
 H	4wank.com	-	I3BhdXNlLWFkcw
 H	5dwallpaper.com	-	Ll9fZmR3X19hZHNwb3QtdGl0bGUtY29udGFpbmVy
 H	5dwallpaper.com	-	Ll9fZmR3X19hZHYtYmxvY2s
@@ -1996,10 +2040,13 @@ H	a8ix.*	-	LmlkbXV2aS1jZW50ZXItYWRz
 H	a8ix.*	-	LmlkbXV2aS1mb290ZXJiYW5uZXI
 H	a8ix.*	-	LmlkbXV2aS10b3BiYW5uZXItYWZ0ZXJtZW51
 H	a8ix.*	-	LmlubmVyLWZsb2F0YmFubmVyLWJvdHRvbQ
+H	ab.nanacdn.com	-	I292ZXJsYXk
+H	ab.nanacdn.com	-	LmxvYWRpbmctb3ZlcmxheSB-IGRpdltzdHlsZV49InBvc2l0aW9uOiByZWxhdGl2ZTsiXQ
 H	abcnews.com	-	LlN0aWNreUFkV3JhcHBlcg
 H	abcnews.go.com	-	LlN0aWNreUFkV3JhcHBlcg
 H	abcya.com	-	LmEtcHJlcm9sbHZpZGVvLWNvbnRhaW5lcg
 H	abczdrowie.pl	-	KjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQ6aGFzKD4gZGl2OmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0pOm5vdChbYWx0XSwgW2lkXSwgW3dpZHRoXSwgW2RhdGEtc3JjXSkgKyBkaXY6ZW1wdHkp
+H	abczdrowie.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	abczdrowie.pl	-	Ym9keSA-IGRpdiA-IGRpdjpvbmx5LWNoaWxkID4gZGl2Om9ubHktY2hpbGQgPiBhOmZpcnN0LWNoaWxkID4gZGl2Om9ubHktY2hpbGQ6ZW1wdHk
 H	abczdrowie.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	abczdrowie.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
@@ -2025,6 +2072,7 @@ H	abysscdn.com	-	LmxvYWRpbmctb3ZlcmxheSB-IGRpdltzdHlsZV49InBvc2l0aW9uOiByZWxhdGl
 H	abysscdn.com	-	LnBsYXlvdmVy
 H	abysscdn.com	-	ZGl2W3N0eWxlKj0iei1pbmRleDoxMDAwMDAiXQ
 H	abyssplayer.com	-	I292ZXJsYXk
+H	abyssplayer.com	-	LmxvYWRpbmctb3ZlcmxheSB-IGRpdltzdHlsZV49InBvc2l0aW9uOiByZWxhdGl2ZTsiXQ
 H	ac-illust.com	-	I2VhY2hEb3dubG9hZGVkTW9kYWw6aGFzKC5hYy1idG5baHJlZl49Imh0dHBzOi8vcHJlbWl1bS4iXSk
 H	ac-illust.com	-	Lm1vZGFsLWJhY2tkcm9w
 H	accordo.it	-	I2JnbGluaw
@@ -2082,12 +2130,13 @@ H	advertiserandtimes.co.uk	-	LlRhYm9vbGFTaWRl
 H	advertiserandtimes.co.uk	-	LmFkdmVydA
 H	advicefunda.com	-	Lm92ZXJsYXk
 H	advicefunda.com	-	LnBvcHVw
+H	advtpe.com	-	LnBsYXktb3ZlcmxheQ
 H	adweek.com	-	LndpZGdldC1hZHdlZWstc3RpY2t5LW5leHQ6aGFzKD4gLmh0bC1hZC13cmFwcGVyKQ
-H	adzz.in	-	LmNvdW50ZG93bg
 H	aeroxplorer.com	-	LmlhYWQ
 H	aetv.com	-	ZGl2W2NsYXNzXj0iQ29tcG9uZW50LWFkQnJlYWstIl0
 H	afasiaarchzine.com	-	LmFmYXNpYV9zaWRlYmFyX2FkX2dyb3Vw
 H	agar.live	-	LnNpZGUtYmFubmVy
+H	aha-music.com	-	LmhvbWUtbGVhZGVyYm9hcmQtcmVzZXJ2ZQ
 H	aii.sh	-	I2xpbmstdmlldyA-IGNlbnRlcg
 H	aii.sh	-	W3NyY149Imh0dHBzOi8vaS5pbWd1ci5jb20vIl0
 H	airdrieecho.com	-	LmZlYXR1cmVkLXZpZGVv
@@ -2128,11 +2177,11 @@ H	alphaporno.com	-	LmJvdHRvbS1iYW5uZXJz
 H	alphaporno.com	-	Lm1vdmllcy1ibG9jayA-IGRpdltzdHlsZSo9InRleHQtYWxpZ246Y2VudGVyOyJd
 H	alphaporno.com	-	LnNwb25zb3I
 H	alrakoba.net	-	LnN0cmVhbS1pdGVtLXdpZGdldA
+H	alternativeto.net	-	LmJvcmRlci1vZmZpY2lhbC1wYXJ0bmVy
 H	alternativeto.net	-	W2hyZWYqPSJhZmZfYz8iXQ
 H	alternativeto.net	-	ZGl2W3N0eWxlXTpoYXMoPiBkaXZbY2xhc3NePSJBZHNlbnNlIl0p
 H	alternativeto.net	-	bGlbZGF0YS10ZXN0aWRdOmhhcyhbaHJlZl49Ii9vdXRnb2luZy8iXSk
 H	alternativeto.net	-	bWFpbiA-IGRpdi5mbGV4Lmp1c3RpZnktY2VudGVyID4gZGl2LnctZnVsbC5ib3gtYm9yZGVyLmZsZXggPiBkaXYudy1mdWxsLmNvbnRhaW5lci53aWRlLWNvbnRhaW5lcg
-H	alternativeto.net	-	bWFpbiA-IHNlY3Rpb24uY29udGFpbmVyLndpZGUtY29udGFpbmVyID4gZGl2LmNvbnRhaW5lciA-IGRpdi5tdC0xMA
 H	alternativeto.net	-	c2VjdGlvbiNhbHRlcm5hdGl2ZS1saXN0ID4gZGl2Om5vdChbY2xhc3NdKTpoYXMoPiBkaXZbZGF0YS10ZXN0aWQ9ImFkc2Vuc2Utd3JhcHBlciJdKQ
 H	alternativeto.net	-	c2VjdGlvbiNhbHRlcm5hdGl2ZS1saXN0ID4gb2wgPiBsaTpoYXMoPiAuYmFubmVyTGluayk
 H	alternativeto.net	-	c2VjdGlvbiNhbHRlcm5hdGl2ZS1saXN0ID4gb2wgPiBsaTpoYXMoZGl2W2RhdGEtdGVzdGlkPSJhZHNlbnNlLXdyYXBwZXIiXSk
@@ -2167,6 +2216,8 @@ H	androidweblog.com	-	W2NsYXNzXj0iYW5kcm8tcmFuZG9tLXBhcmFncmFwaCJd
 H	androjungle.com	-	LmFkcw
 H	anghami.com	-	YW5naGFtaS1hZHM
 H	anhdep24.com	-	LnBvcHVwLWNvbnRhaW5lciwgLnRleHQtY2VudGVyIGgyfiosIC50ZXh0LWNlbnRlciBoMiwgLnNpdGUtbG9nbw
+H	anikoto.*	-	I25ldHdvcmtsb29wLWFk
+H	anikototv.to	-	I25ldHdvcmtsb29wLWFk
 H	animalia.bio	-	LnMtYWQtYmFubmVyLWhvcml6b250YWw
 H	animationxpress.com	-	LmZhLXN0aWNreS11bml0
 H	anime-drama.jp	-	I2Jsb2NrLTEx
@@ -2204,6 +2255,8 @@ H	anitube.*	-	I2lmcmFtZUNvcmVfX19f
 H	anitube.*	-	ZGl2W3N0eWxlXj0icG9pbnRlci1ldmVudHM6IG5vbmU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgIl0
 H	aniwave.*	-	LmFkeA
 H	aniwave.*	-	LnRleHQtY2VudGVyOmhhcyhzY3JpcHQgKyBhW3RhcmdldD0iX2JsYW5rIl0p
+H	aniwixi.xyz	-	I3dpeGktc2luZ2xlLWFkLW92ZXJsYXk
+H	aniwixi.xyz	-	Ym9keSA-IFtzdHlsZV49InBvc2l0aW9uOiBmaXhlZDsgdG9wOiAwOyBsZWZ0OiAwOyJdW3N0eWxlKj0iei1pbmRleDogOTk5OTk5OyJdW3RhcmdldD0iX2JsYW5rIl0
 H	anoboy.*	-	I3BvcHVwX2Jhd2Fo
 H	anoboy.*	-	I3BvcHVwX2JveA
 H	anoboy.*	-	W2hyZWZePSJodHRwOi8vY2xpY2syZ28ubWUvIl0
@@ -2240,8 +2293,12 @@ H	apl348.me	-	I2Fkcw
 H	apl374.me	-	I2FkYnRt
 H	apnews.com	-	LlNvdnJuQWQ
 H	app.cekresi.me	-	cCwgbGksIHVsLCB0ZCwgdHIsIC5sYXp5bG9hZCwgW2lkXj0iaF8iXSwgI3RlYXNlcjI
+H	app.khaddavi.net	-	bGksIG9sLCB1bCwgaDIsIGgzLCAuZW50cnktbWV0YSwgLmVudHJ5LXRpdGxl
 H	app.studysmarter.de	-	YXNpZGUgPiAubmctc3Rhci1pbnNlcnRlZA
 H	app.vaia.com	-	YXNpZGUgPiAubmctc3Rhci1pbnNlcnRlZA
+H	applescoop.org	-	LmFzLWFk
+H	applescoop.org	-	LmFzLWFkLXJhaWw
+H	applescoop.org	-	LnN0b3J5LWNvbnRlbnQgLmFk
 H	appnee.com	-	I2JhYmFzYm1zZ3g
 H	appnee.com	-	W2hyZWZePSJodHRwczovL2FwcG5lZS5jb20vYWR2ZXJ0aXNpbmcvIl0gPiBbc3JjXj0iaHR0cHM6Ly9pbWcuYXBwbmVlLmNvbS9vdGhlci8iXVthbHQ9IkFkcyBQbGFjZSJd
 H	appnee.com	-	ZGl2W2NsYXNzXVtpZF06aGFzKGRpdi5hYW9fYm94KQ
@@ -2253,6 +2310,8 @@ H	appsmodz.com	-	LnN0aWNreS1hZHM
 H	appvn.com	-	LmFkcw
 H	appvn.com	-	LmRvd25sb2FkdGl0bGU
 H	aquipelis.net	-	W2NsYXNzXj0iYWRzYnV0dCJd
+H	arabcanadanews.ca	-	LmRldGFpbHNBZHZlcnRpc2VtZW50V3JhcA
+H	arabcanadanews.ca	-	LnNsaWRlckFkdmVydGlzZW1lbnRXcmFw
 H	arabic-robot.blogspot.com	-	I3ByZWxvYWRlcg
 H	arabseed.*	-	LmFkcy1hYQ
 H	arakpop.net	-	YVtocmVmKj0iP2tleT0iXVtvbmNsaWNrXj0id2luZG93Lm9wZW4iXQ
@@ -2331,9 +2390,12 @@ H	audiostereo.pl	-	ZGl2W3N0eWxlPSJtYXJnaW4tYm90dG9tOiAxMHB4OyJdID4gYVtocmVmXVt0Y
 H	audiotools.*	-	aW5zLmFkc2J5Z29vZ2xl
 H	augsburger-allgemeine.de	-	ZGl2W2lkXj0iY3hfIl0
 H	ausfile.com	-	aW5zLmFkc2J5Z29vZ2xl
+H	auto-swiat.pl	-	LnBsYWNlaG9sZGVy
+H	auto-swiat.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	auto.am	-	LmF6ZC10b3A
 H	auto.am	-	LmJuY29udA
 H	auto.am	-	LnRvZ2dsZS1hZHYtc2VhcmNo
+H	autocentrum.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	autocentrum.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	autocentrum.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	autocentrum.pl	www.wp.pl	ZGl2W2NsYXNzXSA-IGRpdjpub3QoW2NsYXNzXSwgW2lkXSk6b25seS1jaGlsZDpoYXMoPiBkaXZbY2xhc3NdOm9ubHktY2hpbGQgPiBkaXZbY2xhc3NdOmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0p
@@ -2342,6 +2404,8 @@ H	autoembed.app	-	c2VjdGlvblthcmlhLWxhYmVsPSJTcG9uc29yZWQgY29udGVudCJd
 H	autofaucet.dutchycorp.space	-	LnNob3ctb24tbWVkaXVt
 H	autofaucet.dutchycorp.space	-	W2hyZWYqPSJiYW5uZXIiXQ
 H	autokult.pl	-	KjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQ6aGFzKD4gZGl2OmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0pOm5vdChbYWx0XSwgW2lkXSwgW3dpZHRoXSwgW2RhdGEtc3JjXSkgKyBkaXY6ZW1wdHkp
+H	autokult.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
+H	autokult.pl	-	LndwLWNvbW1lbnRzLWFkdi13cmFwcGVyOm5vdCg6aGFzKD4gLndwLWNvbW1lbnRzLW1vdGgtdGVhc2VyLWNvbnRhaW5lcikpOmhhcyg-IC53cC1jb21tZW50cy1hZHZbZGF0YS10ZXN0aWRePSJhZC1zbG90LSJdKQ
 H	autokult.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	autokult.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	autokult.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -2466,6 +2530,8 @@ H	bellinghamherald.com	-	YXJ0aWNsZSBbaWRePSJ6b25lLWVsIl0
 H	bembed.net	-	Ym9keSA-IGRpdltjbGFzc106ZW1wdHk
 H	bemyhole.com	-	LmNhbXMtYnV0dG9u
 H	bemyhole.com	-	LmhlYWRsaW5lLXNpZGViYXI
+H	benchmark.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
+H	benchmark.pl	-	LndwLWNvbW1lbnRzLWFkdi13cmFwcGVyOm5vdCg6aGFzKD4gLndwLWNvbW1lbnRzLW1vdGgtdGVhc2VyLWNvbnRhaW5lcikpOmhhcyg-IC53cC1jb21tZW50cy1hZHZbZGF0YS10ZXN0aWRePSJhZC1zbG90LSJdKQ
 H	benchmark.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	benchmark.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	benchmark.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -2501,11 +2567,13 @@ H	beta.xfreehd.com	-	LmFkLWNvbnRhaW5lcg
 H	beta.xfreehd.com	-	LmNvbC1tZC0xMjpoYXMoYVtocmVmXj0iaHR0cHM6Ly9sYW5kaW5nLmJyYXp6ZXJzbmV0d29yay5jb20vIl0p
 H	beverfood.com	-	I2JhY2t5
 H	beverfood.com	-	LnN3aXRjaGFiaWc
+H	beverfood.com	-	LnRoZWlhU3RpY2t5U2lkZWJhciA-IHVsID4gbGkud2lkZ2V0Omhhcyg-IC50ZXh0d2lkZ2V0ID4gZGl2W2FsaWduPSJjZW50ZXIiXSA-IGFbdGFyZ2V0PV9ibGFua106bm90KFtjbGFzc10pIGltZyk
+H	beverfood.com	-	YSN4MQ
 H	bezpolitickekorektnosti.cz	-	LlNDX1RCbG9jaw
-H	bg-gledai.*	-	I2Nhc2luZyA-IGNlbnRlcg
-H	bg-gledai.*	-	LmFkc2J5Z29vZ2xl
+H	bg-gledai.*	-	I2Nhc2luZyA-IC5hZHNieWdvb2dsZQ
 H	bg-gledai.*	-	LnNtYWxsYmFubmVy
 H	bg-gledai.*	-	LnNxdWFyZWJhbm5lcg
+H	bg-gledai.*	-	Y2VudGVyID4gLmFkc2J5Z29vZ2xl
 H	bgland24.de	-	LmlkLVJlY29tbWVuZGF0aW9u
 H	bgland24.de	-	Lnd2X3N0b3J5X2VsX2NsZXZlclB1c2hXaWRnZXQ
 H	bgland24.de	-	Lnd2X3N0b3J5X2VsX3BpbnBvbGw
@@ -2621,7 +2689,9 @@ H	bnd.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
 H	bnd.com	-	YXJ0aWNsZSBbaWRePSJ6b25lLWVsIl0
 H	boardgameoracle.com	-	ZGl2W2NsYXNzXj0ianMiXTpoYXMoPiBzcGFuLk11aVR5cG9ncmFwaHktc3VidGl0bGUyLk11aVR5cG9ncmFwaHktZGlzcGxheUJsb2NrKQ
 H	boardgamesonline.net	-	aW5zLmFkc2J5Z29vZ2xl
-H	boards.net	-	W2lkXj0iYWQtIl0sICNyZW1vdmVfYWRzX2xpbms
+H	boards.net	-	I2FkMQ
+H	boards.net	-	I3JlbW92ZV9hZHNfbGluaw
+H	boards.net	-	W2lkXj0iYWQtIl0
 H	bobs-tube.com	-	LmFkdg
 H	bobs-tube.com	-	LmFkdl9uYWRfcGxheWVy
 H	bobs-tube.com	-	LmFkdmVydGlzaW5n
@@ -2649,7 +2719,6 @@ H	box-manga.com	-	I2FkczcyOHg5MHRvcA
 H	boyfriendtv.com	-	LmFkcy1ibG9jay1yaWdodHNpZGU
 H	boyfriendtv.com	-	bGlbY2xhc3NdOmhhcyhhW2hyZWZePSJodHRwczovL2JveWZyaWVuZC5zaG93LyJdW3JlbD0ic3BvbnNvcmVkIl0p
 H	boysfood.com	-	I3BhdXNlLWNvbnRhaW5lcg
-H	boysxclusive.com	-	LmFzc2lkZS1saW5r
 H	boysxclusive.com	-	W2hyZWZePSJodHRwczovL3RzeW5kaWNhdGUuY29tLyJd
 H	bradenton.com	-	I21hc3RoZWFkVnVlQ29udGFpbmVyID4gLnpvbmU
 H	bradenton.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
@@ -2697,6 +2766,8 @@ H	bunshun.jp	-	LnJlY29tbWVuZC1hcnRpY2xlczpoYXMoPiBkaXZbY2xhc3NePSJ0YWJvb2xhIl0p
 H	buondua.com	-	Lm1haW4tYm9keSBkaXZbY2xhc3NdOmhhcyg-IC5hZHNieWV4b2NsaWNrKQ
 H	buondua.com	-	LnBhZ2luYXRpb24gKyBiciArIGRpdltjbGFzc10
 H	buondua.com	-	LnZpZXctbGlzdCA-IGRpdjpub3QoW2NsYXNzXSk6aGFzKGlmcmFtZSk
+H	businessinsider.com.pl	-	LnBsYWNlaG9sZGVy
+H	businessinsider.com.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	businessinsider.de	-	LmFkdXAtd3JhcA
 H	businessinsider.de	-	LmJpLWluamVjdGVkLWFk
 H	businessinsider.de	-	LmJpLXN1cGVyYmFubmVy
@@ -2729,7 +2800,9 @@ H	cachevalleydaily.com	-	Lm1haW4tdG9wLWFk
 H	calciomercato.com	-	LmFkdg
 H	calculator-online.net	-	LnN0aWNreV9hZA
 H	calgaryherald.com	-	LmZlYXR1cmVkLXZpZGVv
+H	calgaryherald.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	calgarysun.com	-	LmZlYXR1cmVkLXZpZGVv
+H	calgarysun.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	cambabe.*	-	LnBsYWNl
 H	cambabe.*	-	LnRvcGFk
 H	cambb.xxx	-	I2FkYg
@@ -2755,11 +2828,11 @@ H	camclips.tv	-	ZGl2LmNiY2hhdA
 H	camflow.tv	-	LmJveC5ybHRk
 H	camflow.tv	-	LnRhYmxl
 H	camfox.com	-	LnRhYmxl
+H	camgirlfap.com	-	LnNwb3Q
 H	camgoddess.tv	-	LnRhYmxl
 H	camhoes.tv	-	LmJveC5ybHRk
 H	camhoes.tv	-	LnRhYmxl
 H	camhub.*	-	LnBvcHVuZGVyLW9wZW5lcg
-H	camhub.cc	-	LmFzc2lkZS1saW5r
 H	camhub.cc	-	Lmxpbmstb2ZmZXI
 H	camhub.cc	-	LnRhYmxl
 H	caminspector.net	-	LnBsYWNl
@@ -2788,11 +2861,13 @@ H	camwhorestv.*	-	LnBsYWNl
 H	camwhorestv.*	-	LnJvdy1tb2RlbHM
 H	camwhorestv.*	-	LnRvcGFk
 H	camwhorestv.*	-	W2hyZWZePSJodHRwczovL2dvLnNjaGptcC5jb20iXQ
+H	canada.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	canalnatelinhaonline.blogspot.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	canlikolik.my	-	I3ZpZGVvLWNsaWNrLW92ZXJsYXk
 H	canoe.com	-	I3Bvc3RtZWRpYV9sYXlvdXRzX2FkLXRvcA
 H	canoe.com	-	LmFkX19jb250YWluZXI
 H	canoe.com	-	LmZlYXR1cmVkLXZpZGVv
+H	canoe.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	capital.fr	-	LmNhcC1hZHM
 H	capital.fr	-	LnBtZC1hZHM
 H	cararegistrasi.com	-	YVtocmVmPSJodHRwczovL2JhaGFzdGVrbm9sb2dpLmNvbS8iXQ
@@ -2850,9 +2925,10 @@ H	charlotteobserver.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
 H	charlotteobserver.com	-	YXJ0aWNsZSBbaWRePSJ6b25lLWVsIl0
 H	chathamdailynews.ca	-	LmZlYXR1cmVkLXZpZGVv
 H	chathamthisweek.com	-	LmZlYXR1cmVkLXZpZGVv
+H	chaturflix.cam	-	YVtocmVmPSJodHRwczovL3RoZXBvcm5kdWRlLmNvbS8iXQ
 H	cheatsquad.gg	-	LnRvb2x0aXA6OmFmdGVy
 H	cheatsquad.gg	-	LnRvb2x0aXA6OmJlZm9yZQ
-H	check-host.net	-	I2Ftc3BlYXl0cHVpa3ByaXZhdGVhbHBzLCAuaG9zdGFidywgW2lkXj0iYW1zcGVheSJdLCAucmktY3RpdmUsIFtpZF49ImFtc3BlYXl0cHVpa3BwLWxpYXJ5dCJdLCAuYmxvY2t4cywgW2hyZWYqPSImdXRtXyJdLCBhW2hyZWYqPSJwcml2YXRlYWxwcy5uZXQiXSwgW29uY2xpY2sqPSJodHRwczovL3ByaXZhdGVhbHBzLm5ldC8iXSwgW29uY2xpY2sqPSJodHRwczovL2FlemEubmV0LyJdLCBbb25jbGljayo9Imh0dHBzOi8vYWxleGhvc3QuY29tIl0sIFtvbmNsaWNrKj0iaHR0cHM6Ly9qdXN0aG9zdC5hc2lhIl0sIFtvbmNsaWNrKj0iaHR0cHM6Ly91MWhvc3QuY29tIl0sIGFbaHJlZl49Imh0dHBzOi8vYWV6YS5uZXQvIl0sIGFbaHJlZl49Imh0dHBzOi8vYWxleGhvc3QuY29tLyJdLCBhW2hyZWZePSJodHRwczovL3RoZS5ob3N0aW5nIl0sIGFbaHJlZl49Imh0dHBzOi8vbWhvc3QuZWUiXSwgYVtocmVmXj0iaHR0cHM6Ly93YWljb3JlLm5ldC8iXQ
+H	check-host.net	-	I2FtZHR2ZWF5dHB1aWtwcml2YXRlYWxwcywgW2lkXj0iYW1kdHZlYXl0cHVpa3BwLWxpYXJ5dCJdLCAuaG9zdGFiZSwgLnJpLWJ0aXZlLCAuc3BlY2pwLCBbaHJlZio9IiZ1dG1fIl0sIGFbaHJlZio9InByaXZhdGVhbHBzLm5ldCJdLCBbb25jbGljayo9Imh0dHBzOi8vcHJpdmF0ZWFscHMubmV0LyJdLCBbb25jbGljayo9Imh0dHBzOi8vYWV6YS5uZXQvIl0sIFtvbmNsaWNrKj0iaHR0cHM6Ly9hbGV4aG9zdC5jb20iXSwgW29uY2xpY2sqPSJodHRwczovL2p1c3Rob3N0LmFzaWEiXSwgW29uY2xpY2sqPSJodHRwczovL3UxaG9zdC5jb20iXSwgYVtocmVmXj0iaHR0cHM6Ly9hZXphLm5ldC8iXSwgYVtocmVmXj0iaHR0cHM6Ly9hbGV4aG9zdC5jb20vIl0sIGFbaHJlZl49Imh0dHBzOi8vdGhlLmhvc3RpbmciXSwgYVtocmVmXj0iaHR0cHM6Ly9taG9zdC5lZSJdLCBhW2hyZWZePSJodHRwczovL3dhaWNvcmUubmV0LyJdLCBhW2hyZWZePSJodHRwczovL2hvc3RlYWxvLmVzIl0
 H	check-plagiarism.com	-	W2lkXj0idG9wYWRzXyJd
 H	cherrynudes.com	-	W2hyZWZePSJodHRwOi8vbGlua3MudmVyb3RlbC5jb20vIl0
 H	cherrynudes.com	-	W2hyZWZePSJodHRwOi8vd2NyZ2wuZnJlZWFkdWx0LmdhbWVzL2hpdC5waHAiXQ
@@ -2861,19 +2937,24 @@ H	chess.com	-	LmJvYXJkLWxheW91dC1hZA
 H	chiemgau24.de	-	LmlkLVJlY29tbWVuZGF0aW9u
 H	chiemgau24.de	-	Lnd2X3N0b3J5X2VsX2NsZXZlclB1c2hXaWRnZXQ
 H	chiemgau24.de	-	Lnd2X3N0b3J5X2VsX3BpbnBvbGw
-H	chip.de	-	I1IxQzFbcm9sZT0iY29tcGxlbWVudGFyeSJd
-H	chip.de	-	I1IxQzJbcm9sZT0iY29tcGxlbWVudGFyeSJdOm5vdCg6aGFzKD4gLkhlcm8pKQ
-H	chip.de	-	I1IxQzNbcm9sZT0iY29tcGxlbWVudGFyeSJd
 H	chip.de	-	I2FhYmhvcg
 H	chip.de	-	I2Jhbm5lcl90b3BfdGFibGU
 H	chip.de	-	I2NvbnRlbnRhZC10b3AtYWRzZW5zZS0x
 H	chip.de	-	LkFk
-H	chip.de	-	LkFkLVNsb3Q
 H	chip.de	-	LkFkLWhvci1oZWlnaHQ
 H	chip.de	-	LkJ1dHRvbkF1c3dhaGwgKyBkaXYgPiBkaXZbY2xhc3NdOmhhcyg-IGFbY2xhc3NdW3N0eWxlPSJkaXNwbGF5OmZsZXg7Il1baHJlZl49Imh0dHBzOi8vd3d3LmNoaXAuZGUvZG93bmxvYWRzLyJdW2hyZWYkPSIuaHRtbCJdKQ
+H	chip.de	-	LkRvd25sb2FkUGFnZVdpZGdldC1DdGE6aGFzKGFbZGF0YS1xYS1kb3dubG9hZC1wYWdlLW1hbnVhbC1pbnN0YWxsLWxpbmtdKSA-IC5SVUMtRG93bmxvYWRCdXR0b24tV3JhcA
+H	chip.de	-	LmFk
+H	chip.de	-	LmFkLWxpc3Rpbmc
+H	chip.de	-	LmFlLWJhbm5lcg
 H	chip.de	-	LmFwcF9uZXh1c19iYW5uZXJzX2NvbW1vbg
-H	chip.de	-	LmpzX2Rvd25sb2FkX2J1dHRvbjpoYXMoPiBhLkRvd25sb2FkLUJ1dHRvbi0tRnJlZVtocmVmKj0id2l0aGluc3RhbGxlciJdW2hyZWYqPSJsYXN0Y2hhbmdlZCJdKQ
+H	chip.de	-	LmF2YXN0LWJveA
 H	chip.de	-	Lm9iLWFkLWNhcm91c2VsLWxheW91dA
+H	chip.de	-	LnByb2R1Y3RfX3RvcC1hc2lkZQ
+H	chip.de	-	ZGl2Om5vdChbaWRdLCBbY2xhc3NdKTpoYXMoPiBkaXY6b25seS1jaGlsZCA-IGFbaHJlZl49Imh0dHBzOi8vd3d3LmNoaXAuZGUvdGVzdC1rYXVmYmVyYXR1bmcvIl06b25seS1jaGlsZCA-IGltZ1tzcmNePSJodHRwczovL3F1YWRyby5idXJkYS1mb3J3YXJkLmRlLyJdOm9ubHktY2hpbGQp
+H	chip.de	-	ZGl2Om5vdChbaWRdLCBbY2xhc3NdKTpoYXMoPiBkaXY6b25seS1jaGlsZCA-IGRpdjpvbmx5LWNoaWxkID4gYVtocmVmXj0iaHR0cHM6Ly93d3cuY2hpcC5kZS90ZXN0LWthdWZiZXJhdHVuZy8iXTpvbmx5LWNoaWxkID4gaW1nW3NyY149Imh0dHBzOi8vcXVhZHJvLmJ1cmRhLWZvcndhcmQuZGUvIl06b25seS1jaGlsZCk
+H	chip.de	-	ZGl2W2NsYXNzKj0iYWQtc2xvdCIgaV0
+H	chip.de	-	ZGl2W2lkKj0iQWRTbG90Il0
 H	chip.de	-	dHI6aGFzKD4gdGRbc3R5bGVdW2NvbHNwYW5dID4gYS5qcy1hbnRpdmlydXNjbGlja1tocmVmXSk
 H	choralia.net	-	Ym9keSA-IHRhYmxlID4gdGJvZHkgPiB0ciA-IHRkOm50aC1vZi10eXBlKDEpOmhhcyhkaXZbaWRePSJhZF8iXSk
 H	choralia.net	-	Ym9keSA-IHRhYmxlID4gdGJvZHkgPiB0ciA-IHRkOm50aC1vZi10eXBlKDMpOmhhcyhkaXZbaWRePSJhZF8iXSk
@@ -2891,7 +2972,6 @@ H	cinedetodo.*	-	LmFsaWdubm9uZQ
 H	cinedetodo.*	-	LmJucg
 H	cinedetodo.*	-	W2lkKj0ieWVsbG93Il0
 H	cinehd.app	-	LmRhcmtcOmJnLWJsYWNrLnB0LTIwLmJnLXdoaXRlLnctZnVsbC56LTEwLnJlbGF0aXZlID4gLmxnXDpweC04Lm1kXDpweC02LnB4LTQubWF4LXctXFsxNDQwcHhcXTpoYXMoLm5hdGl2ZS1hZHMtc2xvdCk
-H	cinema.maalaimalar.com	-	LmluLmZhZGUubW9kYWwtYmFja2Ryb3A
 H	cinepiroca.com	-	I2NsaWNrZmFrZXBsYXllcg
 H	cinepiroca.com	-	LmNvdmVy
 H	cineplateforme.*	-	LmctYnV0dG9ucw
@@ -2919,6 +2999,8 @@ H	clik.pw	-	YVtocmVmXj0iaHR0cHM6Ly9ocmVmLmxpLyJd
 H	clik.pw	-	Ym9keSA-IGRpdltzdHlsZV06aGFzKGlucHV0W3R5cGU9ImJ1dHRvbiJdKQ
 H	clik.pw	-	ZGl2W3N0eWxlKj0iei1pbmRleDo5OTk5OSJdID4gZGl2W3N0eWxlKj0id2lkdGg6MzAwcHgiXQ
 H	clintonnewsrecord.com	-	LmZlYXR1cmVkLXZpZGVv
+H	clksz.com	-	LnRkLXBvc3QtdGVtcGxhdGUtZGVmYXVsdC50ZC1jb250YWluZXIsIC5iYW5uZXItaW5uZXI
+H	clksz.com	-	YVtocmVmXVt0YXJnZXQ9Il9ibGFuayJd
 H	cloubix.com	-	LmQwYS11cGdyYWRlLXdyYXAsIC5jYi1mb290ZXIsIC5kMGEtc3RhdHVzLWJhciwgLmNiLWhhbWJ1cmdlciwgLmQwYS1jYXJkLWhlYWQsIC5kMGEtZmVhdHVyZXMtcm93LCAuZDBhLXNwZWVkLWJveCwgLmQwYS1idG4tbm90ZSwgLmQwYS1hZHMtc2VjdGlvbiwgLmRsMS1yZXBvcnQtYnRuLCAuZGwxLWFjdGlvbnMsIC5kbDEtY29kZXM
 H	cloud.hownetwork.xyz	-	I292ZXJsYXk
 H	club-opel.com	-	LnNpZGVfYWRfbGVmdF8xNjA
@@ -2985,7 +3067,6 @@ H	cookinggames.com	-	I3NreXNjcmFwcGVyLWNvbnRhaW5lcg
 H	cookinggames.com	-	LmJhbm5lcg
 H	cookpad.com	-	I21vZGFscw
 H	coolmathgames.com	-	I2Jsb2NrLWFkc3RvcC1vdGhlcnBhZ2UtNzI4eDkw
-H	coolmathgames.com	-	W2NsYXNzKj0iLWFkcyJd
 H	coolrom.com.au	-	I3RkLWJvdHRvbS1tcHUtMQ
 H	coolrom.com.au	-	I3RkLXRvcC1sZWFkZXJib2FyZC0x
 H	coolrom.com.au	-	I3RkLXRvcC1tcHUtMQ
@@ -3058,6 +3139,7 @@ H	cryptowin.io	-	LmhpZGRlbi14cw
 H	cryptowin.io	-	LnBhbmVsLWJvZHkgPiBwW3N0eWxlPSIgY29sb3I6IzgxODE4MTsgYmFja2dyb3VuZC1jb2xvcjogI2ZmZmRjNDsgdGV4dC1hbGlnbjogY2VudGVyOyBmb250LXNpemU6IDE0cHg7IGJvcmRlci1yYWRpdXM6IDJweDsgd2lkdGg6IDMyMHB4OyBtYXgtd2lkdGg6IDEwMCU7IG1hcmdpbjogYXV0bzsgbWFyZ2luLXRvcDogMTVweDsgIl0
 H	csrevo.com	-	I0hUTUwz
 H	csst.at	-	YVtocmVmXj0iaHR0cHM6Il0gPiBbYWx0Kj0iYmFubmVyIl0
+H	csst.at	-	YVtyZWx-PSJzcG9uc29yZWQiXQ
 H	cstalking.tv	-	LmJsb2NraGVhZA
 H	ctinsider.com	-	I21vZGFscw
 H	ctpost.com	-	I21vZGFscw
@@ -3079,7 +3161,6 @@ H	cutearn.net	-	W3NyY149Imh0dHBzOi8vaS5pYmIuY28vIl0
 H	cutearn.net	-	c2VjdGlvbi5zaG9ydA
 H	cutlink.net	-	LnN0ZXBzLXRvLWVhcm4sIC5mbGV4LnNoYXJlLWljb25zLWNvbnRhaW5lciwgLnJlZ2lzdGVyLWJhbm5lciwgZmllbGRzZXQsIC5wYXJ0bmVycy1jb250YWluZXIsIC5hY3Rpb25zLCAuZWFybmluZy1zdGVwcywgYXJ0aWNsZTpoYXMocCksIGZvb3RlciwgaGVhZGVy
 H	cutnet.net	-	LnN0ZXBzLXRvLWVhcm4sIC5mbGV4LnNoYXJlLWljb25zLWNvbnRhaW5lciwgLnJlZ2lzdGVyLWJhbm5lciwgZmllbGRzZXQsIC5wYXJ0bmVycy1jb250YWluZXIsIC5hY3Rpb25zLCAuZWFybmluZy1zdGVwcywgYXJ0aWNsZTpoYXMocCksIGZvb3RlciwgaGVhZGVy
-H	cutpaid.com	-	Y2VudGVy
 H	cuttlinks.com	-	LnN0ZXBzLXRvLWVhcm4sIC5mbGV4LnNoYXJlLWljb25zLWNvbnRhaW5lciwgLnJlZ2lzdGVyLWJhbm5lciwgZmllbGRzZXQsIC5wYXJ0bmVycy1jb250YWluZXIsIC5hY3Rpb25zLCAuZWFybmluZy1zdGVwcywgYXJ0aWNsZTpoYXMocCksIGZvb3RlciwgaGVhZGVy
 H	cuttty.com	-	LnN0ZXBzLXRvLWVhcm4sIC5mbGV4LnNoYXJlLWljb25zLWNvbnRhaW5lciwgLnJlZ2lzdGVyLWJhbm5lciwgZmllbGRzZXQsIC5wYXJ0bmVycy1jb250YWluZXIsIC5hY3Rpb25zLCAuZWFybmluZy1zdGVwcywgYXJ0aWNsZTpoYXMocCksIGZvb3RlciwgaGVhZGVy
 H	cwtvembeds.com	-	LmhvbGFfdG9wX2VsZW1lbnQ
@@ -3089,6 +3170,7 @@ H	cyberdefensemagazine.com	-	I2JzYUlmcmFtZQ
 H	cyberdefensemagazine.com	-	W2hyZWZePSJodHRwczovL3d3dy5jb3Jlc2VjdXJpdHkuY29tLyJd
 H	cybernews.com	-	YXNpZGVbZGF0YS1lPSJwb3B1cEV2ZW50Il0
 H	cyclehack.jp	-	I2FkLW92ZXJsYXk
+H	cyklobazar.cz	-	Y3VydGFpbi1hZA
 H	daddylive.*	-	I2Zsb2F0TGF5ZXIx
 H	daddylive.*	-	I2h0bWwx
 H	daddylive.*	-	ZGl2ID4gYS5idG4tb3V0bGluZS1wcmltYXJ5LmJ0bg
@@ -3323,6 +3405,7 @@ H	dl-protect.link	-	YVtocmVmXj0iaHR0cHM6Ly9wbGFuZXR3ZWFsdGhidWlsZGVycy5uZXQvdHJj
 H	dl.gamecopyworld.*	-	LnQyID4gdGJvZHkgPiB0cjpudGgtb2YtdHlwZSgxKSA-IHRk
 H	dl.gamecopyworld.*	-	dGQ6bnRoLW9mLXR5cGUoMik
 H	dl.gamecopyworld.*	-	dHI6bnRoLW9mLXR5cGUoNikgPiB0ZA
+H	dobreprogramy.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	dobreprogramy.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	dobreprogramy.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	dobreprogramy.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -3330,6 +3413,10 @@ H	dobreprogramy.pl	-	ZGl2W2NsYXNzKj0iICJdOm5vdChbY2xhc3MqPSItIl0sIFtpZF0pOmhhcyg
 H	dobreprogramy.pl	www.wp.pl	ZGl2W2NsYXNzXSA-IGRpdjpub3QoW2NsYXNzXSwgW2lkXSk6b25seS1jaGlsZDpoYXMoPiBkaXZbY2xhc3NdOm9ubHktY2hpbGQgPiBkaXZbY2xhc3NdOmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0p
 H	dobreprogramy.pl	www.wp.pl	ZGl2W3N0eWxlPSJwb3NpdGlvbjogcmVsYXRpdmU7IHRvcDogMHB4OyJdOmhhcyg-IGFbdGFyZ2V0PSJfYmxhbmsiXSk
 H	dogefaucet.com	-	LmxvYWRlcg
+H	dokkandb.com	-	LmNhcmQtZGV0YWlscy12aWRlby1hZA
+H	dokkandb.com	-	LnJhcHRpdmUtYmVsb3ctcG9zdC1wbGFjZWhvbGRlcg
+H	dokkandb.com	-	LnJhcHRpdmUtY29udGVudC1wbGFjZWhvbGRlcg
+H	dokkandb.com	-	YXBwLWNhcmQtZGV0YWlscy1hZC1zbG90
 H	dollarindex.org	-	LmFkcw
 H	domaha.tv	-	LmxpbmstaG9sZGVy
 H	domainwheel.com	-	LmJhbm5lci1hZHZlcnRpc2luZy1zZWN0aW9u
@@ -3370,8 +3457,8 @@ H	dozarte.com	-	I2JhbmFuYQ
 H	dpstream.*	-	Lm1vdmllLWF5ZQ
 H	dr-farfar.com	-	LmVzc2Itc2hhcmVib29zdGVy
 H	dr-farfar.com	-	LmVzc2Itc2hhcmVib29zdGVyLW92ZXJsYXk
+H	dragontea.ink	-	LmJvZHktdG9wLWFkcw
 H	dragontea.ink	-	LmR0YQ
-H	dragontea.ink	-	aWZyYW1lW2lkXj0iZ29vZ2xlX2Fkc19pZnJhbWUiXQ
 H	dragontranslation.com	-	I3RlYXNlcjI
 H	dragontranslation.com	-	ZGl2W3N0eWxlJD0icG9zaXRpb246IGZpeGVkOyJdW3N0eWxlKj0iei1pbmRleDogMjE0NzQ4MzY0NzsiXQ
 H	dramacool.*	-	W2NsYXNzJD0iX2FkcyJd
@@ -3384,6 +3471,7 @@ H	dreamcheeky.com	-	I2xpbmsxcy13YWl0MQ
 H	dreamsnest.com	-	W2hyZWZePSJodHRwczovL2RyZWFtaW5nZm9yZHJlYW1zLmNvbS9jb250YWN0LyJd
 H	drinkspartner.com	-	bmF2LCAucmVtb3ZlLXN0aWNreSwgLndpZGdldC1hcmVhLCAuZW50cnktY29udGVudCwgLmVudHJ5LWhlYWRlciwgLmVudHJ5LW1ldGEsIC5jb21tZW50cy1hcmVhLCAud3BqYW5rYXJpLXNvY2lhbC13cmFwcGVyLCAuc2l0ZS1mb290ZXIsIC5nYi1jb250YWluZXIsIC5mZWF0dXJlZC1pbWFnZSwgLmhhcy1pbmxpbmUtbW9iaWxlLXRvZ2dsZS5zaXRlLWhlYWRlciwgI3RvcC1jb250YWluZXItMg
 H	drivenime.com	-	I3N0aWNreWI
+H	driving.ca	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	dronedj.com	-	LmFkLWRpc2NsYWltZXItY29udGFpbmVyLCAuaW5saW5lYWQsIC5hZC1jb250YWluZXI
 H	dronedj.com	-	LmFkc2Vuc2UsIGFbdGFyZ2V0PSJfYmxhbmsiXVtyZWw9Im5vb3BlbmVyIG5vcmVmZXJyZXIiXQ
 H	dronedj.com	-	LnNsb3QtbGVhZGVyYm9hcmQ
@@ -3477,7 +3565,9 @@ H	editpad.org	-	LmlubGluQURz
 H	editpad.org	-	LnRvcF9hZF9ib3g
 H	editpad.org	-	bGFiZWxbc3R5bGU9ImZvbnQtc2l6ZTogMTJweDt0ZXh0LXRyYW5zZm9ybTogdXBwZXJjYXNlOyJd
 H	edmontonjournal.com	-	LmZlYXR1cmVkLXZpZGVv
+H	edmontonjournal.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	edmontonsun.com	-	LmZlYXR1cmVkLXZpZGVv
+H	edmontonsun.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	edn.com	-	I2N1c3RvbV9odG1sLTM
 H	edn.com	-	I2N1c3RvbV9odG1sLTU
 H	edn.com	-	I2Zvb3RlckFkV3JhcA
@@ -3527,8 +3617,11 @@ H	elektroda.com	-	ZGl2W2lkXTpoYXMoPiAudGV4dC1jZW50ZXIgPiBkaXZbaWRePSJkaXYtZ3B0LW
 H	elektroda.com	-	c2VjdGlvbltjbGFzc106aGFzKD4gLnRleHQtY2VudGVyID4gZGl2W2lkXj0iZGl2LWdwdC1hZC0iXSA-IHNjcmlwdDpvbmx5LWNoaWxkKQ
 H	elektroda.de	-	ZGl2W2lkXTpoYXMoPiAudGV4dC1jZW50ZXIgPiBkaXZbaWRePSJkaXYtZ3B0LWFkLSJdID4gc2NyaXB0Om9ubHktY2hpbGQp
 H	elektroda.de	-	c2VjdGlvbltjbGFzc106aGFzKD4gLnRleHQtY2VudGVyID4gZGl2W2lkXj0iZGl2LWdwdC1hZC0iXSA-IHNjcmlwdDpvbmx5LWNoaWxkKQ
-H	elektroda.pl	-	ZGl2W2NsYXNzPSJjb2wtbGctNCBjb2wtbWQtMTIgbm8tcGFkZCJdOmhhcyg-IFtpZF06b25seS1jaGlsZCA-IGRpdltzdHlsZV49ImhlaWdodDogIl0gPiBkaXYgKyBmb3JtW2FjdGlvbl1bbWV0aG9kPSJnZXQiXVtvbnN1Ym1pdF0p
 H	elektroda.pl	-	ZGl2W2lkXTpoYXMoPiAudGV4dC1jZW50ZXIgPiBkaXZbaWRePSJkaXYtZ3B0LWFkLSJdID4gc2NyaXB0Om9ubHktY2hpbGQp
+H	elektroda.pl	-	c2VjdGlvbltjbGFzc106aGFzKD4gLnRleHQtY2VudGVyID4gZGl2W2lkXj0iZGl2LWdwdC1hZC0iXSA-IHNjcmlwdDpvbmx5LWNoaWxkKQ
+H	elektrotanya.com	-	I2FkLWhlYWRlcjM
+H	elektrotanya.com	-	I2FkLWhlYWRlcjQ
+H	elektrotanya.com	-	LmFkX2tvbnRlbmVy
 H	elitepvpers.com	-	W2hyZWY9Imh0dHBzOi8vc2t5cmVkaXJlY3QxLmNvbS8iXQ
 H	elitepvpers.com	-	W2hyZWY9Imh0dHBzOi8vd3d3LnNreWNoZWF0cy5jb20vIl0
 H	elitepvpers.com	-	W2hyZWZePSJodHRwczovL2Z1bnBheS5jb20vIl0
@@ -3549,9 +3642,10 @@ H	elperiodicoextremadura.com	-	LnBvcHVwLWxvY2F0aW9u
 H	elperiodicomediterraneo.com	-	LnBvcHVwLWxvY2F0aW9u
 H	eltiempo.es	-	LmNscy1wdWJsaS1oZWlnaHQtY2l0eQ
 H	emailnator.com	-	LnBvc2l0aW9uLXJlbGF0aXZlIHRyOmhhcyhhW2hyZWY9Imh0dHBzOi8vdG9vbHMtYWkub25saW5lIl0p
+H	emailnator.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	emailregex.com	-	LmFkc2J5Z29vZ2xl
-H	embed.nana2play.com	-	LmNsaWNrX2Jsb2Nr
 H	embed.smashystream.com	-	I2FkZGl2
+H	embedorigin.cc	-	Lmp3LXdyYXBwZXIgfiBkaXZbc3R5bGUqPSJ6LWluZGV4OiJdOm5vdChbY2xhc3NdKQ
 H	embedsports.me	-	LmJnLWRhcmsucG9zaXRpb24tYWJzb2x1dGU
 H	embedstream.me	-	LmJnLWRhcmsucG9zaXRpb24tYWJzb2x1dGU
 H	embedv.net	-	Ym9keSA-IGRpdltjbGFzc106ZW1wdHk
@@ -3576,6 +3670,7 @@ H	emulatorgames.net	-	W2NsYXNzKj0iLWxhYmVsIl0
 H	encoretvb.com	-	I3NxdWFyZS1hZC0x
 H	encurtandourl.com	-	LmJhbm5lcg
 H	enjoyfuck.com	-	LmFkdmlu
+H	enmods.com	-	LmVubW9kcy1hZC1zbG90
 H	enryumanga.com	-	I2Zsb2F0Y2VudGVy
 H	entapark.jp	-	ZGl2W2lkJD0iLXBpY2t1cCJdW3N0eWxlXj0iaGVpZ2h0Il0
 H	enternity.gr	-	LmFkXzAy
@@ -3661,6 +3756,7 @@ H	f1livegp.net	-	I2Jsb2NrYmxvY2tB
 H	f75s.com	-	Ym9keS52aWRlby1lbWJlZC1tb2RlID4gZGl2W2NsYXNzXVtzdHlsZV06bm90KCNyb290KQ
 H	f95zone.to.it	-	LmFkLWRvd25sb2Fk
 H	faanproj.com	-	Lmdtci1iYW5uZXJwb3B1cA
+H	facebook.com	-	I3JpZ2h0X3JhaWxfY29udGFpbmVyIGRpdltkYXRhLXZpc3VhbGNvbXBsZXRpb25dOmhhcyhkaXZbZGF0YS12aXN1YWxjb21wbGV0aW9uXSBhW3RhcmdldD0icmhjYWQyIl0p
 H	facebook.com	-	I3N0cmVhbV9wYWdlbGV0IFtpZF49Imh5cGVyZmVlZF9zdG9yeV9pZF8iXTpoYXMoc3Bhbi5fNGRjdSk
 H	facebook.com	-	I3N0cmVhbV9wYWdlbGV0IGRpdltpZF49Imh5cGVyZmVlZF9zdG9yeV9pZF8iXTpoYXMoYS51aVN0cmVhbVNwb25zb3JlZExpbmsp
 H	facebook.com	-	LmVnb19jb2x1bW46aGFzKGFbaHJlZl49Ii9jYW1wYWlnbi9sYW5kaW5nIl0p
@@ -3670,6 +3766,7 @@ H	facebook.com	-	LmVnb19zZWN0aW9uOmhhcyhhW2hyZWZePSIvYWRfY2FtcGFpZ24iXSk
 H	facebook.com	-	LnVzZXJDb250ZW50V3JhcHBlcjpoYXMoYVtocmVmKj0iL2Fkcy8iXSk6bm90KDpoYXMoYVtocmVmKj0iL2Fkcy9wcmVmZXJlbmNlcyJdKSk
 H	facebook.com	-	ZGl2W3JvbGU9ImNvbXBsZW1lbnRhcnkiXSBkaXY6bm90KFtjbGFzc10pOm5vdChbaWRdKSA-IHNwYW46bm90KFtjbGFzc10pOm5vdChbaWRdKTpub3QoW2FyaWEtbGFiZWxsZWRieV0p
 H	facebook.com	-	ZGl2W3JvbGU9InJlZ2lvbiJdICsgZGl2W3JvbGU9Im1haW4iXSBkaXZbcm9sZT0iYXJ0aWNsZSJdIGRpdltzdHlsZT0iYm9yZGVyLXJhZGl1czogbWF4KDBweCwgbWluKDhweCwgKCgxMDB2dyAtIDRweCkgLSAxMDAlKSAqIDk5OTkpKSAvIDhweDsiXSA-IGRpdltjbGFzc106bm90KFtjbGFzcyo9IiAiXSk
+H	facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion	-	I3JpZ2h0X3JhaWxfY29udGFpbmVyIGRpdltkYXRhLXZpc3VhbGNvbXBsZXRpb25dOmhhcyhkaXZbZGF0YS12aXN1YWxjb21wbGV0aW9uXSBhW3RhcmdldD0icmhjYWQyIl0p
 H	facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion	-	I3N0cmVhbV9wYWdlbGV0IFtpZF49Imh5cGVyZmVlZF9zdG9yeV9pZF8iXTpoYXMoc3Bhbi5fNGRjdSk
 H	facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion	-	I3N0cmVhbV9wYWdlbGV0IGRpdltpZF49Imh5cGVyZmVlZF9zdG9yeV9pZF8iXTpoYXMoYS51aVN0cmVhbVNwb25zb3JlZExpbmsp
 H	facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion	-	LmVnb19jb2x1bW46aGFzKGFbaHJlZl49Ii9jYW1wYWlnbi9sYW5kaW5nIl0p
@@ -3691,6 +3788,8 @@ H	fakazahouse.com	-	W2hyZWYqPSIvL2JpdC5seS8iXSwgW2hyZWYqPSIvL3RoYXVkcmF5LmNvbS8i
 H	fakazamusic.co	-	W2hyZWYqPSIvL2JpdC5seS8iXSwgW2hyZWYqPSIvL3RoYXVkcmF5LmNvbS8iXSwgW2hyZWYqPSIvL3RpbmtlcndpZHRoLmNvbS8iXQ
 H	fakazavibes.com	-	YVtkYXRhLXdwZWwtbGluaz0iZXh0ZXJuYWwiXSA-ICo
 H	fakingszoo.com	-	W2hyZWZePSJodHRwczovL3d3dy5za3lwZWlzIl0
+H	fakt.pl	-	LnBsYWNlaG9sZGVy
+H	fakt.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	falatron.com	-	LmNvbnNlbnQ
 H	famfonts.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	family-fuck.net	-	LnBsaW5r
@@ -3728,6 +3827,8 @@ H	fapeza.com	-	LmF6el9pZnJhbWU
 H	fapguru.com	-	LnVuZGVycGxheWVyX2Jhbm5lcg
 H	fapnado.*	-	LnBhdXNlLWFkLXB1bGx1cA
 H	fapnado.*	-	W2NsYXNzXj0ienBvdCJd
+H	fapnut.net	-	LnJ0c2Mtc3BvbnNvcmVkLWNhcmQ
+H	fapnut.net	-	W2hyZWY9Imh0dHBzOi8vdGhlcG9ybmR1ZGUuY29tLyJd
 H	fapomania.com	-	Lm1lbnVyYWR1bzI
 H	faptitans.com	-	LmNyb3NzLXByb21vLWJucg
 H	faqwiki.us	-	LnJld2FyZGVkLWFkLWNhcmQ
@@ -3797,6 +3898,7 @@ H	fileplanet.com	-	LnRycy1hZGVy
 H	fileplanet.com	-	YVtocmVmXj0iaHR0cHM6Ly91cmwudG90YWxhZGJsb2NrLmNvbS8iXQ
 H	filerice.com	-	LmFkcw
 H	filerox.com	-	Lm1oaWRl
+H	fileroy.com	-	ZGl2LmZyLWdhdGUtYWQ
 H	filespayout.com	-	I25vcm1hbC1ib3g
 H	filespayout.com	-	Y2VudGVyID4gYVtyZWxd
 H	filespayouts.com	-	I25vcm1hbC1ib3g
@@ -3845,7 +3947,7 @@ H	financefernly.com	-	cCwgbGksIHVsLCBvbCwgaDIsIGgz
 H	financemonk.net	-	I2RncHJvbW8
 H	financemonk.net	-	LmRvd25sb2FkUGFnZS5wYWdlLnB0LTUuY29udGFpbmVyID4gY2VudGVyOmhhcyhbc3JjPSJodHRwczovL2Fzc2V0cy5maW5hbmNlbW9uay5uZXQvaW1hZ2VzL2RncHJvbW8uanBnIl0p
 H	financemonk.net	-	W2lkKj0iZ3B0LSJd
-H	financewada.com	-	LnByb2Nlc3MsIC50eHRfdG9w
+H	financialpost.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	finanzas-vida.com	-	W2hyZWY9Imh0dHBzOi8venBsYXllci5saXZlLyJd
 H	finanzen.net	-	LmJhY2tncm91bmQtY29sb3ItaW5mbzpoYXMoLmFkLWhpbnQp
 H	finanzen.net	-	LmVkZ2U6aGFzKD4gLmFkLWhpbnQp
@@ -3880,6 +3982,8 @@ H	flsaudio.com	-	LmFsdHVtY29kZS1jb3Vwb24tY29udGVudA
 H	flvto.com.co	-	LmFkZC1ibG9jaw
 H	flycutlink.com	-	LmJveC1tYWluID4gLmJsb2ctaXRlbSwgLnRleHQtbGVmdA
 H	flyplayer.xyz	-	LnBwcHg
+H	fmkorea.com	-	aW5zLmFkc2J5Z29vZ2xlW2RhdGEtYWQtY2xpZW50XQ
+H	fmkorea.com	-	aW5zLmFkc2J5Z29vZ2xlW2RhdGEtYWQtc2xvdF0
 H	fmovies.*	-	I2dpZnQtbWlkZGxl
 H	fmovies.*	-	I2dpZnQtdG9w
 H	fmovies.*	-	I21vZGFsc2hhcmU
@@ -3891,6 +3995,8 @@ H	food.ndtv.com	-	LmFkcw
 H	food.ndtv.com	-	Lm92ZXJsYXlfX3NpZGUtbmF2
 H	foodupe.com	-	I2RvYWQsLmxvY2tlZC1hY3Rpb24tbGluaw
 H	football-highlight.com	-	aW5zLmFkc2J5Z29vZ2xl
+H	forbes.pl	-	LnBsYWNlaG9sZGVy
+H	forbes.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	forexfactory.com	-	LmFkYml0
 H	forexwikitrading.com	-	W2hyZWZePSJodHRwczovL2Zicy5wYXJ0bmVycyJd
 H	forexwikitrading.com	-	W2hyZWZePSJodHRwczovL2ZvcmV4d2lraXRyYWRpbmcuY29tL2dvLyJd
@@ -3920,6 +4026,7 @@ H	forums.lostmediawiki.com	-	I3JlbW92ZV9hZHNfbGluaw
 H	forums.lostmediawiki.com	-	W2lkXj0iYWQtIl0
 H	forums.redflagdeals.com	-	LmFkX2xlYWRlcmJvYXJkX2xhcmdl
 H	forums.redflagdeals.com	-	LnNwb25zb3JlZC1vZmZlcg
+H	fotoblogia.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	fotoblogia.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	fotoblogia.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	fotoblogia.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -3949,7 +4056,12 @@ H	freebnbcoin.com	-	LmFkc2ZsZXg
 H	freechoice.co.za	-	LmNvbnZlcnQtaWZyYW1lID4gY2VudGVyID4gYVtocmVmXVt0YXJnZXQ9Il9ibGFuayJd
 H	freecoursesites.com	-	LmhlcmFsZF9hZHNlbnNlX3dpZGdldA
 H	freecourseweb.com	-	aW5zLmFkc2J5Z29vZ2xl
-H	freeforums.net	-	W2lkXj0iYWQtIl0sICNyZW1vdmVfYWRzX2xpbms
+H	freeforums.net	-	I2FkMQ
+H	freeforums.net	-	I3JlbW92ZV9hZHNfbGluaw
+H	freeforums.net	-	I3dyYXBwZXIgPiBkaXZbc3R5bGVdOmhhcyg-IGRpdltpZF49IkZyZWVGb3J1bXNfbmV0XyJdKQ
+H	freeforums.net	-	LmNvbnRlbnQgPiB0YWJsZS5saXN0ID4gdGJvZHkgPiB0cltzdHlsZV06bm90KFtpZF0pOm5vdChbY2xhc3NdKQ
+H	freeforums.net	-	W2lkXj0iYWQtIl0
+H	freeforums.net	-	ZGl2W2lkXj0iRnJlZUZvcnVtc19uZXRfSW5UaHJlYWQiXQ
 H	freehdinterracialporn.in	-	Lm15LWFk
 H	freemagazines.top	-	LndpZGdldDpoYXMoPiAuYWRzYnlnb29nbGUp
 H	freeopenvpn.org	-	Lmlwc3BlZWQ
@@ -4011,6 +4123,9 @@ H	frkn64modding.com	-	LmV6b2ljLWFk
 H	frprn.com	-	LmZvb3Rlci1zcG90
 H	frprn.com	-	LnNwb3Q
 H	frustfrei-lernen.de	-	Lm5vQ29udGVudEJhbm5lckFyZWE
+H	fsicomics.com	-	W2hyZWY9Ii9naXJsZnJpZW5kLWV4cGVyaWVuY2UiXQ
+H	fsicomics.com	-	W2hyZWY9Imh0dHBzOi8vdGhlcG9ybmR1ZGUuY29tLyJd
+H	fsicomics.com	-	W2hyZWZePSJodHRwczovL3d3dy5lNnVpOHBjLmNvbS8iXQ
 H	fstream365.com	-	I29sLWFkcw
 H	fstream365.com	-	I292ZXJsYXktYWRz
 H	ft.com	-	Lm1vZC1oZWFkZXItYWQ
@@ -4063,6 +4178,7 @@ H	fullxh.com	-	ZGl2W2RhdGEtcm9sZT0icHJvbW8tbWVzc2FnZXMtd3JhcHBlciJd
 H	funnyand.com	-	LmFkLXVuaXQtZGVza3RvcA
 H	fuqer.com	-	LnJpZ2h0ID4gLnRleHQ
 H	fusevideo.net	-	YVtocmVmXVt0YXJnZXQ9Il9ibGFuayJd
+H	futbin.com	-	LmFkLWNvbnRhaW5lcg
 H	fux.com	-	LmF1dG9uZXh0QWQ
 H	fwcdn.pl	-	I2NsaWNrQXJlYQ
 H	fwcdn.pl	-	I2xpbmstY29udGFpbmVyLWFsbA
@@ -4082,6 +4198,7 @@ H	g-streaming.com	-	LnBvcHVwLW92ZXJsYXk
 H	g3g.*	-	LnRleHQtY2VudGVyLmFsZXJ0LWRhbmdlci5hbGVydC1kaXNtaXNzaWJsZS5hbGVydA
 H	g9r6.com	-	Ym9keS52aWRlby1lbWJlZC1tb2RlID4gZGl2W2NsYXNzXVtzdHlsZV06bm90KCNyb290KQ
 H	gadgetguideonline.com	-	LmFpLXRyYWNr
+H	gadzetomania.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	gadzetomania.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	gadzetomania.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	gadzetomania.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -4213,8 +4330,16 @@ H	gamezizo.com	-	I2lmcmFtZV9pZA
 H	gamezizo.com	-	W2lkXj0iYWQiXQ
 H	gamezop.com	-	W2RhdGEtbmF0aXZlLWFkXQ
 H	gamingbible.co.uk	-	LmNzcy0xZGdtMHppLUFkdmVydA
+H	gamingmode.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	gamingvital.com	-	I3RkaV8xMzI
 H	gananoquereporter.com	-	LmZlYXR1cmVkLXZpZGVv
+H	garaz.cz	-	Lm1vbC1hZHZlcnRfX2FkLWluZm8tcGFyYWdyYXBo
+H	garaz.cz	-	Lm9nbS1hZHZlcnQtcmVjdGFuZ2xlLWluc2NyZWVu
+H	garaz.cz	-	Lm9nbS1icmFuZGluZy1hZHZlcnQgKyBkaXZbY2xhc3NdOmVtcHR5
+H	garaz.cz	-	Lm9nbS1zZXpuYW0tcmVjb21tZW5kcw
+H	garaz.cz	-	LnBsYWNlaG9sZGVyLXdyYXBwZXI
+H	garaz.cz	-	ZGl2W2RhdGEtYWR2ZXJ0XQ
+H	garaz.cz	-	aGVhZGVyW2RhdGEtZG90PSJ0cGwtbWFpbkhlYWRlciJdIH4gZGl2OmhhcyhzZWN0aW9uW2RhdGEtZG90PSJ0cGwtYm90dG9tQ29udGVudCJdKQ
 H	garrysmods.org	-	LmJsb2NrZXIuanF1ZXJ5LW1vZGFs
 H	gastroepato.it	-	aW5zLmFkc2J5Z29vZ2xl
 H	gatevidyalay.com	-	aW5zLmFkc2J5Z29vZ2xl
@@ -4240,6 +4365,7 @@ H	gdr-online.com	-	LmFkdl9iYXJyYV9hbHRv
 H	geinoukame.com	-	Lm5pbmphLXJlY29tbWVuZC1ibG9jayArIGJy
 H	geinoukame.com	-	Lm5pbmphLXJlY29tbWVuZC1ibG9jayArIGhy
 H	gendai.media	-	LmVsZW1lbnRTZWN0aW9uSGVhZGluZ3NXaXRoU3VmZml4OmhhcygrIGRpdltpZF49InRhYm9vbGEtYmVsb3ctYXJ0aWNsZS10aHVtYm5haWxzLWdlbmRhaV9iaXotZGVza3RvcCJdKQ
+H	genialne.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	genialne.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	genialne.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	genialne.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -4269,6 +4395,7 @@ H	getsexgames.com	-	LmNlbnRlciA-IHRhYmxlW2NlbGxzcGFjaW5nPSI1Il0gPiB0Ym9keSA-IHRy
 H	getsexgames.com	-	Lm1lbnVBZmY
 H	getsexgames.com	-	Lm1lbnVQb2ludFBpYw
 H	gfx-station.com	-	LmFkLWNvbnRhaW5lcg
+H	gg.deals	-	LmZsYXNoLWNvbnRhaW5lci13cmFwcGVy
 H	gifans.com	-	ZGl2W2lkXj0id3BzYWZlLXdhaXQiXQ
 H	gifhq.com	-	LnVuaXF1ZS1iYW5uZXI
 H	giga.de	-	aW1nW3JlZmVycmVycG9saWN5PSJ1bnNhZmUtdXJsIl1bc3JjXj0iL2ltZy8iXVtzcmMkPSIuanBnIl0
@@ -4286,11 +4413,17 @@ H	gitlink.pro	-	LmFsdGVybmF0aXZlLWFk
 H	givee.club	-	LmRlZmluZXRlbHlub3RhbmFk
 H	givemeaporn.com	-	LkpvaW5DaGFubmVs
 H	givemeaporn.com	-	LnNvdXJjZXM
+H	gizguide.com	-	I2ZpeGVkYm94
+H	gizguide.com	-	I3NpZGViYXItd3JhcHBlciAud2lkZ2V0LkhUTUw6aGFzKGFbaHJlZl49Imh0dHBzOi8vYml0Lmx5LyJdKQ
+H	gizguide.com	-	LmZlYXR1cmVk
+H	gizguide.com	-	YVtocmVmXj0iaHR0cHM6Ly9iaXQubHkvIl0
 H	gizmodo.com	-	I3NwbGFzaHktYWQtY29udGFpbmVyLXRvcA
 H	gizmodo.com	-	YXJ0aWNsZS5wb3N0bGlzdF9faXRlbTpoYXMoLm1ldGFfX25ldHdvcmsp
 H	gjirafa.com	-	W2lkXj0iYW4taG9sZGVyIl0
 H	gjirafa.com	-	W2lkXj0iZ2pjIl0
+H	gkstreams.*	-	LmFkLWJhbm5lcg
 H	gleanster.com	-	I292ZXJsYXk
+H	gledaitv.*	-	LmFkc2J5Z29vZ2xl
 H	gledajcrtace.xyz	-	I0hUTUw4
 H	gledajcrtace.xyz	-	I2hlYWRlci13cmFwLXJla2xhbWE
 H	globalnews.ca	-	LmMtYWRfX2xhYmVs
@@ -4323,6 +4456,7 @@ H	gmx.*	-	Lm1haW4gW2RhdGEtYWNdOmVtcHR5
 H	go.fakta.id	-	cCwgbGksIHVsLCB0ZCwgdHIsIC5sYXp5bG9hZCwgW2lkXj0iaF8iXSwgI3RlYXNlcjI
 H	go.gociwidey.com	-	LnotMC5vdmVyZmxvdy1oaWRkZW4ucmVsYXRpdmUudy1mdWxsLnJvdW5kZWQtbGcudG8tXFtcIzA5NDhFQVxdLmZyb20tXFtcIzU1OTdGRlxdLmJnLWdyYWRpZW50LXRvLXIucC04Lm1pbi1oLVxbMTg5cHhcXQ
 H	go.gociwidey.com	-	W3NyYyo9ImJsb2dnZXIuZ29vZ2xldXNlcmNvbnRlbnQuY29tIl0
+H	go.gociwidey.com	-	bGksIG9sLCB1bCwgaDIsIGgzLCAuZW50cnktbWV0YSwgLmVudHJ5LXRpdGxl
 H	go.gociwidey.com	-	cA
 H	go.linkify.ru	-	LmJhbm5lcg
 H	go.linkify.ru	-	Lm92ZXJsYXk
@@ -4335,6 +4469,8 @@ H	gofile.download	-	LnBvcHVwLWJveC1hZHM
 H	gofile.download	-	LnZyLWFkdi11bml0
 H	goflix.sbs	-	LnRleHQtY2VudGVyLmJnLWluZm8
 H	goflix.sbs	-	ZGl2LmNvbC1tZC00Omhhcyg-IC5wYW5lbCA-IC5wYW5lbC1mb290ZXIgPiBhW2hyZWZePSIvZG93bmxvYWQtZmFzdC8iXSk
+H	gogatv.net	-	I292ZXJsYXk
+H	gogatv.net	-	LmxvYWRpbmctb3ZlcmxheSB-IGRpdltzdHlsZV49InBvc2l0aW9uOiByZWxhdGl2ZTsiXQ
 H	gogaytube.tv	-	LnZpZGVvanMtaGVybw
 H	gogo-miyagi.com	-	I2FkLW92ZXJsYXk
 H	gogoanime.*	-	LmFkeA
@@ -4347,6 +4483,7 @@ H	gomoviz.*	-	Lm1vYmlsZS1idG4
 H	gomoviz.*	-	Lm12aWMtYnRu
 H	gomoviz.*	-	ZGl2LmNvbnRlbnQta3Vzcw
 H	gooals.*	-	I21vLWFkcy1jbG9zZQ
+H	goodreads.com	-	LkFkc3BBZENvbnRhaW5lcg
 H	goodtoknow.co.uk	-	LmhlYWRlci1hZHZlcnQtd3JhcHBlcg
 H	google.com	-	LkQxZnowZQ
 H	googleads.g.doubleclick.net	-	I2FiZ2M
@@ -4367,6 +4504,7 @@ H	gosexpod.com	-	Y2VudGVy
 H	gotxx.*	-	ZGl2W2NsYXNzXVtzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsgY3Vyc29yOiBwb2ludGVyOyB6LWluZGV4OiAyMTQ3NDgzNjQ2Il0
 H	governing.com	-	LlBhZ2UtYm9keVtkYXRhLWhlYWRlci1oYXQ9InRydWUiXSAuUGFnZS1oZWFkZXItaGF0
 H	govtech.com	-	LkVuaGFuY2VtZW50OmhhcyguR29vZ2xlRGZwQWQp
+H	gowatchseries.net	-	I2d3LWFkLXJvb3Q
 H	gplinks.*	-	YS5leGNsdWRlLXBvcC5zbWFydGxpbmssIC5leGNsdWRlLXBvcC5xdWl6LWNvbnRhaW5lciwgI1BsYXlRdWl6LCAjcXVpei1mcmFtZSwgLmV4Y2x1ZGUtcG9wYWQ
 H	gpucheck.com	-	I3BsYWNlaG9sZGVyX3RvcF9taWRkbGU
 H	gpxgenerator.com	-	I2FkQmxvY2tEaXY
@@ -4391,6 +4529,9 @@ H	greybrucethisweek.ca	-	LmZlYXR1cmVkLXZpZGVv
 H	growgritly.com	-	cCwgbGksIHVsLCBvbCwgaDIsIGgz
 H	gsm-solution.com	-	I2FkYmxvY2stYmxvY2tlci1vdmVybGF5
 H	gsm-solution.com	-	LnBvcFNj
+H	gsmarena.com	-	I29wdDMwMHgyNTA
+H	gsmarena.com	-	LmFkLWxhYmVs
+H	gsmarena.com	-	ZGl2LmFsaWduLWNlbnRlci5qdXN0aWZ5LWNlbnRlci5mbGV4LWNvbHVtbi5kLWZsZXg6aGFzKC5hZC1jLWxhYmVsKQ
 H	gsmware.com	-	LmFkdGVzdGVyLWNvbnRhaW5lcg
 H	gsmware.com	-	LmthYmFyYWRk
 H	gtxgamer.fr	-	I2N1c3RvbV9odG1sLTU
@@ -4443,6 +4584,7 @@ H	hardgif.com	-	LnVuaXF1ZS1iYW5uZXI
 H	hardwarezone.com.sg	-	I3Nwb25zb3JlZC1saW5rcy1hbHQ
 H	hardwarezone.com.sg	-	LmFk
 H	hardwarezone.com.sg	-	Lmh3ei1hZC1vdXRzdHJlYW0
+H	harpersbazaar.com	-	ZGl2W2FyaWEtbGFiZWxsZWRieT0icmVjaXJjLWhlYWRpbmciXQ
 H	harshfaucet.com	-	LmFkcw
 H	hastingsobserver.co.uk	-	LmxlYWRlcmJvYXJkLWFk
 H	hatecoin.me	-	I3djZmxvYXREaXY0
@@ -4623,7 +4765,6 @@ H	hindustantimes.com	-	ZGl2W2lkXj0iZGl2LWdwdC1hZCJd
 H	hints.littlealchemy2.com	-	I3liX2FuY2hvcl93cmFwcGVy
 H	hiraethtranslation.com	-	LmMtc2lkZWJhcg
 H	hispajotes.com	-	W2hyZWZePSJodHRwczovL3d3dy5za3lwZWlzIl0
-H	historicaerials.com	-	LmJvcmRlci1ib3R0b20uY29udGFpbmVyOmhhcygjaGlzdG9yaWNhZXJpYWxzXzcyOHg5MF9BVEYp
 H	history.com	-	YXNpZGU6aGFzKFtjbGFzcyo9Ii1hZC0iXSk
 H	history.com	-	ZGl2W2NsYXNzXj0iQ29tcG9uZW50LWFkQnJlYWstIl0
 H	hitbdsm.com	-	W2hyZWYqPSJhZmZfYWQiXQ
@@ -4635,7 +4776,6 @@ H	hltv.org	-	YVtjbGFzcyo9Im9kZHMiXQ
 H	hltv.org	-	YVtocmVmXj0iL21hdGNoZXMvIl1baHJlZio9In4iXTpoYXMoZGl2LGltZyk
 H	hltv.org	-	YVtocmVmXj0iL21hdGNoZXMvIl1baHJlZio9In4iXVtjbGFzcyo9ImN0YSJpXQ
 H	hm4tech.info	-	LnBvcFNj
-H	hobby-machinist.com	-	LnNhbUNvZGVVbml0
 H	hochi.news	-	I29odGFuaS1waWNrdXA
 H	hog.*	-	LmNvbnRlbnRfX2luZm8tLXZpcw
 H	hog.*	-	LmNvbnRlbnRfX3RvcA
@@ -4644,6 +4784,8 @@ H	hog.*	-	LnBsYXllci1ibG9ja19fc3F1YXJl
 H	hog.*	-	LnBsYXllcl9fbGluZQ
 H	hog.*	-	LnBsYXllcl9fc2lkZQ
 H	hog.*	-	LnJlbGF0ZWQtdmlldyA-IGRpdi50aXRsZS0tc20
+H	hogtiehub.com	-	LmFkLWJvdHRvbS1ncmlk
+H	hogtiehub.com	-	LmFkLXRvcC1zaGVsbA
 H	hollywoodpq.com	-	ZGl2Lm9ib3hhZHM
 H	home-made-videos.com	-	I2RjbG1fbW9kYWxfY29udGVudA
 H	home-made-videos.com	-	I2RjbG1fbW9kYWxfc2NyZWVu
@@ -4747,6 +4889,7 @@ H	idnes.cz	-	LnNfd2lkZXNxdWFyZTpoYXMoPiBkaXYgPiAjd2lkZXNxdWFyZSA-IGFbcmVsPSJzcG9
 H	idnes.cz	-	YVtocmVmXj0iaHR0cHM6Ly9zZXJ2aXguaWRuZXMuY3ovZGF0YS5hc3B4PyJd
 H	idnes.cz	-	ZGl2W2lkXS5wbGEtbmV0ID4gZGl2ID4gc3BhbjplbXB0eQ
 H	idnes.cz	-	ZGl2W2lkXj0iZml4LWJsb2NrLSJd
+H	igay69.com	-	LnVubG9jay1ib3g
 H	igay69.com	-	W2hyZWZePSJodHRwczovL3d3dy5nY2x1Yi1jYXNpbm8uY29tL2RhaWx5LXJlbG9hZC1ib251czUvIl0
 H	igg-games.com	-	I3RtLXNpZGViYXIgPiBkaXY6bm90KFtjbGFzc10sIFtpZF0pOmhhcyhhW3JlbF0gPiBpbWdbc3JjXj0iaHR0cHM6Ly9pZ2ctZ2FtZXMuY29tL3dwLWNvbnRlbnQvdXBsb2Fkcy8iXSk
 H	igg-games.com	-	LnVrLW1hcmdpbi1tZWRpdW0tdG9wID4gKjpmaXJzdC1jaGlsZCArIGE6aGFzKGltZ1tzcmNePSJodHRwczovL2lnZy1nYW1lcy5jb20vd3AtY29udGVudC91cGxvYWRzLyJdKQ
@@ -4758,6 +4901,15 @@ H	igg-games.com	-	YVtocmVmXj0iaHR0cHM6Ly9pZ2ctZ2FtZXMuY29tLyJdW2hyZWYqPSJmbGl4Il
 H	igg-games.com	-	YXJ0aWNsZSA-IGE6aGFzKGltZ1tsb2FkaW5nPSJsYXp5Il1bd2lkdGhdW2hlaWdodF0p
 H	igg-games.com	-	YXNpZGUgPiA6bm90KDpmaXJzdC1jaGlsZCkgYVtocmVmXSBpbWc
 H	ign.com	-	I2tpbmc
+H	igorslab.de	-	LmhlcmFsZC1zdGlja3k
+H	igorslab.de	-	W3N0eWxlKj0iIWltcG9ydGFudCJd
+H	igorslab.de	-	W3N0eWxlKj0iYXNwZWN0LXJhdGlvIl0
+H	igorslab.de	-	W3N0eWxlKj0iYmFja2dyb3VuZC1pbWFnZTp1cmwiXQ
+H	igorslab.de	-	YVthcmlhLWxhYmVsKj0iQmFubmVyIl0
+H	igorslab.de	-	YVtyZWxdW3RhcmdldF06bm90KFt0YXJnZXQ9ImJsYW5rIl0sW3RhcmdldD0iX2JsYW5rIl0p
+H	igorslab.de	-	ZGl2W3N0eWxlPSJoZWlnaHQ6IDkwIHB4OyB0ZXh0LWFsaWduOiBsZWZ0OyJd
+H	igorslab.de	-	ZGl2W3N0eWxlXj0iZGlzcGxheTpibG9jaztwb3NpdGlvbjpyZWxhdGl2ZTttYXgtd2lkdGg6Il0
+H	igorslab.de	-	aW1nW3NyY149ImJsb2I6aHR0cCJd
 H	iimanga.com	-	ZGl2W2lkXj0idGVhc2VyIl0
 H	iir.ai	-	I2xpbmstdmlldyA-IGRpdltzdHlsZV0gKyBwW3N0eWxlXSArIGNlbnRlciA-IFtocmVmXVt0YXJnZXRd
 H	iir.ai	-	LmJveC1tYWluID4gYVtocmVmXVt0YXJnZXRd
@@ -4968,7 +5120,6 @@ H	indiatoday.in	-	LmFkX2JuLnJvdw
 H	indojavstream.com	-	LmJveF9pdGVtX2Fkc19wb3B1cA
 H	inews.co.uk	-	LnRoYW5rcy0zeHNXcg
 H	info-desk.co.za	-	aW5zLmFkc2J5Z29vZ2xl
-H	infomatricula.pt	-	LmNvbnRhaW5lcjpoYXMoLmFkc2J5Z29vZ2xlKQ
 H	informacion.es	-	LnBvcHVwLWxvY2F0aW9u
 H	informer.com	-	LnNjcmVlbl9hZA
 H	ingles.com	-	I2FkVG9wTGFyZ2UtY29udGFpbmVy
@@ -4992,6 +5143,8 @@ H	insider.com	-	LmluLXBvc3Qtc3RpY2t5Omhhcyg-IC5hZC13cmFwcGVyKQ
 H	intelligencer.ca	-	LmZlYXR1cmVkLXZpZGVv
 H	interactivemap.app	-	I3N0cmVhbWVycw
 H	interactivemap.app	-	LmZvb3Rlcg
+H	intercelestial.com	-	LnJpZ2h0LXNpZGViYXIucGVuY2lfc2lkZWJhci5jb250YWluZXIsLnBlbmNpLWhvbWUtcG9wdWxhci1wb3N0cy5jb250YWluZXIscCx1bCxsaSxbaHJlZio9InMwLWdyZWF0ZSJdLCNzaWRlYmFyLC5wb3N0LXBhZ2luYXRpb24sLnNpbmdsZS1icmVhZGNydW1iLnBlbmNpLWJyZWFkY3J1bWIuY29udGFpbmVyLC5wZW5jaS1tb3ZlLXRpdGxlLWFib3ZlLnBvc3QtaW1hZ2UsI2Zvb3Rlci1zZWN0aW9uLCAucG9zdC1yZWxhdGVkLCAjY29tbWVudHMsIC5wb3N0LXNoYXJlLnRhZ3Mtc2hhcmUtYm94LCAuYWxpZ25sZWZ0LndwLWNhcHRpb24
+H	intercelestial.com	-	ZGl2OmhhcyhhW2hyZWYqPSJhbnRpYWRibG9ja2NvcmUuY29tIl0p
 H	internetretailing.com.au	-	LnRleHR3aWRnZXQ6aGFzKD4gZGl2ID4gZGl2W2lkXj0iSVJOX0hvbWVwYWdlXzMwMHgyNTAiXSk
 H	interracial.com	-	W3NyY149Imh0dHBzOi8vd3d3LmludGVycmFjaWFsLmNvbS9wbGF5ZXIvaHRtbC5waHAiXQ
 H	intoday.in	-	I2FkYm9ja2VyX2FsdA
@@ -5061,8 +5214,11 @@ H	jacquieetmicheltv2.net	-	LmNvbnRlbnRzLWxpc3QtLXplZGVyLWRldGFpbC1taWRkbGUtMg
 H	jacquieetmicheltv2.net	-	LmNvbnRlbnRzLWxpc3QtLXplZGVyLWhvbWVfdG9w
 H	jacquieetmicheltv2.net	-	Lm1haW5fX3NlY3Rpb24tLXN3YW1l
 H	jagran.com	-	LmFkcw
+H	jakdojade.pl	-	LnBsYWNlaG9sZGVy
+H	jakdojade.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	jalopnik.com	-	I3NwbGFzaHktYWQtY29udGFpbmVyLXRvcA
 H	jalopnik.com	-	YXJ0aWNsZS5wb3N0bGlzdF9faXRlbTpoYXMoLm1ldGFfX25ldHdvcmsp
+H	jastrzabpost.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	jastrzabpost.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	jastrzabpost.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	jastrzabpost.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -5139,7 +5295,6 @@ H	javtiful.com	-	W2hyZWZePSIvLyJdW3JlbD0ibm9mb2xsb3cgbm9yZWZmZXJlciBub29wZW5lciJ
 H	javtiful.com	-	Ym9keSA-IGRpdltzdHlsZSo9InotaW5kZXg6Il0
 H	javtrailers.com	-	I2N0YQ
 H	javtrailers.com	-	I3BvcHVuZGVyTGluaw
-H	javuncensored.watch	-	Lml0ZW1hZHM
 H	javxxx.me	-	I3BsYXllcl8zeDJfY29udGFpbmVyX2lubmVy
 H	javzh.com	-	I2N1c3RvbV9odG1sLTU
 H	javzh.com	-	I2lzTGF0ZXN0
@@ -5191,6 +5346,8 @@ H	jouer.fr	-	LmFkLXRpdGxlLW1lZ2FiYW4
 H	journaldemontreal.com	-	I2Jhbm5lcg
 H	journaldemontreal.com	-	LmJpZ2JveC1jb250YWluZXI
 H	jovemnerd.com.br	-	I2FkLXdhbGxwYXBlcg
+H	jpopsingles.eu	-	I3N0YXJ0IH4gZGl2W2FsaWduPSJjZW50ZXIiXQ
+H	jpopsingles.eu	-	LmNvZGUtYmxvY2s
 H	jpopsingles.eu	-	W3NyYz0iL2RkbC9kbC1nZXQucG5nIl0
 H	jpopsingles.eu	-	W3NyYz0iL2RkbC9kbC1saW5rLnBuZyJd
 H	jprime.jp	-	LmFkLW92ZXJsYXk
@@ -5207,11 +5364,17 @@ H	justlightnovels.com	-	LmFkc2J5dmxp
 H	justswallows.net	-	W2hyZWY9Imh0dHBzOi8vdC5tZS9SdXNzaWFfVnNfVWtyYWluZV9XYXIzIl0
 H	justswallows.net	-	YVtvbmNsaWNrPSJvcGVuQXVjKCk7Il0
 H	justwatch.com	-	LnZwbi1saW5r
+H	kaa.lt	-	I2Z1bGxzY3JlZW4tYWQtdHJhcA
+H	kaa.lt	-	I3ByZW1pdW0tc3dpcGV5LWJhcg
+H	kaa.lt	-	ZGl2W2NsYXNzXj0iY29sLSJdOmhhcyg-IC5zaG93LWl0ZW0gPiAubmF0aXZlLWFkLWNhcmQp
+H	kaa.lt	-	ZGl2W2NsYXNzXj0iY29sLSJdOmhhcyg-IC5zaG93LWl0ZW0gPiAubmF0aXZlLWFkLWNvdmVyKQ
 H	kachelmannwetter.com	-	I21ldGVvc2FmZQ
 H	kachelmannwetter.com	-	LmRrcHctYmlsbGJvYXJkLW1hcmdpbg
 H	kachelmannwetter.com	-	LmRrcHctYmlsbGJvYXJkLW1hcmdpbi1maXhlZA
 H	kachelmannwetter.com	-	Lmt3LWFkLXJpZ2h0
 H	kachelmannwetter.com	-	W2hyZWY9Imh0dHBzOi8vcGZsb3RzaC5jb20iXQ
+H	kaembed.net	-	Ym9keSA-IGltZ1tpZF0
+H	kafeteria.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	kafeteria.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	kafeteria.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	kafeteria.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -5293,6 +5456,7 @@ H	kickasskat.*	-	W3N0eWxlKj0iZGVjb3JhdGlvbiJdOm5vdChbc3R5bGVePSJ3aWR0aCJdKQ
 H	kickassminds.*	-	W3N0eWxlKj0iZGVjb3JhdGlvbiJdOm5vdChbc3R5bGVePSJ3aWR0aCJdKQ
 H	kickassmovies.*	-	W3N0eWxlKj0iZGVjb3JhdGlvbiJdOm5vdChbc3R5bGVePSJ3aWR0aCJdKQ
 H	kickasspk.*	-	W3N0eWxlKj0iZGVjb3JhdGlvbiJdOm5vdChbc3R5bGVePSJ3aWR0aCJdKQ
+H	kickasssubtitles.com	-	LmpzLWFwcC1leHRlcm5hbC5hcHAtZXh0ZXJuYWw6aGFzKCNiYW5uZXItcGxhY2Vob2xkZXIp
 H	kickasst.*	-	W2hyZWY9Ii9rLnBocD9xPXEiXQ
 H	kickasst.*	-	W3N0eWxlKj0iZGVjb3JhdGlvbiJdOm5vdChbc3R5bGVePSJ3aWR0aCJdKQ
 H	kickasstorrents.*	-	W2hyZWY9Ii9rLnBocD9xPXEiXQ
@@ -5340,7 +5504,6 @@ H	kissasian.*	-	ZGl2W3N0eWxlJD0id2lkdGg6IDYxMHB4OyJdOmhhcyguYWRzYnl2bGkp
 H	kisscos.net	-	W2lkJD0iLW92ZXJsYXkiXQ
 H	kisscos.net	-	c3BhbltpZCQ9InJlbGF0ZWQiXSA-IGRpdltpZF49ImNvbnRhaW5lci0iXQ
 H	kissinggames.com	-	LmFkLXRpdGxlLW1lZ2FiYW4
-H	kissjav.*	-	LmFzc2lkZS1saW5r
 H	kissmanga.*	-	I215TW9kYWw
 H	kissmaturestube.com	-	LmJsb2NrLWE
 H	kisstvshow.*	-	I2hpZGVBZHM
@@ -5358,8 +5521,19 @@ H	klz9.com	-	Y2VudGVyID4gY2VudGVyID4gYVt0YXJnZXQ9Il9ibGFuayJdW3JlbD0ibm9vcGVuZXI
 H	kmhd.net	-	LmVudHJ5LWNvbnRlbnQgPiBkaXZbY2xhc3NePSJjb2RlLWJsb2NrIl0gPiBoNFtjbGFzc11bc3R5bGVePSJ0ZXh0LWFsaWduOiBjZW50ZXI7Il0
 H	knowt.com	-	ZGl2W2NsYXNzXj0iYnJlYWtwb2ludHNfbWREb3duRGlzcGxheU5vbmUiXTpoYXMoI2tub3d0X3N0aWNreV9yaWdodHJhaWwp
 H	kobe-np.co.jp	-	c2VjdGlvbi5zZWM6aGFzKD4gI3BpYW5vX3JlY3NfaW5saW5lX3RpdGxlKQ
-H	kobietyhistorii.pl	-	I2JvdHRvbS1zdGlja3ktY29udGFpbmVy
+H	kobietyhistorii.pl	-	I2JvdHRvbS1zdGlja3ktY29udGFpbmVyID4gI3N0aWNreUVs
+H	kobietyhistorii.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBbY2xhc3NdOm9ubHktY2hpbGQgPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IFtjbGFzc10gPiAuaC0wOmVtcHR5ICsgc2NyaXB0Omxhc3QtY2hpbGQp
+H	kobietyhistorii.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IC5oLTA6ZW1wdHkgKyBzY3JpcHQ6bGFzdC1jaGlsZCk
+H	kobietyhistorii.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
+H	kobietypro.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
+H	kobietypro.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBbY2xhc3NdOm9ubHktY2hpbGQgPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IFtjbGFzc10gPiAuaC0wOmVtcHR5ICsgc2NyaXB0Omxhc3QtY2hpbGQp
+H	kobietypro.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IC5oLTA6ZW1wdHkgKyBzY3JpcHQ6bGFzdC1jaGlsZCk
+H	kociakolyska.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	kolagames.com	-	LnNsb3Q
+H	komonews.com	-	I2RlZXBlci1kaXZlLWNvbnRhaW5lci0w
+H	komonews.com	-	LlRhYm9vbGFIb21lcGFnZUZlZWRfdGFib29sYVdyYXBwZXJfX2R0cmR0
+H	komonews.com	-	W2RhdGEtc2xvdC1sYWJlbF49IkRpc3BsYXlBZCJd
+H	komorkomania.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	komorkomania.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	komorkomania.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	komorkomania.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -5368,6 +5542,8 @@ H	komorkomania.pl	www.wp.pl	ZGl2W2NsYXNzXSA-IGRpdjpub3QoW2NsYXNzXSwgW2lkXSk6b25s
 H	komorkomania.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXZbY2xhc3NdOmVtcHR5ICsgaW1nW3NyY149Imh0dHBzOi8vaS53cGltZy5wbC8iXSk
 H	komorkomania.pl	www.wp.pl	ZGl2W3N0eWxlPSJwb3NpdGlvbjogcmVsYXRpdmU7IHRvcDogMHB4OyJdOmhhcyg-IGFbdGFyZ2V0PSJfYmxhbmsiXSk
 H	kompas.id	-	LnJlbGF0aXZlOmhhcyg-IFtpZF49ImRpdi1ncHQtYWQiXSk
+H	komputerswiat.pl	-	LnBsYWNlaG9sZGVy
+H	komputerswiat.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	kontasas.gr	-	LnN0cmVhbS1pdGVt
 H	koramaup.com	-	W2hyZWZePSJodHRwOi8vdTg3eXVvOW9qaC53b3JsZC8iXQ
 H	koramaup.com	-	ZGl2ID4gY2VudGVyID4gYnV0dG9uW2NsYXNzXVtzdHlsZV0
@@ -5431,9 +5607,12 @@ H	lbprate.com	-	W2lkXj0iQWQiXQ
 H	lcpdfr.com	-	LmFkU3BhY2luZw
 H	lcpdfr.com	-	ZGl2Lmlwc01hcmdpbl9ib3R0b20uaXBzQXJlYUJhY2tncm91bmQuaXBzUGFkZGluZ1w6aGFsZg
 H	leaderpost.com	-	LmZlYXR1cmVkLXZpZGVv
+H	leaderpost.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	league-funny.com	-	W2lkXj0iZGl2LWdwdC1hZC0iXQ
 H	leagueofgraphs.com	-	LmFkYm94
 H	leak.sx	-	LnR3X2Zsb2F0X2Fkc19tYWluX1dyYXBfQm90aA
+H	leakgallery.com	-	YVtyZWx-PSJzcG9uc29yZWQiXQ
+H	leakgallery.com	-	YXBwLXBhZ2UtbGVhZA
 H	learn-cpp.org	-	I2dvb2dsZS1hZC1yaWdodCA-IGRpdi5tdC0z
 H	learn-cpp.org	-	YVtocmVmXj0iaHR0cHM6Ly9jb2Rpbmdmb3JraWRzLmlvIl0
 H	lebahmovie.com	-	LmlkbXV2aS10b3BiYW5uZXItYWZ0ZXJtZW51
@@ -5451,6 +5630,8 @@ H	leechpremium.link	-	LnJvdyA-IC5jb2wtbWQtMjpmaXJzdC1jaGlsZCA-IC5wcmljaW5nVGFibG
 H	leechpremium.link	-	W2lkKj0iU2NyaXB0Um9vdCJd
 H	leechpremium.link	-	aW5zLmFkc2J5Z29vZ2xl
 H	leechpremium.net	-	LmFkc2J5Z29vZ2xl
+H	lendi.pl	-	LnBsYWNlaG9sZGVy
+H	lendi.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	leonoticias.com	-	LnZvYy1hZHZlcnRpc2luZw
 H	lesbenhd.com	-	I3dhX2pvaW5fYnRu
 H	lesbenhd.com	-	LnZqcy1vdmVybGF5ZWQ
@@ -5497,6 +5678,7 @@ H	lewdzone.com	-	LmFsemQ
 H	lewdzone.com	-	Lml0ZW0ud2lkZ2V0X3RleHQ
 H	lewdzone.com	-	LnNpdGUtbWFyZ2luID4gLmNvbnRhaW5lci1ibG9jayBkaXY6aGFzKD4gLml0ZW0ud2lkZ2V0X3RleHQp
 H	lfpress.com	-	LmZlYXR1cmVkLXZpZGVv
+H	lfpress.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	lg-firmwares.com	-	LmNjLXdpbmRvdywgLmJ1eV9vbl9hbWF6b24sIC5wb3N0LWFkcw
 H	lgbtqnation.com	-	ZGl2LnNraW5cOmJnLXRyYW5zcGFyZW50LnB5LTguYmctZ3JheS0xMDA6aGFzKFtkYXRhLWFkYnJpZGctYWQtY2xhc3NdKQ
 H	lidovky.cz	-	I21haW4gPiB0YWJsZQ
@@ -5516,10 +5698,14 @@ H	limerickleader.ie	-	I2Ficl9wdXJjaGFzZV9kaXY
 H	limetorrents.*	-	W2hyZWZePSIvZmFzdC5waHAiXQ
 H	limetorrents.*	-	W2hyZWZePSJodHRwczovL2FmZmlsaWF0ZS5ydXN2cG4uY29tLyJd
 H	limetorrents.*	-	ZGl2Omhhcyg-IGRpdiA-IGFbaHJlZl49Ii9sZWV0Lz8iXSk
+H	linegee.net	-	LnJpZ2h0LXNpZGViYXIucGVuY2lfc2lkZWJhci5jb250YWluZXIsLnBlbmNpLWhvbWUtcG9wdWxhci1wb3N0cy5jb250YWluZXIscCx1bCxsaSxbaHJlZio9InMwLWdyZWF0ZSJdLCNzaWRlYmFyLC5wb3N0LXBhZ2luYXRpb24sLnNpbmdsZS1icmVhZGNydW1iLnBlbmNpLWJyZWFkY3J1bWIuY29udGFpbmVyLC5wZW5jaS1tb3ZlLXRpdGxlLWFib3ZlLnBvc3QtaW1hZ2UsI2Zvb3Rlci1zZWN0aW9uLCAucG9zdC1yZWxhdGVkLCAjY29tbWVudHMsIC5wb3N0LXNoYXJlLnRhZ3Mtc2hhcmUtYm94LCAuYWxpZ25sZWZ0LndwLWNhcHRpb24
+H	linegee.net	-	ZGl2OmhhcyhhW2hyZWYqPSJhbnRpYWRibG9ja2NvcmUuY29tIl0p
 H	linfoweb.com	-	aW5zLmFkc2J5Z29vZ2xlLXdyYXBwZXI
 H	link-to.net	-	LmFkLWJsb2NrLTE
 H	link.djbassking.live	-	LmZsdWlkcHJpbWFyeSwgI2dvX2QsIC5hZGJfZGV0ZWN0ZWQgPiBoMg
 H	link.paid4link.com	-	LmNhcmQ
+H	link.snipcash.com	-	LmJhbm5lcg
+H	link.snipcash.com	-	LnRleHQtbGVmdA
 H	link1s.*	-	I2Jhb2xpbmsxcw
 H	link1s.*	-	LmJhbm5lci1pbm5lcg
 H	link99.bid	-	I25pbmRvLXBvcHVwLXBvcnRhbA
@@ -5572,6 +5758,7 @@ H	livetv.moviebite.cc	-	ZGl2W2RhdGEtYWQtY29udGFpbmVyXQ
 H	livingincebuforums.com	-	W2RhdGEtYmxvY2tpZCo9IkFkc1dpZGdldCJd
 H	livingincebuforums.com	-	W2lkXj0ibmJBZFdpZGdldCJd
 H	lksfy.com	-	W2hyZWY9Imh0dHBzOi8vdGVsZWdyYW0ubWUvbGlua3Nob3J0aWZ5Il0gPiAuYnV0dG9uLWltYWdl
+H	lmaga.jp	-	LnJlY29tbWVuZA
 H	lmtonline.com	-	I21vZGFscw
 H	lne.es	-	LnBvcHVwLWxvY2F0aW9u
 H	lnk.news	-	LmNoaWxkLWNlbnRlcmVkLmRpc3BsYXktMzAweDI1MA
@@ -5579,10 +5766,27 @@ H	lnk.parts	-	LmNoaWxkLWNlbnRlcmVkLmRpc3BsYXktMzAweDI1MA
 H	loadout.tf	-	Ym9keSA-IGRpdjpzaGFkb3coZGl2KTpzaGFkb3coZGl2KTpoYXMoOnNoYWRvdyhkaXY6bm90KFtjbGFzc10pKTpoYXMoOnNoYWRvdyhpbnMuYWRzYnlnb29nbGVbZGF0YS1hZC1jbGllbnRdKSkp
 H	lofi-nopixel.com	-	LmZvbnQtc2VtaWJvbGQuaG92ZXJcOnVuZGVybGluZS50ZXh0LXByaW1hcnkuY3Vyc29yLXBvaW50ZXIuZ3JvdXAucC0wXC41LnRleHQteHMudGV4dC1jZW50ZXIuYmxvY2s
 H	lofi-nopixel.com	-	Lm5pdHJvLWFkLWNvbnRhaW5lcg
+H	lofi-nopixel.com	-	YXNpZGVbZGF0YS10ZXN0aWQ9ImFkLXJhaWwiXQ
+H	lofi-nopixel.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3IiXQ
+H	lofi-nopixel.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3Itc3BhY2VyIl0
+H	lofi-nopixel.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1pbi1mZWVkIl0
+H	lofi-onx.com	-	YXNpZGVbZGF0YS10ZXN0aWQ9ImFkLXJhaWwiXQ
+H	lofi-onx.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3IiXQ
+H	lofi-onx.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3Itc3BhY2VyIl0
+H	lofi-onx.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1pbi1mZWVkIl0
+H	lofi-prestige.com	-	YXNpZGVbZGF0YS10ZXN0aWQ9ImFkLXJhaWwiXQ
+H	lofi-prestige.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3IiXQ
+H	lofi-prestige.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3Itc3BhY2VyIl0
+H	lofi-prestige.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1pbi1mZWVkIl0
+H	lofi-prodigy.com	-	YXNpZGVbZGF0YS10ZXN0aWQ9ImFkLXJhaWwiXQ
+H	lofi-prodigy.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3IiXQ
+H	lofi-prodigy.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1hbmNob3Itc3BhY2VyIl0
+H	lofi-prodigy.com	-	ZGl2W2RhdGEtdGVzdGlkPSJhZC1pbi1mZWVkIl0
 H	logikfx.com	-	LndpeC1ibG9nLXByaW50LWluLWZ1bGwtd2lkdGhbZGF0YS10ZXN0aWQ9Im1lc2gtY29udGFpbmVyLWNvbnRlbnQiXSA-IGRpdltjbGFzc149Il8iXSA-IGRpdltzdHlsZT0icGFkZGluZy1sZWZ0OiAzMHB4OyJd
 H	logikfx.com	-	ZGl2W3N0eWxlPSJ3aWR0aDo3NDBweCJd
 H	lokerwfh.net	-	LnotMC5vdmVyZmxvdy1oaWRkZW4ucmVsYXRpdmUudy1mdWxsLnJvdW5kZWQtbGcudG8tXFtcIzA5NDhFQVxdLmZyb20tXFtcIzU1OTdGRlxdLmJnLWdyYWRpZW50LXRvLXIucC04Lm1pbi1oLVxbMTg5cHhcXQ
 H	lokerwfh.net	-	W3NyYyo9ImJsb2dnZXIuZ29vZ2xldXNlcmNvbnRlbnQuY29tIl0
+H	lokerwfh.net	-	bGksIG9sLCB1bCwgaDIsIGgzLCAuZW50cnktbWV0YSwgLmVudHJ5LXRpdGxl
 H	lokerwfh.net	-	cA
 H	lolhentai.net	-	LnNwb25zb3I
 H	lollty.pro	-	LnRleHQtbGVmdA
@@ -5697,6 +5901,7 @@ H	mail.yahoo.com	-	W2FyaWEtbGFiZWxsZWRieV49ImJvdHRvbS1zdGlja3ktcGVuY2lsLWFkLWJyY
 H	mail.yahoo.com	-	W2RhdGEtdGVzdC1pZD0icmlnaHQtcmFpbC1hZCJd
 H	mail.yahoo.com	-	W2RhdGEtdGVzdC1pZD0idmlkZW8tY29udGFpbmVyIl0
 H	mail.yahoo.com	-	YVtkYXRhLXRlc3QtaWQ9InNlYXJjaC1hZCJd
+H	maimuna.to	-	ZGl2W2lkXj0ibWFpbXVua2EtYWQtIl0
 H	main-echo.de	-	ZGl2W2lkXj0idHJhZmZlY3RpdmUtYWQiXQ
 H	main-spitze.de	-	LmFkU2xvdCwgLmxvYWRpbmdCYW5uZXI
 H	maisonbrico.com	-	W2lkXj0icHViIl0
@@ -5709,6 +5914,7 @@ H	mamamia.com.au	-	LnRvcC1sZWFkZXJib2FyZC1hZC1jb250YWluZXI
 H	manchestereveningnews.co.uk	-	I2gtbGluZQ
 H	manchestereveningnews.co.uk	-	ZGl2W2RhdGEtdGVzdGlkXj0ibm9uLWNvbW1lcmNpYWwtIl0
 H	manga18fx.com	-	LmthZHg
+H	mangaball.com	-	ZGl2LnctZnVsbC5mbGV4LWNvbC5pdGVtcy1jZW50ZXI6aGFzKHNwYW4udXBwZXJjYXNlID4gc3BhbiArIHN2Zyk
 H	mangabats.com	-	LmFkcy1jb250YWlu
 H	mangabats.com	-	LmFkcy1jb250YWluLXYy
 H	mangabats.com	-	LmJhbm5lci1jb250YWluZXI
@@ -5828,6 +6034,8 @@ H	mediaite.com	-	Lm8tanctc3ViLXByb21v
 H	medicalnewstoday.com	-	LmNzcy1ycDNkNg
 H	medicalnewstoday.com	-	ZGl2W2RhdGEtZHluYW1pYy1hZHNd
 H	medicalnewstoday.com	-	aGwtYWRzZW5zZQ
+H	medonet.pl	-	LnBsYWNlaG9sZGVy
+H	medonet.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	meetdownload.com	-	LmFkdmVydA
 H	meetdownload.com	-	YVtocmVmKj0iZ290LXRvLWJlLm5ldCJd
 H	meetdownload.com	-	YVtocmVmXj0iaHR0cHM6Ly9hZXJvcGxhbmV2ZXJzaW9uLmNvbS8iXQ
@@ -5898,7 +6106,10 @@ H	metro.co.uk	-	LmFkLXNsb3QtY29udGFpbmVy
 H	metro.co.uk	-	Lm1ldHJvX19hZF9hcmVhX2xlZnQ
 H	metro.co.uk	-	Lm1ldHJvX19hZF9hcmVhX3JpZ2h0
 H	metro.style	-	I2FkQmxvY2stYm90dG9tLWZpeA
+H	metropoliatorunska.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	meuplayeronlinehd.com	-	I2FkYmxvY2stb3ZlcmxheQ
+H	meuplayeronlinehd.com	-	I3BvcHVwT3ZlcmxheQ
+H	mfw09.org	-	Ym9keSA-IGRpdltzdHlsZSo9IjIxNDc0ODM2NDciXQ
 H	mgeko.cc	-	I2hlcm8tYWQ
 H	mgeko.cc	-	I3JhZGlvX2NvbnRlbnQuYWJpZXJ0bw
 H	mgnet.xyz	-	LmFjdGl2ZS5ibnNMYXllcnMuaXMtYmxvY2stdG91Y2guaXMtZ3JpZCA-IC5jb2xfMTIuYXJ0aWNsZS1jZW50ZXI
@@ -5917,10 +6128,8 @@ H	middletownpress.com	-	I21vZGFscw
 H	midnorthmonitor.com	-	LmZlYXR1cmVkLXZpZGVv
 H	miiiiixdrop.net	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
 H	miiiixdrop.net	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
-H	miiixdrop.com	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
-H	miiixdrop.net	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
-H	miixdrop.com	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
-H	miixdrop.net	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
+H	miiixdrop.*	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
+H	miixdrop.*	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
 H	miklpro.com	-	LmJhbm5lcg
 H	miklpro.com	-	LmJveC1tYWluID4gLmJsb2ctaXRlbQ
 H	milf-porn.xxx	-	LmZvb3Rlci1tYXJnaW4
@@ -5976,7 +6185,9 @@ H	mma-core.*	-	LnJza3k
 H	mmorpg.com	-	LnZoYWRi
 H	mmorpg.com	-	W29uY2xpY2tePSJ0cmFja0NsaWNrIl0
 H	mmorpg.com	-	YVtocmVmXj0iaHR0cDovL3YyLmcuOTkuY29tLyJd
+H	mmorpg.org.pl	-	LkFkc0Jsb2NrX19XcmFwcGVyLXNjLWUzMTcwZjgyLTA
 H	mmorpg.org.pl	-	ZGl2LmJBQmNNYi5zYy01b2RjdWItMA
+H	mmorpg.org.pl	-	ZGl2W2RhdGEtdmlkdmVydG8tem9uZV0
 H	mmtv01.xyz	-	I3BvcA
 H	mmtv01.xyz	-	I3BvcC5kaXZfcG9w
 H	mmtv01.xyz	-	I3BvcDE
@@ -6002,6 +6213,7 @@ H	modrinth.com	-	Lm1hcmtkb3duLWJvZHkgYVtocmVmKj0iL3JlZGlyZWN0LyJdIGltZw
 H	modrinth.com	-	Lm1hcmtkb3duLWJvZHkgYVtocmVmKj0iYmlzZWN0aG9zdGluZy5jb20iXTpub3QoW2hyZWYkPSIvIl0pOm5vdChbaHJlZiQ9Ii5jb20iXSk
 H	modrinth.com	-	Lm1hcmtkb3duLWJvZHkgYVtocmVmXj0iaHR0cHM6Ly9iaWxsaW5nLmVtYmVyLmhvc3QvYWZmLnBocD9hZmY9Il0
 H	modrinth.com	-	Lm1hcmtkb3duLWJvZHkgcCA-IGltZ1thbHRePSJVc2UgY29kZSJd
+H	modrinth.com	-	YVtyZWwqPSJzcG9uc29yZWQiXQ
 H	moenime.com	-	I3VpLWN0eC13cmFwcGVyLTAx
 H	moenime.com	-	W2hyZWZePSJodHRwczovL3RlcmFib3gub25lbGluay5tZS8iXQ
 H	momondo.*	-	ZGl2W2RhdGEtcmVzdWx0aWQkPSItc3BvbnNvcmVkIl0
@@ -6012,11 +6224,15 @@ H	momvids.com	-	LnNwb3QgPiBkaXY
 H	momvids.com	-	W3NyY149Imh0dHBzOi8vd3d3Lm1vbXZpZHMuY29tL3BsYXllci9odG1sLnBocCJd
 H	momvids.com	-	ZGl2W3N0eWxlPSJwb3NpdGlvbjogYWJzb2x1dGU7IGluc2V0OiAwcHg7IG92ZXJmbG93OiBoaWRkZW47IHotaW5kZXg6IDE2MDsgYmFja2dyb3VuZDogdHJhbnNwYXJlbnQgbm9uZSByZXBlYXQgc2Nyb2xsIDAlIDAlOyBkaXNwbGF5OiBibG9jazsiXQ
 H	momzr.com	-	Lml0ZW06aGFzKD4gaWZyYW1lKQ
+H	moneteasy.pl	-	LnBsYWNlaG9sZGVy
+H	moneteasy.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	money.cnn.com	-	c2VjdGlvbi5jb2x1bW46aGFzKD4gI21vbmV5U3BvbnNvcnMp
 H	money.it	-	LmdwdHNsb3Q
 H	money.pl	-	I2FwcCA-IGRpdjpmaXJzdC1jaGlsZCA-IGRpdjpoYXMoPiBkaXY6b25seS1jaGlsZDplbXB0eSk
 H	money.pl	-	I2FwcCA-IGRpdjpmaXJzdC1jaGlsZCA-IGRpdjpub3QoW2NsYXNzXSwgW2lkXSk6aGFzKD4gZGl2Om5vdChbY2xhc3NePSJzYy0iXSkp
 H	money.pl	-	LmFkc2l6ZV9jb250ZW50ID4gZGl2ICsgZGl2Omhhcyg-IGRpdiA-IGEgaW1nW2xvYWRpbmc9ImxhenkiXSk
+H	money.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
+H	money.pl	-	LndwLWNvbW1lbnRzLWFkdi13cmFwcGVyOm5vdCg6aGFzKD4gLndwLWNvbW1lbnRzLW1vdGgtdGVhc2VyLWNvbnRhaW5lcikpOmhhcyg-IC53cC1jb21tZW50cy1hZHZbZGF0YS10ZXN0aWRePSJhZC1zbG90LSJdKQ
 H	money.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	money.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6b25seS1jaGlsZDplbXB0eSk
 H	money.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
@@ -6030,6 +6246,7 @@ H	money.pl	-	bWFpbiArIGRpdiBhc2lkZSArIGRpdjpoYXMoPiBkaXYgPiBkaXYgPiBkaXYgPiBkaXY
 H	money.pl	-	bWFpbiA-IGRpdltjbGFzcyo9InNjLSJdOmhhcyg-IGRpdiA-IGFbaHJlZl49Imh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0LyJdKQ
 H	money.pl	-	c2VjdGlvbiArIGRpdjpoYXMoPiBpZnJhbWVbc3JjKj0icHJvbW90ZWQiXSk
 H	moneycontrol.com	-	LnNwb25zb3JfYWRfYmdfc2xpZGVy
+H	montrealgazette.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	moonline.*	-	I2NsaWNrZmFrZXBsYXllcg
 H	moovitapp.com	-	bXYtYWQtYmxvY2tlci1yZWNvdmVyeQ
 H	moozpussy.com	-	W2hyZWZePSIvZ28vZGVzaXJlIl0
@@ -6039,6 +6256,8 @@ H	more.tv	-	W2NsYXNzXj1CYW5uZXJfXQ
 H	morencius.com	-	Ym9keSA-IGRpdltzdHlsZT0icG9zaXRpb246Zml4ZWQ7aW5zZXQ6MDt6LWluZGV4OjIxNDc0ODM2NDc7YmFja2dyb3VuZDpibGFjaztvcGFjaXR5OjAuMDE7aGVpZ2h0OjQzN3B4O3dpZHRoOjgyNHB4O2N1cnNvcjpwb2ludGVyOyJd
 H	moretvtime.*	-	LnNjLWJhbm5lcg
 H	morganhillwebcam.com	-	Lmhvcml6LWJhbm5lci1ib3gtMSwgLmluZm8tbGVmdCwgLmluZm8tcmlnaHQ
+H	morizon-gratka.pl	-	LnBsYWNlaG9sZGVy
+H	morizon-gratka.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	motherporno.com	-	LmFzaWRl
 H	motherporno.com	-	LnNwb3Q
 H	motoroids.com	-	ZGl2LkFNX1NJTkdMRV9TVE9SWV9CRVRXRUVOX0NPTlRFTlRfU0VDT05EX1BBUkFHUkFQSF9SRVNQT05TSVZF
@@ -6054,10 +6273,6 @@ H	mousecity.com	-	ZGl2W3N0eWxlKj0iYm9yZGVyOiA1cHggc29saWQgI2ZmZiJdOm5vdCg6aGFzKG
 H	mousecity.com	-	ZGl2W3N0eWxlPSJmbG9hdDogcmlnaHQ7IHdpZHRoOiAyNjBweDsgaGVpZ2h0OiAzMDBweDsiXQ
 H	mov18plus.cloud	-	I3ZpZGVvX3BsYXllciB-IGRpdltpZF06aGFzKD4gZGl2W3N0eWxlXj0icG9zaXRpb246Zml4ZWQ7aW5zZXQ6MHB4O3otaW5kZXgiXSA-IGFbdGFyZ2V0PSJfYmxhbmsiXSk
 H	movi.pk	-	I3ZhZHM
-H	movie44.com	-	LmFkLW92ZXJsYXktY2xpY2s
-H	movie44.com	-	LmFkLXBsYXllci1za2lw
-H	movie44.com	-	LmltZ2Jhbm5lcg
-H	movie44.com	-	LndoaXRlX2NvbnRlbnQx
 H	movied.link	-	I3NpbmdsZURvd25sb2FkQnRu
 H	moviedokan.*	-	LnJlc3A
 H	moviedokan.*	-	LnJlc3Bz
@@ -6121,7 +6336,7 @@ H	mrgay.tube	-	LndyYXBwZXIgPiBzZWN0aW9u
 H	mrgay.tube	-	W2lzLWZvb3Rlci1iYW5uZXJzXQ
 H	mrgay.tube	-	W3N0eWxlPSJkaXNwbGF5OmZsZXggIWltcG9ydGFudCJdID4gZGl2ID4gZGl2Om5vdCg6bGFzdC1jaGlsZCk
 H	mrgay.tube	-	YXJ0aWNsZSA-IHNlY3Rpb24
-H	mrproblogger.com	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0
+H	mrproblogger.com	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0sIC50ZXh0LWxlZnQ
 H	mrsbrownsb.blogspot.com	-	LnNlY3Rpb24uZmVhdHVyZWQtcG9zdA
 H	mrsexe.com	-	I2Rpc2NsYWltZXI
 H	mrsexe.com	-	I2V4b3ZpZA
@@ -6145,6 +6360,8 @@ H	mtb-news.de	-	Lm10Ym5ld3MtZm9ydW1fX2Jhbm5lcg
 H	mtouch.beta.facebook.com	-	YXJ0aWNsZTpoYXMoZm9vdGVyID4gZGl2ID4gZGl2ID4gYVtocmVmXj0iL2ZyaWVuZHMvY2VudGVyLz9mYl9yZWY9Il0p
 H	mtouch.facebook.com	-	YXJ0aWNsZTpoYXMoZm9vdGVyID4gZGl2ID4gZGl2ID4gYVtocmVmXj0iL2ZyaWVuZHMvY2VudGVyLz9mYl9yZWY9Il0p
 H	mtouch.facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion	-	YXJ0aWNsZTpoYXMoZm9vdGVyID4gZGl2ID4gZGl2ID4gYVtocmVmXj0iL2ZyaWVuZHMvY2VudGVyLz9mYl9yZWY9Il0p
+H	multishows.top	-	I2FkQmxvY2tNb2RhbA
+H	multishows.top	-	I21zLWhvbWVwYWdlLXJvb3Q
 H	multiup.eu	-	Lm1mcC1yZWFkeQ
 H	multiup.eu	-	LnRleHQtY2VudGVyLmJnLWluZm8
 H	multiup.eu	-	YVtocmVmXj0iL2Rvd25sb2FkLWZhc3QvIl0
@@ -6163,6 +6380,7 @@ H	multiup.org	-	ZGl2LnRleHQtY2VudGVyOmhhcyhhW2NsYXNzPSJidG4gYnRuLXN1Y2Nlc3MiXVto
 H	musicbusinessworldwide.com	-	I3ViZXJhZA
 H	musicbusinessworldwide.com	-	Lm1iLWFkdmVydF9faW5jb250ZW50
 H	musicbusinessworldwide.com	-	Lm1iLWFkdmVydF9fdWJlcg
+H	mxdrop.*	-	Ym9keSA-IGRpdltzdHlsZV49InBvc2l0aW9uOiBhYnNvbHV0ZTsiXVtzdHlsZSo9InotaW5kZXgiXQ
 H	my-subs.co	-	I2NvdW50ZG93bg
 H	myabandonware.com	-	Lml0ZW1zID4gLml0ZW1baWRdOm5vdCguaXRlbUxpc3RHYW1lKQ
 H	myabandonware.com	-	W2hyZWZePSIvdmlzdWFsL3ItIl0
@@ -6184,6 +6402,7 @@ H	mydaddy.cc	-	I292cmxfYWQ
 H	mydownloadtube.*	-	Lm1vdmllLWJveCA-IC52ZXJ0LWFkZA
 H	mydramalist.com	-	LmFwcC1ib2R5ID4gZGl2W2NsYXNzXTpub3QoW2RhdGEtY29tcG9uZW50XSk6aGFzKC5odGxhZC1oZWFkZXJfdG9wKQ
 H	mydramalist.com	-	LmlzLWRlc2t0b3AtYWRz
+H	mydramalist.com	-	ZGl2LmZxbXJfcmlnaHRfMjYzOTpoYXMoLmFkLXJlbW92YWwtaW5mbyk
 H	mydverse.*	-	LnBvcFNj
 H	myfirstname.rocks	-	Lnhjb250ZW50LmNvbnRhaW5lcg
 H	myflixer.*	-	I2dpZnQtbWlkZGxl
@@ -6237,6 +6456,7 @@ H	myuploadedpremium.de	-	aW5zLmFkc2J5Z29vZ2xl
 H	myvidster.com	-	ZGl2LmRldGFpbHNfYWRzOm50aC1vZi10eXBlKDIp
 H	myvidster.com	-	dGRbaGVpZ2h0PSI5MCJd
 H	myzoversion.blogspot.com	-	I2NvbnRlbnQtbG9ja2Vy
+H	na2ka4.blog.fc2.com	-	I2lubmVyMiA-IGRpdi5zZWN0aW9uMjpoYXMoPiBkaXYubmluamEtcmVjb21tZW5kLWJsb2NrKQ
 H	nadidetarifler.com	-	LmFkdmVydC1zaWRl
 H	nagpurtoday.in	-	Lm1pZGRsZS1jb250Ym94
 H	nagpurtoday.in	-	YXNpZGVbaWRePSJjdXN0b21faHRtbC0iXVtjbGFzcyo9IndpZGdldCJdOmhhcyhpbWcgKyAucG9wdXAp
@@ -6245,6 +6465,8 @@ H	naijaray.com.ng	-	W2hyZWZePSIvL2FzaG91cHN1LmNvbS8iXQ
 H	nakedbabes.club	-	LmRlc2tiYW5uZXI
 H	namemc.com	-	LmFkLWNvbnRhaW5lcg
 H	namethatporn.com	-	W2RhdGEtZmxiYV49Imh0dHBzOi8vbGFuZGluZy5icmF6emVyc25ldHdvcmsuY29tIl0
+H	namiko.net	-	Lm5hbWlrby1hZC1iYW5k
+H	nanamovies.co	-	YVt0YXJnZXQ9Il9ibGFuayJdID4gaW1n
 H	nanoreview.net	-	I2d0ZmxvYXRzLXNiLXJpZ2h0
 H	nanoreview.net	-	Lndpc2luYWRfb25seV9kZXNrdG9w
 H	nantonnews.com	-	LmZlYXR1cmVkLXZpZGVv
@@ -6254,6 +6476,7 @@ H	nasdaqfutures.org	-	LmFkcw
 H	nationalgeographic.*	-	Lm5nLWFkLWJhbm5lcg
 H	nationalgeographic.*	-	Lm5nYXJ0X19mb290ZXItYWQ
 H	nationalpost.com	-	LmZlYXR1cmVkLXZpZGVv
+H	nationalpost.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	nativesurge.top	-	I2FkY2FzaGJhbm5lcg
 H	nativesurge.top	-	YnV0dG9uI2Rpc21pc3MtYnRu
 H	natomanga.com	-	LmFkcy1jb250YWlu
@@ -6330,6 +6553,8 @@ H	newsobserver.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
 H	newsobserver.com	-	YXJ0aWNsZSBbaWRePSJ6b25lLWVsIl0
 H	newsonthegotoday.com	-	LmNsaWNrYnV0dG9uOm5vdChbZGF0YS1ocmVmXSk
 H	newstimes.com	-	I21vZGFscw
+H	newsweek.pl	-	LnBsYWNlaG9sZGVy
+H	newsweek.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	newsweekjapan.jp	-	LnRhYm9vbGEtYmVsb3ctYXJ0aWNsZS10aHVtYm5haWxzLWRlc2t0b3AtMi13cmFw
 H	newyorker.com	-	LmpvdXJuZXktdW5pdA
 H	newyorker.com	-	LnBheXdhbGwtcmVnaXN0cmF0aW9uLWdhdGU
@@ -6359,7 +6584,6 @@ H	nightdreambabe.com	-	LmJhbm5lcl9wbGFjZQ
 H	nightdreambabe.com	-	LnNlY3Rpb24tYnVzdHlNZWRpbmFxID4gYVtocmVmXj0iL2NsaWNrL28vIl0
 H	nightlifeporn.com	-	Lndwcy1wbGF5ZXJfX2hhcHB5LWluc2lkZS0tcGF1c2Uud3BzLXBsYXllcl9faGFwcHktaW5zaWRl
 H	nihonkuni.com	-	I3VubG9ja19ib3g
-H	nikkansports.com	-	ZGl2W2lkXj0iY3hfIl0
 H	nikkei.com	-	I3BpYW5vUmVjb21tZW5kQm90dG9t
 H	nikkeifutures.org	-	LmFkcw
 H	nj.com	-	LmFkLXVuaXRbaWRd
@@ -6367,6 +6591,9 @@ H	njwildlifecam.com	-	Lmhvcml6LWJhbm5lci1ib3gtMSwgLmluZm8tbGVmdCwgLmluZm8tcmlnaH
 H	nmac.to	-	LmFkc2xvdF9idXR0b21faW5uZXIgPiBhW2hyZWYqPSIvNC8iXVt0YXJnZXQ9Il9ibGFuayJd
 H	nobitafc.com	-	I3djZmxvYXREaXY0
 H	noithatmyphu.vn	-	ZGl2W2lkXj0id3BzYWZlLXdhaXQiXQ
+H	noizz.pl	-	LnBsYWNlaG9sZGVy
+H	noizz.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
+H	nonograms-katana.com	-	I2VtYmVkLWRh
 H	noodlemagazine.com	-	ZGl2W3N0eWxlXTpoYXMoPiBbaWQqPSJfYWRfbmF0aXZlXyJdKQ
 H	noodlemagazine.com	-	ZGl2W3N0eWxlXTpoYXMoPiBpbnMp
 H	noodlemagazine.com	-	bm9pbmRleA
@@ -6389,7 +6616,6 @@ H	novelcrow.com	-	W2hyZWY9Imh0dHBzOi8vdGhlcG9ybmR1ZGUuY29tLyJd
 H	novelcrow.com	-	W2hyZWZePSJodHRwczovL2xhbmRpbmcuY2FuZHluZXR3b3JrLmFpLyJd
 H	novelfull.com	-	YVtyZWw9Im5vZm9sbG93IG5vb3BlbmVyIHNwb25zb3JlZCJd
 H	novelgo.id	-	aW5zLmFkc2J5Z29vZ2xl
-H	novelmultiverse.com	-	LmFkYWNlLXNsaWRldXAtc2xvdC13cmFw
 H	novojoy.com	-	Lm93bmVyYmFubmVy
 H	novoporn.com	-	YVtocmVmXj0iL2NsaWNrL28vIl0
 H	now.gg	-	I2Rpdi1hZC1hcHAtcGFnZS1sZWFkZXJib2FyZC1jb250YWluZXI
@@ -6441,6 +6667,7 @@ H	nysainfo.pl	-	I21kcC1kZWJsb2NrZXItanMtZGlzYWJsZWQ
 H	nytimes.com	-	I2FjbS13cmFwcGVy
 H	nzbstars.com	-	W2hyZWY9InVzZW5ldGJ1Y2tldC5waHAiXQ
 H	o2.pl	-	LnctZnVsbDpoYXMoPiBkaXY6bm90KFtjbGFzc10pID4gZGl2ID4gZGl2ID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0p
+H	o2.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	o2.pl	-	LndwLWNvbW1lbnRzLWFkdi13cmFwcGVyOm5vdCg6aGFzKD4gLndwLWNvbW1lbnRzLW1vdGgtdGVhc2VyLWNvbnRhaW5lcikpOmhhcyg-IC53cC1jb21tZW50cy1hZHZbZGF0YS10ZXN0aWRePSJhZC1zbG90LSJdKQ
 H	o2.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	o2.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
@@ -6462,6 +6689,8 @@ H	odtmag.com	-	Lm1vZGFsLWJhY2tkcm9w
 H	oemdtc.com	-	LmJsb2NrZXItbm90aWNlLCAuYmxvY2tlci1vdmVybGF5
 H	oemdtc.com	-	LmVhc3lhem9uLWJsb2Nr
 H	oemdtc.com	-	W3NyY149Imh0dHBzOi8vY2RuLmZsb3dkZWUuZGUvIl0sIFtocmVmXj0iaHR0cHM6Ly93d3cuYW1hem9uLmNvbS9iIl0
+H	ofeminin.pl	-	LnBsYWNlaG9sZGVy
+H	ofeminin.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	ofiii.com	-	Lm5vbmxpbmVhcl9hZA
 H	ohentai.org	-	LnZpZGVvYnJpY2s6aGFzKD4gLnZpZGVvYWRpbnRybyk
 H	ohentai.org	-	W2NsYXNzXj0iZGV0YWlsIl1bY2xhc3MqPSJpZnJhbWVjb250YWluZXIiXQ
@@ -6474,8 +6703,10 @@ H	okanime.*	-	I2NhbHF1ZQ
 H	okazuch.site	-	I2N1c3RvbV9odG1sLTMw
 H	okstream.*	-	W2lkXj0iY2xpY2siXQ
 H	okutta.net	-	LmFydGljbGVfX2Zvb3RlciA-IGRpdltzdHlsZT0iaGVpZ2h0OjUwMHB4OyBvdmVyZmxvdy15OnNjcm9sbDsiXQ
-H	olamovies.*	-	KltzdHlsZT0iZGlzcGxheTogZmxleDsiXQ
 H	olx.in	-	I21haW5fY29udGVudCBkaXZbY2xhc3NdOmhhcyg-IC5iYXh0ZXItc3R5bGUtZGZwLWRlZmF1bHQtZGVmYXVsdCk
+H	omegascans.org	-	LmFpLXRvcC1iYXI
+H	omegascans.org	-	YVtocmVmKj0iPyJdW3RhcmdldD0iX2JsYW5rIl0gaW1n
+H	omegascans.org	-	c2VjdGlvbiBkaXYuZmxleC1yb3cucm91bmRlZC5vdmVyZmxvdy1oaWRkZW4ucmVsYXRpdmU6aGFzKGlmcmFtZSk
 H	omuzaani.me	-	LmFiZy1iYWNrZHJvcA
 H	omuzaani.me	-	ZGl2W3N0eWxlPSJvcGFjaXR5OiAwOyB2aXNpYmlsaXR5OiBoaWRkZW47IG92ZXJmbG93OiBoaWRkZW47IGRpc3BsYXk6IGJsb2NrOyBwb3NpdGlvbjogYWJzb2x1dGU7IHRvcDogMHB4OyBsZWZ0OiAwcHg7IHdpZHRoOiAxMDAlOyBoZWlnaHQ6IDEwMCU7Il0
 H	onbatch.my.id	-	W2lkKj0iU2NyaXB0Um9vdCJd
@@ -6489,7 +6720,9 @@ H	ondemandkorea.com	-	LmNzcy1sdmRpdWE
 H	ondemandkorea.com	-	LmZsb2F0QmFubmVy
 H	ondemandkorea.com	-	LnBsYXllcl9vdmVybGF5LmJhbm5lcg
 H	onepace.co	-	LmZha2UtcGxheWVyLW92ZXJsYXk
+H	onet.pl	-	LnBsYWNlaG9sZGVy
 H	onet.pl	-	YWQtZGVmYXVsdA
+H	onet.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	onionplay.io	-	I2Zha2VwbGF5ZXI
 H	onle.co	-	W2lkXj0iYXN3aWZ0Il0
 H	online2pdf.com	-	ZGl2W2lkKj0iaG9yaXpvbnRhbF9ib3giXQ
@@ -6501,10 +6734,12 @@ H	onlinepornhub.net	-	LmhlYWRlci1hcmVh
 H	onlinesoccermanager.com	-	I2FkdmVydGlzZW1lbnQtbGVhZGVyYm9hcmQtY29udGFpbmVy
 H	onlinestream.live	-	W3NyY149Ii9iYW5uZXJzLyJd
 H	onlinevideoconverter.*	-	Lm11c2ljLWNvbnRhaW5lciA-IGRpdltzdHlsZV0gPiBhW2hyZWZdW3RhcmdldF0gPiBpbWc
+H	onlyputaria.com	-	YSN0cmFja2luZy11cmw
 H	onrpg.com	-	I29ucnBnLWhvdGJveC13aWRnZXQ
 H	onrpg.com	-	W2hyZWZePSJodHRwOi8vc2VydmVyLmNwbXN0YXIuY29tL2NsaWNrLmFzcHgiXQ
 H	onrpg.com	-	YVtocmVmKj0ibW1vLWl0LmNvbS8iXQ
 H	ontariofarmer.com	-	LmZlYXR1cmVkLXZpZGVv
+H	ontariofarmer.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	onvid.*	-	LnZpZGVvX2JhdG1hbg
 H	onworks.net	-	I2phLWNvbnRhaW5lci1wcmV2LWI
 H	op.gg	-	Lm1heC13LW5vbmU6aGFzKD4gLm1iLTIgPiBkaXZbc3R5bGVePSJ3aWR0aDoiXSA-IGRpdltkYXRhLW9wZ2ctYmVlci1pZF0p
@@ -6516,7 +6751,11 @@ H	open.fm	www.wp.pl	ZGl2W3N0eWxlPSJwb3NpdGlvbjogcmVsYXRpdmU7IHRvcDogMHB4OyJdOmhh
 H	open3dmodel.com	-	W3N0eWxlXTpoYXMoPi5hZHNieWdvb2dsZSksW3N0eWxlXTpoYXMoPi5hZHNieWdvb2dsZSl-Lm5vdHJhbnNsYXRl
 H	openculture.com	-	Lm5vLWZyYW1lYXJvdW5kX2FkX2luX3Bvc3Q
 H	openloading.com	-	I2NsaWNrZmFrZXBsYXllcg
+H	openlua.cloud	-	YVtocmVmXj0iaHR0cHM6Ly9ib29zdG1hbmlhLmdnLyJd
+H	openlua.cloud	-	ZGl2LmZpeGVkLmJhY2tkcm9wLWJsdXIteGw
 H	opentunnel.net	-	Lm1iLTMuc21hbGwudGV4dC1tdXRlZA
+H	opineo.pl	-	LnBsYWNlaG9sZGVy
+H	opineo.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	oploverz.*	-	I292ZXJwbGF5
 H	order-order.com	-	I3N0aWNreWZvb3RlcmFk
 H	orgasmatrix.com	-	LmNhcmQucG9zdDpoYXMoW2hyZWYqPSJsYW5kaW5nLiJdKQ
@@ -6531,11 +6770,15 @@ H	osuskins.net	-	LmFkLTMwMC0yNTAsIC5hZC1iaWxsYm9hcmQ
 H	otakudesu.*	-	LmJveF9pdGVtX2Fkc19wb3B1cA
 H	otakukan.com	-	LmFpLWF0dHJpYnV0ZXM
 H	otakukan.com	-	aW5zLmFkc2J5Z29vZ2xl
+H	otakusexart.com	-	LndpZGdldC1hcmVh
+H	otakusexart.com	-	YVtocmVmXj0iaHR0cHM6Ly9oZW50YWktb25haG9sZS5tb2UiXQ
 H	otomi-games.com	-	Lm90b21pLXdpZGdldA
 H	otomi-games.com	-	YVtocmVmXj0iaHR0cHM6Ly90LnRyY2t0ci5jb20vIl0
 H	otomoto.pl	-	W2RhdGEtdGVzdGlkPSJiYW5uZXItbGluayJd
 H	ottawacitizen.com	-	LmZlYXR1cmVkLXZpZGVv
+H	ottawacitizen.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	ottawasun.com	-	LmZlYXR1cmVkLXZpZGVv
+H	ottawasun.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	ottplay.com	-	LmluZmluaXRlLXNjcm9sbC1jb21wb25lbnQgPiBkaXZbc3R5bGVePSJtaW4taGVpZ2h0OiJdOm5vdChbY2xhc3NdKQ
 H	ottplay.com	-	LmxhenktbG9hZGVk
 H	ottplay.com	-	Lm5ld3NEZXRhaWxzLXJpZ2h0ID4gZGl2W3N0eWxlPSJtaW4td2lkdGg6IDMwMHB4OyBtaW4taGVpZ2h0OiAyNTBweDsgbWFyZ2luLWJvdHRvbTogMTBweDsiXQ
@@ -6549,7 +6792,6 @@ H	ouo.*	-	aWZyYW1lOm5vdChbc3JjXSk
 H	ouo.press	-	LnNraXAtY29udGFpbmVyID4gLnRleHQtY2VudGVyID4gc3BhbltzdHlsZT0iZGlzcGxheTogYmxvY2s7Y29sb3I6ICNhYWE7Zm9udC1zaXplOiAxM3B4O3BhZGRpbmctYm90dG9tOiAycHg7Il0
 H	ourmidland.com	-	I21vZGFscw
 H	outletpic.*	-	W2hyZWZePSIvLyJdW3JlbD0ibm9mb2xsb3cgbm9yZWZmZXJlciBub29wZW5lciJd
-H	outlook.live.com	-	Lk9ndDdq
 H	ovid.*	-	LnZpZGVvX2JhdG1hbg
 H	owensoundsuntimes.com	-	LmZlYXR1cmVkLXZpZGVv
 H	owsafe.com	-	LmFkc2xy
@@ -6563,6 +6805,8 @@ H	p2pplay.pro	-	ZGl2W3N0eWxlXj0icG9zaXRpb246Zml4ZWQ7aW5zZXQ6MHB4O3otaW5kZXg6MjE0
 H	pachinkopachisro.com	-	LnBsdWdpbi1tZW1vOmhhcyg-IGRpdi5zaWRlID4gZGl2Lm5pbmphLXJlY29tbWVuZC1ibG9jayk
 H	pages.lazada.co.id	-	Lmx6ZC1jYWxsLWFwcC1kb3dubG9hZC1wb3B1cA
 H	paginadanoticia.com.br	-	LmJhbm5lci1pbWc
+H	pahe.*	-	ZGl2OmhhcyhhW2hyZWYqPSJhbnRpYWRibG9ja2NvcmUuY29tIl0p
+H	pahe.plus	-	Zm9vdGVyLCAudGV4dC1sZWZ0LCAjbGluay12aWV3ID4gW2hyZWZdLCAuYm94LW1haW4gPiBbaHJlZl0
 H	painaltube.com	-	LndpZGdldCA-IGRpdi53aWRnZXQ
 H	palcomix.com	-	dGFibGVbd2lkdGg9IjgwMCJdOmhhcyhpbWdbc3JjXj0iLi4vYWRzLyJdKQ
 H	pallabmobile.in	-	YVtjbGFzc11baHJlZj0iIyJdIGltZw
@@ -6583,6 +6827,7 @@ H	paraphraser.io	-	LmFkc2VuYm94Om5vdCgjZGV0ZWN0KQ
 H	paraphraser.io	-	Ym9keSA-IC5qdXN0aWZ5LWNvbnRlbnQtY2VudGVy
 H	parcello.org	-	Lmhvcml6b250YWwtYWQtc3BhY2U
 H	parcello.org	-	LnNpZGViYXItYWQtc3BhY2U
+H	parenting.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	parenting.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	parenting.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	parenting.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -6618,7 +6863,6 @@ H	pcgamestorrents.com	-	YVtocmVmXj0iaHR0cHM6Ly9wY2dhbWVzdG9ycmVudHMuIl1baHJlZio9
 H	pcgamestorrents.org	-	W2hyZWYqPSIvZ2FtZWFkdWx0LyJdW2hyZWYkPSIucGhwIl0
 H	pcgamestorrents.org	-	YVtocmVmXVthcmlhLWxhYmVsPSJhd2VkIl0
 H	pcgamestorrents.org	-	YVtocmVmXj0iaHR0cHM6Ly9wY2dhbWVzdG9ycmVudHMuIl1baHJlZio9Ii9jdXNraWxvIl0
-H	pclicious.net	-	I3RleHQtMw
 H	pctfenix.*	-	LmFkcw
 H	pctnew.*	-	LmFkcw
 H	pcworld.com	-	I2FtYXpvbi1ib3R0b20td2lkZ2V0
@@ -6654,6 +6898,9 @@ H	pelisplusxd.*	-	I2Fkcw
 H	pelisplusxd.*	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXZbY2xhc3NdID4gaWZyYW1lW3NyYyo9Ii9zcnYtcHYvdGFnLSJdKQ
 H	pelotalibrevivo.net	-	LnBvc2l0aW9uLWFic29sdXRlLnRvcC0w
 H	pembrokeobserver.com	-	LmZlYXR1cmVkLXZpZGVv
+H	pembrokeobserver.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
+H	penize.cz	-	I2FydGljbGVfY29udGVudCA-IGRpdi50b29sQm94OmhhcyhhW2RhdGEtZ2EtaGl0dHlwZT0iYWQiXSk
+H	penize.cz	-	LmFk
 H	perchance.org	-	ZGl2W3N0eWxlKj0idmFyIl1bc3R5bGUqPSJtaW4taGVpZ2h0Il06aGFzKFtkYXRhLWZyZWVzdGFyLWFkXSk
 H	pererecadoida.life	-	I2Jhbm5lckluQ2VudGVy
 H	pererecadoida.life	-	I2Zsb2F0TGF5ZXIx
@@ -6683,6 +6930,7 @@ H	photopea.com	-	ZGl2W3N0eWxlXTpoYXMoPiBhW2hyZWYqPSJwaG90b3BlYS5jb20iXVtocmVmKj0
 H	phototrans.de	-	ZGl2LmJ1c19jb250ZW50OmZpcnN0LWNoaWxkOmhhcyguYWRzYnlnb29nbGUp
 H	phototrans.eu	-	ZGl2LmJ1c19jb250ZW50OmZpcnN0LWNoaWxkOmhhcyguYWRzYnlnb29nbGUp
 H	phototrans.hu	-	ZGl2LmJ1c19jb250ZW50OmZpcnN0LWNoaWxkOmhhcyguYWRzYnlnb29nbGUp
+H	phototrans.net	-	ZGl2LmJ1c19jb250ZW50OmZpcnN0LWNoaWxkOmhhcyguYWRzYnlnb29nbGUp
 H	phototrans.pl	-	ZGl2LmJ1c19jb250ZW50OmZpcnN0LWNoaWxkOmhhcyguYWRzYnlnb29nbGUp
 H	picbaron.com	-	I2ZhZGVpbmJveA
 H	picbaron.com	-	Lm5ld3NiYXJfYmx1ZQ
@@ -6765,7 +7013,7 @@ H	pixdfdjkkr.shop	-	ZGl2W2NsYXNzXVtzdHlsZT0iZGlzcGxheTogYmxvY2s7Il0
 H	pixdfdjkkr.shop	-	ZGl2W2lkXVtzdHlsZV49InBvc2l0aW9uOiBmaXhlZDsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiAxMDAlOyJd
 H	pixdfdjkkr.shop	-	ZGl2W3N0eWxlPSJ3aWR0aDoxMDAlO2hlaWdodDoxMTBweCJd
 H	pixeldrain.com	-	I3Nwb25zb3Jz
-H	pixhost.*	-	I2pz
+H	pixhost.*	-	LmNvbnRlbnQtY29tcGFuaW9u
 H	pixjnwe.sbs	-	ZGl2W2NsYXNzXVtzdHlsZT0iZGlzcGxheTogYmxvY2s7Il0
 H	pixjnwe.sbs	-	ZGl2W2lkXVtzdHlsZV49InBvc2l0aW9uOiBmaXhlZDsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiAxMDAlOyJd
 H	pixjnwe.sbs	-	ZGl2W3N0eWxlPSJ3aWR0aDoxMDAlO2hlaWdodDoxMTBweCJd
@@ -6830,6 +7078,8 @@ H	playsexgames.xxx	-	LndpZGdldDpub3QoI3RleHQtMik
 H	playstore.pw	-	I292ZXJsYXk
 H	playstore.pw	-	I3BhZ2UgPiBjZW50ZXI6aGFzKFtocmVmPSIjZG93biJdKSB-ICNjb250ZW50IC5lbnRyeS1jb250ZW50ID4gOm5vdChjZW50ZXIp
 H	playview.io	-	LmFkc19wbGF5ZXI
+H	plejada.pl	-	LnBsYWNlaG9sZGVy
+H	plejada.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	plotaroute.com	-	I0FkUGFuZWxSaWdodA
 H	plotaroute.com	-	I1JpZ2h0UGFuZWxBZHM
 H	plutomovies.com	-	YVtocmVmXVtvbmNsaWNrXj0id2luZG93Lm9wZW4iXQ
@@ -6864,11 +7114,14 @@ H	poki.*	-	ZGl2W2NsYXNzKj0iX0FkdmVydGlzZW1lbnRDb250YWluZXIiXQ
 H	poki.com	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBkaXZbc3R5bGUqPSJoZWlnaHQiXVtzdHlsZSo9IndpZHRoIl1bc3R5bGUkPSJweDsgb3ZlcmZsb3c6IGhpZGRlbjsiXSA-IFtpZCo9Il9ncF8iXSk
 H	politico.com	-	LmdhbGxlcnktY2Fyb3VzZWwtYWQ
 H	politico.com	-	ZGl2W2NsYXNzKj0ic3R5bGVzX2FkIl0
+H	polygamia.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	polygamia.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	polygamia.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	polygamia.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
 H	polygamia.pl	www.wp.pl	ZGl2W2NsYXNzXSA-IGRpdjpub3QoW2NsYXNzXSwgW2lkXSk6b25seS1jaGlsZDpoYXMoPiBkaXZbY2xhc3NdOm9ubHktY2hpbGQgPiBkaXZbY2xhc3NdOmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0p
 H	polygamia.pl	www.wp.pl	ZGl2W3N0eWxlPSJwb3NpdGlvbjogcmVsYXRpdmU7IHRvcDogMHB4OyJdOmhhcyg-IGFbdGFyZ2V0PSJfYmxhbmsiXSk
+H	polygon.com	-	LmFuLXpvbmUtZA
+H	polygon.com	-	LmFuLXpvbmUtZm9vdGVyLWZvb3Rlcg
 H	pompanobeachcam.com	-	Lmhvcml6LWJhbm5lci1ib3gtMSwgLmluZm8tbGVmdCwgLmluZm8tcmlnaHQ
 H	ponselharian.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	popcorntv.it	-	LmJveC1hZHY
@@ -6958,9 +7211,11 @@ H	pornhub-sexfilme.net	-	LmlmcmFtZV90Yg
 H	pornhub-sexfilme.net	-	YXNpZGVbY2xhc3NePSJzcGV6X2hlaWdodCJd
 H	pornhub-sexfilme.net	-	YXNpZGVbaWRdOmhhcyg-IGRpdiA-IGlucy5hZHNieWV4b2NsaWNrKQ
 H	pornhub-sexfilme.net	-	YXNpZGVbaWRePSJ3YV8iXQ
+H	pornhub.*	-	I21vYmlsZUNvbnRhaW5lciA-IGRpdjpub3QoW2lkXSk6aGFzKD4gLndhdGNocGFnZUFkKQ
 H	pornhub.*	-	I3BiX2Jsb2Nr
 H	pornhub.*	-	I3JlbGF0ZWRWaWRlb3NDZW50ZXIgPiAud3JhcFZpZGVvQmxvY2s
 H	pornhub.*	-	LmFkLXRhYlNwbGl0
+H	pornhub.*	-	LmVtcHR5QmxvY2tTcGFjZQ
 H	pornhub.*	-	LmpvaW5Ob3dDUFBCdG4
 H	pornhub.*	-	LmpzLWFkc1JlbW92ZUJ1dHRvbg
 H	pornhub.*	-	LmpzLWJlY29tZUZhbmNlbnRyb0ZhbkJ0bg
@@ -7094,6 +7349,8 @@ H	pornxs.com	-	W2RhdGEtYWQtaW5kZXgtcGFyZW50XQ
 H	pornxs.com	-	W2lkXj0iZGl2X3RoZUFkIl0
 H	pornzog.com	-	I250dl9h
 H	pornzog.com	-	LnZpZGVvLW50di1saXN0
+H	portail-assurance.ca	-	LmVqYS1hZA
+H	portalridice.cz	-	LmJ6LWJyYW5kaW5n
 H	portalzoo.com	-	W2hyZWZePSJodHRwczovL3d3dy5za3lwZWlzIl0
 H	portbermudawebcam.com	-	Lmhvcml6LWJhbm5lci1ib3gtMSwgLmluZm8tbGVmdCwgLmluZm8tcmlnaHQ
 H	portcanaveralwebcam.com	-	Lmhvcml6LWJhbm5lci1ib3gtMSwgLmluZm8tbGVmdCwgLmluZm8tcmlnaHQ
@@ -7188,9 +7445,11 @@ H	privatehomeclips.com	-	LnZpZGVvLXBhZ2VfX2NvbnRlbnQgPiAucmlnaHQ
 H	privatehomeclips.com	-	LnZpZGVvLXBhZ2VfX2l0ZW0
 H	privatehomeclips.com	-	c2VjdGlvbltzdHlsZT0icGFkZGluZzogMjBweDsiXQ
 H	privatehomeclips.com	-	c3BhbltzdHlsZT0iZGlzcGxheTpmbGV4ICFpbXBvcnRhbnQiXSA-IGRpdjpmaXJzdC1jaGlsZA
-H	proappapk.com	-	LmJsb2dDb250ZW50OmhhcygjdmVyaWZ5KSAucG9zdEJvZHk
 H	proboards.com	-	I2FkMQ
-H	proboards.com	-	W2lkXj0iYWQtIl0sICNyZW1vdmVfYWRzX2xpbms
+H	proboards.com	-	I3JlbW92ZV9hZHNfbGluaw
+H	proboards.com	-	W2lkXj0iYWQtIl0
+H	prod-tv.wp.pl	-	KjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQ6aGFzKD4gZGl2OmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0pOm5vdChbYWx0XSwgW2lkXSwgW3dpZHRoXSwgW2RhdGEtc3JjXSkgKyBkaXY6ZW1wdHkp
+H	prod-tv.wp.pl	-	ZGl2W2hlaWdodD0iYXV0byJdOmhhcyg-IGRpdjpvbmx5LWNoaWxkID4gZGl2OmZpcnN0LWNoaWxkID4gc2NyaXB0Om9ubHktY2hpbGQpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkKQ
 H	progameguides.com	-	W2lkXj0iY29udGVudF9keW5hbWljQWQtIl0
 H	progameguides.com	-	W2lkXj0ic2lkZUFkLSJd
 H	programmingeeksclub.com	-	W2hyZWYqPSJjbGlja2JhbmsubmV0Il0
@@ -7202,6 +7461,11 @@ H	proxer.me	-	I3N0cmVhbV9tZXNzYWdlX292ZXJsYXk
 H	proxybit.*	-	W2lkKj0iYmFubmVyIl0
 H	prrecordgazette.com	-	LmZlYXR1cmVkLXZpZGVv
 H	prydwen.gg	-	ZGl2LmN1c3RvbS1iYW5uZXItaGVhZGVy
+H	przezwieki.pl	-	I2JvdHRvbS1zdGlja3ktY29udGFpbmVyID4gI3N0aWNreUVs
+H	przezwieki.pl	-	LndwLW1haW4taG9tZSA-IGE6Zmlyc3QtY2hpbGRbdGFyZ2V0PSJfYmxhbmsiXVtyZWw9Im5vb3BlbmVyIG5vcmVmZXJyZXIiXTpoYXMoPiBwaWN0dXJlID4gaW1nLndwLW1lZGlhLWltYWdlKQ
+H	przezwieki.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBbY2xhc3NdOm9ubHktY2hpbGQgPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IFtjbGFzc10gPiAuaC0wOmVtcHR5ICsgc2NyaXB0Omxhc3QtY2hpbGQp
+H	przezwieki.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IC5oLTA6ZW1wdHkgKyBzY3JpcHQ6bGFzdC1jaGlsZCk
+H	przezwieki.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	psprices.com	-	W2hyZWYqPSIuc21hcnRhZHNlcnZlci5jb20iXQ
 H	pstream.*	-	LmJnLWJ1dHRvbnMtcHVycGxlOmhhcyg-IGJ1dHRvblthcmlhLWxhYmVsPSJEaXNtaXNzIGFkIl0p
 H	pstream.*	-	aW1nW2FsdD0iYWQgYmFubmVyIl0
@@ -7213,6 +7477,13 @@ H	publicananker.com	-	I2xpbmsxcy13YWl0MQ
 H	publicearn.*	-	LnBhZ2UtaGVhZGVyID4gaDMsIC5iYW5uZXIsIC5iZy1zb2Z0LXByaW1hcnksIFtzdHlsZT0ibWFyZ2luLXRvcDogMjUwcHg7Il0sIC5ib3gtbWFpbiA-IGNlbnRlciA-IGNlbnRlciA-IFtocmVmXSwgdmlkZW8
 H	publicearn.*	-	W2hyZWYqPSJ0Lm1lIl0
 H	publish0x.com	-	I3JlZ2lzdGVyTW9kYWwsIC5zaG93LmZhZGUubW9kYWwtYmFja2Ryb3A
+H	pudelek.pl	-	KjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQ6aGFzKD4gZGl2OmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0pOm5vdChbYWx0XSwgW2lkXSwgW3dpZHRoXSwgW2RhdGEtc3JjXSkgKyBkaXY6ZW1wdHkp
+H	pudelek.pl	-	LmdhbGxlcnktYm9keS1ncmlkID4gYXNpZGVbcm9sZT0iY29tcGxlbWVudGFyeSJdOmhhcyg-IC53LWZ1bGwgPiBkaXYgPiAuaC0wOmVtcHR5KQ
+H	pudelek.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
+H	pudelek.pl	-	LndwLWNvbW1lbnRzLWFkdi13cmFwcGVyOm5vdCg6aGFzKD4gLndwLWNvbW1lbnRzLW1vdGgtdGVhc2VyLWNvbnRhaW5lcikpOmhhcyg-IC53cC1jb21tZW50cy1hZHZbZGF0YS10ZXN0aWRePSJhZC1zbG90LSJdKQ
+H	pudelek.pl	-	LndwLXN0cmVhbS1ib3g6aGFzKD4gZGl2ID4gLmgtMDplbXB0eSk
+H	pudelek.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBbY2xhc3NdOm9ubHktY2hpbGQgPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IFtjbGFzc10gPiAuaC0wOmVtcHR5ICsgc2NyaXB0Omxhc3QtY2hpbGQp
+H	pudelek.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IC5oLTA6ZW1wdHkgKyBzY3JpcHQ6bGFzdC1jaGlsZCk
 H	pudelek.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	pudelek.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	pudelek.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -7226,9 +7497,11 @@ H	purposegames.com	-	LmFkbGFiZWw
 H	pussyspace.com	-	LmxlZnQgKjpub3QoZGl2KTpub3Qoc3Bhbik6bm90KHApOm5vdChhKTpub3QodmlkZW8pOm5vdChpKTpub3QodWwpOm5vdChsaSk6bm90KGIpOm5vdChidXR0b24pOm5vdChzdmcpOm5vdChnKTpub3QoaDEpOm5vdChoMik6bm90KHBqc2Rpdik6bm90KG5vaW5kZXgpOm5vdChzZWxlY3QpIGltZw
 H	pussyspace.com	-	W3N0eWxlXSBbc3R5bGUqPSJjdXJzb3IiXSBpbWc
 H	pussyspace.com	-	YVtocmVmJD0iL2xpdmUvbWVldC1hbmQtZnVjay8iXQ
+H	pussyspace.com	-	YVtocmVmJD0iL3dhdGNoL3Rpa3Rvay8iXQ
 H	pussyspace.net	-	LmxlZnQgKjpub3QoZGl2KTpub3Qoc3Bhbik6bm90KHApOm5vdChhKTpub3QodmlkZW8pOm5vdChpKTpub3QodWwpOm5vdChsaSk6bm90KGIpOm5vdChidXR0b24pOm5vdChzdmcpOm5vdChnKTpub3QoaDEpOm5vdChoMik6bm90KHBqc2Rpdik6bm90KG5vaW5kZXgpOm5vdChzZWxlY3QpIGltZw
 H	pussyspace.net	-	W3N0eWxlXSBbc3R5bGUqPSJjdXJzb3IiXSBpbWc
 H	pussyspace.net	-	YVtocmVmJD0iL2xpdmUvbWVldC1hbmQtZnVjay8iXQ
+H	pussyspace.net	-	YVtocmVmJD0iL3dhdGNoL3Rpa3Rvay8iXQ
 H	pussyspot.net	-	W2hyZWZePSJodHRwOi8vdWNhbS54eHgvIl0
 H	pussyspot.net	-	W2hyZWZePSJodHRwczovL2Vhc3lnYW1lcHJvbW8uY29tLyJd
 H	pussystate.com	-	bGlbc3R5bGU9ImNsZWFyOmJvdGg7ZmxvYXQ6bm9uZTt3aWR0aDo2MDBweDttYXJnaW46MDtvdmVyZmxvdzpoaWRkZW47bWFyZ2luLWxlZnQ6LTVweDsiXQ
@@ -7351,6 +7624,8 @@ H	puzzles.nola.com	-	W2NsYXNzXj0iRGlzcGxheUFkX19jb250YWluZXIiXQ
 H	puzzles.pressherald.com	-	W2NsYXNzXj0iRGlzcGxheUFkX19jb250YWluZXIiXQ
 H	puzzles.standard.co.uk	-	W2NsYXNzXj0iRGlzcGxheUFkX19jb250YWluZXIiXQ
 H	puzzles.sunjournal.com	-	W2NsYXNzXj0iRGlzcGxheUFkX19jb250YWluZXIiXQ
+H	puzzleshq.com	-	W2NsYXNzXj0iYXJ0aWNsZV9hZENvbnRhaW5lciJd
+H	pysznosci.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	pysznosci.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
 H	pysznosci.pl	-	Ym9keSA-IGRpdltjbGFzc106aGFzKD4gZGl2OmZpcnN0LWNoaWxkOmVtcHR5ICsgZGl2Omxhc3QtY2hpbGQgPiBzdmdbd2lkdGg9Ijk1Il1baGVpZ2h0PSI5NSJdOm9ubHktY2hpbGQgPiBwYXRoKQ
 H	pysznosci.pl	www.wp.pl	ZGl2Omhhcyg-IGRpdiA-IGlmcmFtZVtzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bZnJhbWVib3JkZXI9IjAiXVtzY3JvbGxpbmc9Im5vIl06Zmlyc3QtY2hpbGQp
@@ -7491,6 +7766,7 @@ H	reamporn.com	-	I2JuY2xvc2U
 H	reamporn.com	-	LnZpZC1hdmUtaW5z
 H	rechtschreibpruefung24.de	-	I3JpZ2h0YWRiYXI
 H	recorder.ca	-	LmZlYXR1cmVkLXZpZGVv
+H	recorder.ca	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	recut.ru	-	YSNtb3Jl
 H	redbox.com	-	LnJiLWFkLWxlYWRlcmJvYXJkLWNvbnRhaW5lcg
 H	redd.tube	-	I2Nsb3NlYWJsZV93aWRnZXQ
@@ -7506,13 +7782,16 @@ H	redecanais.*	-	I2d1ZXJlam9iYWNr
 H	redecanais.*	-	I2lmcmFtZUNvcmVfX19f
 H	redecanais.*	-	LnVubG9ja3Itb3ZlcmxheQ
 H	redecanais.*	-	Ym9keS5zd2FsMi1zaG93biA-IC5zd2FsMi1jb250YWluZXI
+H	redecanais.*	-	ZGl2W2RhdGEtcmMxd2luLXByb250b10
 H	redecanaistv.*	-	LnVubG9ja3Itb3ZlcmxheQ
 H	redecanaistv.*	-	Ym9keS5zd2FsMi1zaG93biA-IC5zd2FsMi1jb250YWluZXI
+H	redecanaistv.*	-	ZGl2W2RhdGEtcmMxd2luLXByb250b10
 H	redheadpassions.com	-	I2hlYWRlcl9hZF9iYW5uZXI
 H	redheadpassions.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	redirect.dafontvn.com	-	LnByb2dyZXNz
 H	redisex.*	-	LnN3YWwyLXBvcHVw
 H	redisex.*	-	LnVubG9ja3Itb3ZlcmxheQ
+H	redisex.*	-	ZGl2W2RhdGEtcmMxd2luLXByb250b10
 H	redisex.*	-	ZGl2W3N0eWxlKj0iei1pbmRleDoyMTQ3NDgzNjQ3Il0
 H	redketchup.io	-	LnBvdGF0b19tb2RhbA
 H	redpornblog.com	-	I2Fkcw
@@ -7530,6 +7809,7 @@ H	reliabletv.me	-	LmJnLWRhcmsucG9zaXRpb24tYWJzb2x1dGU
 H	remodelista.com	-	W2RhdGEtYWR2ZXJ0XQ
 H	renault-club.cz	-	aW5zLmFkc2J5Z29vZ2xl
 H	rentry.co	-	YXJ0aWNsZTpoYXMoI2Rvd25sb2FkLXlvdXItYXJjaGl2ZS1maWxlKQ
+H	repack-games.com	-	ZGl2ID4gY2VudGVyID4gYnV0dG9uW2RhdGEtYm91bmQ9InRydWUiXQ
 H	repack-games.com	-	ZGl2LmdhbWUtY3RhLXNlY3Rpb24
 H	repelisgoo.*	-	I2Fkcw
 H	repelisgoo.*	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXZbY2xhc3NdID4gaWZyYW1lW3NyYyo9Ii9zcnYtcHYvdGFnLSJdKQ
@@ -7618,6 +7898,9 @@ H	rule34hentai.net	-	I2ltYWdlbGlzdCB-IHNlY3Rpb25baWQkPSJtYWluIl0
 H	rule34hentai.net	-	W2hyZWZePSJodHRwczovL3N5bmRpY2F0aW9uLmR5bnNydnRiZy5jb20vc3BsYXNoLnBocCJd
 H	rule34hentai.net	-	c2VjdGlvbltpZCQ9ImxlZnQiXTpoYXMoPiAuYmxvY2tib2R5ID4gc2NyaXB0W3R5cGVdKQ
 H	rule34hentai.net	-	c2VjdGlvbltpZCQ9Im1haW4iXTpoYXMoPiAuYmxvY2tib2R5ID4gLmFkc2J5ZXhvY2xpY2sp
+H	rule34video.com	-	LmZvb3Rlcl9zcG90cw
+H	rule34video.com	-	LnBhbmVsX2hlYWRlci0tcHJvbW8
+H	rule34video.com	-	LnNwb3RfdW5kZXI
 H	runhack.jp	-	I2FkLW92ZXJsYXk
 H	rupertisdivingintoocean.com	-	Ym9keS52aWRlby1lbWJlZC1tb2RlID4gZGl2W2NsYXNzXVtzdHlsZV06bm90KCNyb290KQ
 H	s.response.jp	-	LmFzaWRlLWJveC1yZWxhdGlvbi1hcnRp
@@ -7627,6 +7910,9 @@ H	sabervivirtv.com	-	LmFkLXNpZGViYXI
 H	sabishare.com	-	LmNtcC1yb2xs
 H	sabishares.com	-	ZGl2W2NsYXNzPSJjb2RlLWJsb2NrIGNvZGUtYmxvY2stNCJdW3N0eWxlPSJtYXJnaW46IDhweCAwOyBjbGVhcjogYm90aDsiXQ
 H	sabishares.com	-	cCA-IGFbaHJlZio9Ii80LyJdW3RhcmdldD0iX2JsYW5rIl0
+H	sabnzbd.org	-	LmJhbm5lci10YWxs
+H	sabnzbd.org	-	LmRvd25sb2Fkcy1yb3cgPiBkaXY6bm90KFtjbGFzcyo9ImRvd25sb2FkIl0pOmhhcyg-IC5kb3dubG9hZHMtdGlwKQ
+H	sabnzbd.org	-	Lm1haW4td3JhcHBlciB-IGFzaWRl
 H	sacbee.com	-	I21hc3RoZWFkVnVlQ29udGFpbmVyID4gLnpvbmU
 H	sacbee.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
 H	sacbee.com	-	YXJ0aWNsZSBbaWRePSJ6b25lLWVsIl0
@@ -7635,6 +7921,7 @@ H	sadeempc.com	-	W2NsYXNzXj0iYnV0dG9uUHJlc3MiXQ
 H	sadisflix.*	-	YVtocmVmXj0iaHR0cHM6Ly9zaG9ydHVybC5hdC8iXQ
 H	safefileku.com	-	LmNITkk
 H	safefileku.com	-	YnV0dG9uI2Rvd25sb2FkIH4gZGl2Omhhcyg-IGFbdGFyZ2V0PSJfYmxhbmsiXSk
+H	safeframe.googlesyndication.com	-	I215cy13cmFwcGVy
 H	safelinkearn.com	-	LmQyLmFuaW0tdXAuYWN0aW9uLXJvdywgLmJhbm5lci1iZw
 H	safelinkunited.blogspot.com	-	LkFEUw
 H	safelinkunited.blogspot.com	-	aW5zLmFkc2J5Z29vZ2xl
@@ -7712,6 +7999,7 @@ H	seaforthhuronexpositor.com	-	LmZlYXR1cmVkLXZpZGVv
 H	searchenginereports.net	-	W2hyZWYqPSJncmFtbWFybHkuY29tIl0
 H	searchenginereports.net	-	W2lkXj0iYWRib3h4Il0
 H	searchenginereports.net	-	ZGl2W2NsYXNzXj0idGhlTVNzeSJdLCBkaXZbaWRePSJ0aGVNU3N5Il0sIGFbb25jbGljayo9IlB1c2hDbGlja1RhZyJdW3JlbF0sIGFbaHJlZl49Imh0dHBzOi8vc2VhcmNoZW5naW5lcmVwb3J0cy5uZXQvZ21kYXNhZHMiXQ
+H	second-hand.it	-	LndlcmJ1bmctY29udGFpbmVy
 H	secondlifetranslations.com	-	LmFpLWF0dHJpYnV0ZXM
 H	secondlifetranslations.com	-	LmNvZGUtYmxvY2stMTc
 H	securityweek.com	-	LnB1bS1vdmVybGF5W2RhdGEtcG9wbWFrZSo9InBvcHVwLWFkIl0
@@ -7845,6 +8133,9 @@ H	shana.pe.kr	-	aW5zLmFkc2J5Z29vZ2xl
 H	sharer.pw	-	I292ZXJsYXk
 H	sharing.wtf	-	Lm1ldGFSZWRpcmVjdFdyYXBwZXJUb3BBZHM
 H	shavetape.*	-	W2NsYXNzKj0iYm4tY29udGFpbmVyIl0sIGRpdltzdHlsZSo9InotaW5kZXg6IDMwMDAwMDsiXQ
+H	sheepesports.com	-	Lm15LTguZ2FwLTIuaXRlbXMtY2VudGVy
+H	sheepesports.com	-	LnB4LTUubXktMTAubWF4LXctXFs3MHJlbVxd
+H	sheepesports.com	-	ZGl2LnhsXDpibG9jay5oaWRkZW4gPiAuaC1mdWxsOmhhcyhbc3R5bGVePSJhc3BlY3QtcmF0aW86MzAwIC8iXSk
 H	shellshock.io	-	I3NwaW5uZXJPdmVybGF5
 H	shellshock.io	-	LmJveF9yZWxhdGl2ZS5jaHctcHJvZ3Jlc3Mtd3JhcHBlcg
 H	shellshock.io	-	LmhvdXNlLXNtYWxs
@@ -7896,10 +8187,10 @@ H	shrink.icu	-	LmJhbm5lcg
 H	shrink.icu	-	LmJsb2ctaXRlbQ
 H	shrink.icu	-	Y2VudGVy
 H	shrink.icu	-	aDMsIHA
-H	shrinke.*	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0
+H	shrinke.*	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0sIC50ZXh0LWxlZnQ
 H	shrinkforearn.in	-	W2NsYXNzKj0id3AtaW1hZ2UiXQ
 H	shrinkforearn.in	-	W2hyZWYqPSJ3YXVmb29rZS5jb20iXSwgLmZvb3RlciwgLmJhbm5lci1pbm5lciwgLnctbmF2Lm5hdi1yb3VuZGVkLWNlbnRlcg
-H	shrinkme.*	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0
+H	shrinkme.*	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0sIC50ZXh0LWxlZnQ
 H	shrtfly.*	-	LmJhbm5lcg
 H	shrtfly.*	-	aW5zLmFkc2J5Z29vZ2xl
 H	shrtslug.biz	-	cCwgbGksIHVsLCBvbCwgaDIsIGgz
@@ -7930,6 +8221,8 @@ H	simply-hentai.com	-	LmNhbS1jb250YWluZXI
 H	simply-hentai.com	-	Lm5hdGl2ZSArIGRpdg
 H	simply-hentai.com	-	LnBhZ2UtbGVhdmU
 H	simply-hentai.com	-	LnJlYWRlciA-IGRpdi5tYi0zID4gZGl2Lm10LTM
+H	simpmusic.org	-	LmV6b2ljLWFkLXNsb3Q
+H	simpmusic.org	-	W2FyaWEtbGFiZWw9IlNwb25zb3JlZCBvZmZlcnMiXQ
 H	simsdom.com	-	I2FkODYw
 H	simsdom.com	-	I2Fkdjg0MA
 H	simsdom.com	-	Ll9hZA
@@ -7955,6 +8248,8 @@ H	sitarchive.com	-	W2lkXj0iYXN3aWZ0XyJd
 H	siteunblocked.info	-	LmFsbC1saW5rZWQ
 H	siteunblocked.info	-	LmFudG9pYw
 H	siteunblocked.info	-	W2lkXj0iY29va2llQ29uc2VudCJd
+H	skapiec.pl	-	LnBsYWNlaG9sZGVy
+H	skapiec.pl	-	ZGl2W2lkXj0ib25ldC1hZC0iXQ
 H	skidrowcodex.net	-	LmJsb2ctY29udGVudC53Y29udGFpbmVyOmhhcyg-IC5wcmVtaXVtKQ
 H	skidrowcodex.net	-	Lm92ZXJsYXk
 H	skidrowcodex.net	-	LndpZGdldF90ZXh0OmhhcyhzY3JpcHRbc3JjJD0iL2ludm9rZS5qcyJdKQ
@@ -8057,6 +8352,8 @@ H	spaste.com	-	W2hyZWZePSJodHRwOi8vYml0Lmx5LyJd
 H	spaste.com	-	Yg
 H	spaste.com	-	aDUgPiBhW2hyZWZePSJodHRwOi8vYW16bi50by8iXQ
 H	spaziogames.it	-	ZGl2W2lkXj0id2lkZ2V0YmF5LXBsYWNlaG9sZGVyIl0
+H	speedof.me	-	LmFwaS1hZC1mb290ZXI
+H	speedof.me	-	LmJhY2tncm91bmQtY29udGFpbmVyID4gW2NsYXNzKj0iLSJdOm5vdChbaWRdKTpub3QoW2FyaWEtbGFiZWxdKTpub3QoW3N0eWxlXSk6bm90KFtyb2xlXSk6bm90KFtjbGFzcyo9IiAiXSxbY2xhc3MqPSJtZW51Il0sW2NsYXNzKj0iY29udGVudCJdLFtjbGFzcyo9InByb2dyZXNzIl0p
 H	speedporn.*	-	I3RyYWNraW5nLXVybA
 H	speedtest.net	-	I21vZGFsLW92ZXJsYXk
 H	speedtest.net	-	LmVvdC1kZC1jb250ZW50
@@ -8077,7 +8374,10 @@ H	spieleklassiker.com	-	LmJhbm5lcg
 H	splinternews.com	-	I3NwbGFzaHktYWQtY29udGFpbmVyLXRvcA
 H	splinternews.com	-	YXJ0aWNsZS5wb3N0bGlzdF9faXRlbTpoYXMoLm1ldGFfX25ldHdvcmsp
 H	splitshire.com	-	LmV6b2ljLWFk
+H	sporcle.com	-	LnVuaXQtY29udGFpbmVyLmJveDpoYXMoLm5ldy10ZW1wLXVuaXQp
+H	sporcle.com	-	ZGl2LnJvdy11bml0LWNvbnRhaW5lci5yb3c6aGFzKC5uZXctdGVtcC11bml0KQ
 H	sport1.de	-	LnMxLWFk
+H	sportando.basketball	-	ZGl2W3N0eWxlXj0ibWluLWhlaWdodDo2MDBweCFpbXBvcnRhbnQ7YmFja2dyb3VuZC1jb2xvcjojZWVlIWltcG9ydGFudDsiXTpoYXMoPiBkaXZbaWRePSJkaXYtZ3B0LWFkIl0p
 H	sportlemons.*	-	I2hhcHB5RG9n
 H	sportlemons.*	-	I2xhenlDYXQ
 H	sportlemonx.com	-	LnRhbGxzdHJlYW1iYW5uZXI
@@ -8105,18 +8405,26 @@ H	sportweb.info	-	LmZsb2F0aW5nLWJhbm5lcg
 H	sportweb.info	-	dGFibGVbY2xhc3NePSJhIl0
 H	sportzonline.site	-	I2h0bWwx
 H	sportzonline.site	-	LnBvc2l0aW9uLWFic29sdXRlLnRvcC0w
+H	spotbox.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	sprucegroveexaminer.com	-	LmZlYXR1cmVkLXZpZGVv
 H	spycock.com	-	I2FkdmVydGlzaW5n
 H	spycock.com	-	I2FsZmFfcHJvbW9fcGFyZW50
 H	spycock.com	-	LmFzaWRlLWl0ZW1wYWdlLWNvbA
 H	spycock.com	-	LmZvb3Rlci1iYW5uZXItd3JhcHBlcg
 H	sqlserveregitimleri.com	-	LmFpX3dpZGdldA
+H	sreality.cz	-	ZGl2W2RhdGEtZTJlPSJiYW5uZXIucHJvamVrdHUtY29udGFpbmVyIl0
+H	sreality.cz	-	ZGl2W2RhdGEtZTJlPSJkZXRhaWwuYmFubmVyLnByb2pla3R1LWNvbnRhaW5lciJd
+H	sreality.cz	-	ZGl2W2RhdGEtZTJlPSJsZWFkZXJib2FyZC1jb250YWluZXIiXQ
+H	sreality.cz	-	ZGl2W2RhdGEtZTJlPSJtaWRkbGUtY29udGFpbmVyIl0
+H	srnky.com	-	LnRkLXBvc3QtdGVtcGxhdGUtZGVmYXVsdC50ZC1jb250YWluZXIsIC5iYW5uZXItaW5uZXI
+H	srnky.com	-	YVtocmVmXVt0YXJnZXQ9Il9ibGFuayJd
 H	staaker.com	-	I2xpbmsxcy1nZW5lcmF0ZQ
 H	staaker.com	-	I2xpbmsxcy1saW5r
 H	staaker.com	-	I2xpbmsxcy13YWl0MQ
 H	stagatv.com	-	LmFkLWJhbm5lcg
 H	stamfordadvocate.com	-	I21vZGFscw
 H	standard-freeholder.com	-	LmZlYXR1cmVkLXZpZGVv
+H	standard-freeholder.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	stape.*	-	W2NsYXNzKj0iYm4tY29udGFpbmVyIl0sIGRpdltzdHlsZSo9InotaW5kZXg6IDMwMDAwMDsiXQ
 H	star-telegram.com	-	I21hc3RoZWFkVnVlQ29udGFpbmVyID4gLnpvbmU
 H	star-telegram.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
@@ -8129,6 +8437,7 @@ H	statesman.com	-	I21vZGFscw
 H	stbturbo.xyz	-	I3BvcA
 H	stbturbo.xyz	-	I3BvcDE
 H	stbturbo.xyz	-	I3BvcDI
+H	steam-repacks.net	-	ZGl2ID4gY2VudGVyID4gYnV0dG9uW3N0eWxlKj0iYm9yZGVyOiAwcHgiXVtzdHlsZSo9ImN1cnNvcjogcG9pbnRlciJd
 H	steamcrackedgames.com	-	LmJsaW5r
 H	steamcrackedgames.com	-	W2hyZWZePSJodHRwczovL3N0YXJ0Z2FtaW5nLm5ldC8iXQ
 H	steamplay.*	-	I3V2ZXJsYXk
@@ -8209,6 +8518,7 @@ H	streamvid.dev	-	LmFkX21vYmlsZQ
 H	strikeout.*	-	LmQtbm9uZS5kLWxnLWJsb2NrLmNvbC1sZy0z
 H	strikeout.*	-	Lm0tMS5idG4tZGFuZ2VyLmJ0bg
 H	strikeout.*	-	LnctMTAwLnBvc2l0aW9uLWFic29sdXRlLmgtMTAw
+H	striphub.cam	-	YVtocmVmPSJodHRwczovL3RoZXBvcm5kdWRlLmNvbS8iXQ
 H	strtape.*	-	W2NsYXNzKj0iYm4tY29udGFpbmVyIl0sIGRpdltzdHlsZSo9InotaW5kZXg6IDMwMDAwMDsiXQ
 H	strtape.*	-	aWZyYW1lW3NyY149ImRhdGE6Il0
 H	strtapeadblock.*	-	W2NsYXNzKj0iYm4tY29udGFpbmVyIl0sIGRpdltzdHlsZSo9InotaW5kZXg6IDMwMDAwMDsiXQ
@@ -8225,6 +8535,7 @@ H	studyuo.com	-	aWZyYW1lW3dpZHRoPSIzMDAiXQ
 H	stuff.tv	-	LndwLWJsb2NrLWtlbHNleW1lZGlhLWJsb2Nrcy1ibG9jay1zcXVpcnJlbC1lbWJlZA
 H	subdivx.com	-	I3RhYm9vbGEtYmVsb3ctYXJ0aWNsZS10aHVtYm5haWxz
 H	subsvip.com	-	I2JvdGFvQmxvcXVlaW8
+H	sudinfo.be	-	LnBhbmUtcGFydGVuYWlyZXMtb3V0YnJhaW4tc2lkZWJhcg
 H	sudoku-aktuell.de	-	I2FqYXg
 H	sudoku-aktuell.de	-	I2JpbGxib2FyZA
 H	sudoku-aktuell.de	-	I2Jsb2NrZGl2
@@ -8247,6 +8558,7 @@ H	superdeporte.es	-	LnBvcHVwLWxvY2F0aW9u
 H	superembeds.com	-	I2FkU3RvcA
 H	superherohype.com	-	YS53cC1ibG9jay1idXR0b25fX2xpbms6aXMoW2hyZWZePSJodHRwczovL2Ftem4udG8vIl0sIFtocmVmXj0iaHR0cHM6Ly93d3cuYW1hem9uLmNvbS8iXSk
 H	superporn.com	-	LmludGVuc2l2ZS1hZGQ
+H	svetserialu.*	-	Ym9keSA-IC5sb2FkZXIgfiBkaXZbY2xhc3NdW3N0eWxlKj0iei1pbmRleCJdOm5vdChbaWRdKQ
 H	swarmmanga.com	-	LmMtc2lkZWJhcg
 H	swift4claim.com	-	Lm92ZXJmbG93
 H	swift4claim.com	-	Lm92ZXJsYXk
@@ -8284,6 +8596,8 @@ H	taradinhos.com	-	LnVuZGVyLXBsYXllci1hZA
 H	taradinhos.com	-	LndpZGdldF9jdXN0b21faHRtbA
 H	taradinhos.com	-	ZGl2Omhhcyg-IC52aWRlby1ibG9jay1oYXBweSk
 H	target.com	-	ZGl2W2NsYXNzKj0ib3ZlcmxheSJdOmhhcyhhW2hyZWYqPSJoZWFsdGgtcG9saWN5Il0p
+H	tarnkappe.info	-	LmNhcmQ6aGFzKD4gc2VjdGlvbiA-IC5hcm91bmQtZGVza3RvcC1hZCk
+H	tarnkappe.info	-	LnRhcm5hZHNfZ2VuZXJhbC5kZXNrdG9wLW9ubHk
 H	tatsumi-crew.net	-	I0hUTUwy
 H	tattle.life	-	LnZpc2l0b3JBZFBvc3Q
 H	taufiqhdyt.com	-	I2JpZy1hZHM
@@ -8323,6 +8637,8 @@ H	teencumpot.com	-	I3Nwb3QtaG9sZGVy
 H	teenpornvideo.fun	-	LmZ1bGxhdmUtcGw
 H	teenpornvideo.xxx	-	LmFzaWRlLXNwb3Rz
 H	tekfiz.com	-	aW5zLmFkc2J5Z29vZ2xl
+H	teknoasian.com	-	LnJpZ2h0LXNpZGViYXIucGVuY2lfc2lkZWJhci5jb250YWluZXIsLnBlbmNpLWhvbWUtcG9wdWxhci1wb3N0cy5jb250YWluZXIscCx1bCxsaSxbaHJlZio9InMwLWdyZWF0ZSJdLCNzaWRlYmFyLC5wb3N0LXBhZ2luYXRpb24sLnNpbmdsZS1icmVhZGNydW1iLnBlbmNpLWJyZWFkY3J1bWIuY29udGFpbmVyLC5wZW5jaS1tb3ZlLXRpdGxlLWFib3ZlLnBvc3QtaW1hZ2UsI2Zvb3Rlci1zZWN0aW9uLCAucG9zdC1yZWxhdGVkLCAjY29tbWVudHMsIC5wb3N0LXNoYXJlLnRhZ3Mtc2hhcmUtYm94LCAuYWxpZ25sZWZ0LndwLWNhcHRpb24
+H	teknoasian.com	-	ZGl2OmhhcyhhW2hyZWYqPSJhbnRpYWRibG9ja2NvcmUuY29tIl0p
 H	teknolojiprojeleri.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	teleboy.ch	-	YVtocmVmKj0iQnJhbmRpbmdEYXkiXQ
 H	teledyski.info	-	I3ItczE
@@ -8330,6 +8646,8 @@ H	telepisodes.org	-	I2xvYWRpbmdfYnV0dG9u
 H	telepisodes.org	-	W3N0eWxlKj0icG9pbnRlci1ldmVudHMiXQ
 H	telerium.*	-	I292ZXJsYXk
 H	teleriumtv.*	-	I292ZXJsYXk
+H	televiziebi.tv	-	LmFkcy1iYW5lcmktMQ
+H	televiziebi.tv	-	LmF2Yy1hc3Zs
 H	teltarif.de	-	aW1nW3JlZmVycmVycG9saWN5PSJ1bnNhZmUtdXJsIl1bc3JjXj0iL2ltZy8iXVtzcmMkPSIuanBnIl0
 H	temp-mail.io	-	bWFpbi5tYi1nZW5lcmFsID4gZGl2W3N0eWxlPSJ3aWR0aDoxMDAlO2hlaWdodDo1MHB4OyJd
 H	tempatwisata.pro	-	cCwgbGksIHVsLCB0ZCwgdHIsIC5sYXp5bG9hZCwgW2lkXj0iaF8iXSwgI3RlYXNlcjI
@@ -8342,7 +8660,10 @@ H	terabox.fun	-	W2lkXj0icG9wLWFkIl0sIGRpdi5hcnRpY2FsLWNvbnRlbnQsIC5mdWxsLWJveCwg
 H	teraearn.com	-	W2lkXj0icG9wLWFkIl0sIGRpdi5hcnRpY2FsLWNvbnRlbnQsIC5mdWxsLWJveCwgLmJvdHRvbS1hZHNlbnNlLCAuYXJ0aWNsZS1yZWNvbW1lbmQsIC5hcnRpY2xlLW5leHQsIFtpZF49ImFkLWJveC0iXSwgLmZ1bGwtY3Ry
 H	teralink.me	-	W2lkXj0icG9wLWFkIl0sIGRpdi5hcnRpY2FsLWNvbnRlbnQsIC5mdWxsLWJveCwgLmJvdHRvbS1hZHNlbnNlLCAuYXJ0aWNsZS1yZWNvbW1lbmQsIC5hcnRpY2xlLW5leHQsIFtpZF49ImFkLWJveC0iXSwgLmZ1bGwtY3Ry
 H	terashare.me	-	W2lkXj0icG9wLWFkIl0sIGRpdi5hcnRpY2FsLWNvbnRlbnQsIC5mdWxsLWJveCwgLmJvdHRvbS1hZHNlbnNlLCAuYXJ0aWNsZS1yZWNvbW1lbmQsIC5hcnRpY2xlLW5leHQsIFtpZF49ImFkLWJveC0iXSwgLmZ1bGwtY3Ry
+H	terazwloclawek.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	tercihiniyap.net	-	aW5zLmFkc2J5Z29vZ2xl
+H	terraria-servers.com	-	I3RvcGFkc3BvdA
+H	terraria-servers.com	-	I3ZvdGUtd2FybmluZy1ibG9jaw
 H	testsieger.de	-	I3Nwb25zb3JlZEFkc0hlYWRlcg
 H	testsieger.de	-	I3Nwb25zb3JlZFByb2R1Y3RQZHA
 H	textreverse.com	-	LmNsZWFyZml4
@@ -8387,6 +8708,7 @@ H	thegay.*	-	LnVuZGVycGxheWVyX19pbmZvID4gZGl2W2NsYXNzXTpmaXJzdC1jaGlsZA
 H	thegay.*	-	LnZpZGVvLXBhZ2VfX2NvbnRlbnQgPiBkaXYubGVmdCArIGRpdltjbGFzc106bGFzdC1jaGlsZA
 H	thegay.*	-	ZGl2W3N0eWxlPSJkaXNwbGF5OmZsZXggIWltcG9ydGFudCJdID4gZGl2
 H	thegraphicleader.com	-	LmZlYXR1cmVkLXZpZGVv
+H	thegrowthop.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	thehackernews.com	-	LmFra3U
 H	thehackernews.com	-	W2hyZWY9Imh0dHBzOi8vdGhlaGFja2VybmV3cy51ay93aXota3ViZXJuZXRlcy1zZWN1cml0eSJd
 H	thehackernews.com	-	Ym9keTpoYXMoYXJ0aWNsZSkgLmNmID4gYVtocmVmXj0iaHR0cHM6Ly90aGVoYWNrZXJuZXdzLnVrLyJdW3RhcmdldD0iX2JsYW5rIl0
@@ -8415,7 +8737,7 @@ H	theloadout.com	-	I25uX2JmYV93cmFwcGVy
 H	theloadout.com	-	LmxlZ2lvbl9wcmltaXN3cmFwcGVy
 H	theloadout.com	-	Lm5uX21vYmlsZV9tcHVfd3JhcHBlcg
 H	thelondoner.ca	-	LmZlYXR1cmVkLXZpZGVv
-H	themezon.net	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0
+H	themezon.net	-	LmV4cG9wLCAuYmxvZy1pdGVtLCBmb290ZXIsIFtzcmMqPSJzaHJpbmttZS4iXSwgLmJveC1tYWluIGgzLCBbaGlnaHQ9IjI1MHB4Il0sIC50ZXh0LWxlZnQ
 H	themix.net	-	LmJhbm5lci1zcGFjZXItdG9w
 H	themix.net	-	LmNvbnRhaW5lci5oZWFkZXItY29udGFpbmVyX19tYWlu
 H	themix.net	-	LnRwZC1iYW5uZXItbW9iaWxl
@@ -8444,6 +8766,7 @@ H	theporngod.com	-	LnRhYmxl
 H	theporngod.com	-	W2lkXj0iY3ctIl0
 H	thepost.on.ca	-	LmZlYXR1cmVkLXZpZGVv
 H	theprovince.com	-	LmZlYXR1cmVkLXZpZGVv
+H	theprovince.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	theproxy.app	-	LmFsbC1saW5rZWQ
 H	theridgefieldpress.com	-	I21vZGFscw
 H	theroot.com	-	I3NwbGFzaHktYWQtY29udGFpbmVyLXRvcA
@@ -8456,6 +8779,7 @@ H	thessdreview.com	-	LmUzbGFu
 H	thestar.com	-	Lm1haW4tc2lkZWJhcjpoYXMoPiAjc3RpY2t5LXNpZGUtc2Vjb25kYXJ5LXNwYWNlcik
 H	thestar.com	-	LnZpYWZvdXJhLWVuZ2FnZW1lbnQtc3RhcnRlcg
 H	thestarphoenix.com	-	LmZlYXR1cmVkLXZpZGVv
+H	thestarphoenix.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	thestate.com	-	I21hc3RoZWFkVnVlQ29udGFpbmVyID4gLnpvbmU
 H	thestate.com	-	YXJ0aWNsZSAuY29tYm8uem9uZQ
 H	thestate.com	-	YXJ0aWNsZSBbaWRePSJ6b25lLWVsIl0
@@ -8475,6 +8799,7 @@ H	theverge.com	-	LmR1ZXQtLWhvbWVwYWdlLS1oZXJvID4gZGl2W2NsYXNzXSA-IGRpdltjbGFzc10
 H	thevidhd.*	-	LnZpZGVvX2JhdG1hbg
 H	thevidhd.*	-	aDE
 H	thewhig.com	-	LmZlYXR1cmVkLXZpZGVv
+H	thewhig.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	thingiverse.com	-	W2NsYXNzKj0iVGhpbmdQYWdlX190b3BBZCJd
 H	thingiverse.com	-	W2NsYXNzXj0iSXRlbUNhcmRDb250YWluZXJfX2l0ZW1DYXJkIl06aGFzKD4gW3RpdGxlPSJBZHZlcnRpc2VtZW50Il0p
 H	thothd.com	-	LnRhYmxl
@@ -8521,11 +8846,13 @@ H	timesofindia.indiatimes.com	-	LnNpZGViYXJfYWRfZml4IC5pbWFnZUJhbm5lcg
 H	timesofindia.indiatimes.com	-	ZGl2W2NsYXNzKj0icGVyc29uYWxpc2VXaWRnZXRMb2FkZXIiXQ
 H	timesunion.com	-	I21vZGFscw
 H	timminspress.com	-	LmZlYXR1cmVkLXZpZGVv
+H	timminspress.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	timminstimes.com	-	LmZlYXR1cmVkLXZpZGVv
 H	tio.ch	-	LmFk
 H	tirexo.*	-	W2hyZWZePSJodHRwczovL2RsLXByb3RlY3QubGluay9yZXEtZGlyZWN0LXVybCJd
 H	titantv.com	-	I3NpZGVib3g
 H	tiz-cycling-live.io	-	I21zZw
+H	tj.news	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	tmearn.*	-	LmJhbm5lcg
 H	tmohentai.com	-	LmFkdmVydA
 H	tnaflix.com	-	I3ZpZFBsYXllciA-IGRpdjpsYXN0LWNoaWxk
@@ -8564,6 +8891,7 @@ H	torbobit.net	-	I19fYmdkX2xpbmsy
 H	torlock.*	-	LmV4dG5lZWQ
 H	torlock2.*	-	LmV4dG5lZWQ
 H	tornadomovies.*	-	W2hyZWY9Ii91c2VyL3ByZW1pdW1yZWdpc3RyYXRpb24iXQ
+H	torontosun.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	torrent9.*	-	I3ZwbnZwbg
 H	torrentdownload.*	-	W2hyZWZePSIvYmluZy4iXQ
 H	torrentdownload.*	-	W2hyZWZePSIvZ2V0LnBocCJd
@@ -8592,15 +8920,18 @@ H	tournguide.com	-	cCwgbGksIHVsLCBvbCwgaDIsIGgz
 H	toursetlist.com	-	LndpZGdldF9jdXN0b21faHRtbA
 H	tousatu-ch.net	-	LndpZGdldF9jdXN0b21faHRtbDpoYXMoPiBkaXYudGV4dHdpZGdldCA-IGRpdltzdHlsZV49IndpZHRoOiAxMDAlOyJdID4gZGl2Lm5pbmphLXJlY29tbWVuZC1ibG9jayk
 H	tousatu-club.com	-	I3RleHQtOQ
+H	tpb.*	-	YVtocmVmXj0iaHR0cHM6Ly91bHRpbWF0ZXN1cmZlcnByb3RlY3Rvci5jb20vIl0
 H	tpi.li	-	LnRkLXBvc3QtdGVtcGxhdGUtZGVmYXVsdC50ZC1jb250YWluZXIsIC5iYW5uZXItaW5uZXI
 H	tpi.li	-	YVtocmVmXVt0YXJnZXQ9Il9ibGFuayJd
 H	tr.link	-	LnN3ZWV0LWFsZXJ0
 H	tr.link	-	LnN3ZWV0LW92ZXJsYXk
+H	tradingref.com	-	LnNpZGViYXI6aGFzKD4gZGl2LmFkLXVuaXQp
+H	tradingref.com	-	ZGl2W3N0eWxlXj0iZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBjZW50ZXI7Il06aGFzKD4gZGl2W2RhdGEtcnRiLXRhZy1pZF0p
+H	tradingref.com	-	ZGl2W3N0eWxlXj0iZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBjZW50ZXI7Il06aGFzKD4gZGl2W2lkXj0iZGl2LWdwdC1hZCJdKQ
 H	trailerhg.xyz	-	I3BvcA
 H	trailerhg.xyz	-	I3BvcDE
 H	trailerhg.xyz	-	I3BvcDI
 H	trakt.tv	-	LnNuaWdlbA
-H	trakt.tv	-	YVt0YXJnZXQ9Il9ibGFuayJdW3N0eWxlXTpoYXMoaW1nW3NyY10p
 H	trakt.tv	-	ZGl2W2lkKj0iLXdyYXBwZXIiXTpoYXMoYVtocmVmPSIvdmlwL2FkdmVydGlzaW5nIl0p
 H	tralhasvarias.blogspot.com	-	LmNlbGxBZA
 H	tranimeizle.*	-	LmFkdmVydGlzZW1lbnQ
@@ -8715,15 +9046,17 @@ H	turbovidhls.com	-	I3BvcDI
 H	tureng.com	-	I3R1cmVuZy1jYW1ibHktYWQtcGxhY2Vob2xkZXI
 H	tureng.com	-	LmRlYnVnLWFk
 H	tureng.com	-	LnRlcm1yZXN1bHRzLWFkLXRy
-H	turkanime.*	-	I3Nwb25zb3JlZA
-H	turkanime.*	-	LkFsdGtpc2ltTWVudQ
 H	turystyka.wp.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBkaXYgPiBzcGFuID4gZGl2ID4gLmJvcmRlciA-IC5jb250YWluZXIgPiBbY2xhc3NdID4gYS53X2NvbnRlbnRMaW5rW3RhcmdldD0iX2JsYW5rIl1bcmVsPSJub3JlZmVycmVyIG5vb3BlbmVyIl0gPiBpbWdbd2lkdGg9IjEwMCUiXSk
 H	tutcourse.com	-	LmFpLWF0dHJpYnV0ZXM
 H	tutcourse.com	-	LnRleHQtaHRtbA
 H	tutorgaming.com	-	LnBvcFNj
+H	tuwroclaw.com	-	LmdyaWRfX2Fk
+H	tuwroclaw.com	-	LmdyaWRfX2NvbDpoYXMoPiAuYWR2KQ
 H	tv-sport-hd.com	-	I3Jla2xhbWEx
 H	tv-sport-hd.com	-	W3NyYz0iL3JjbC9yZWNsYW1hLnBocCJd
 H	tv.shoot-yalla.live	-	LmRlbWFuZC1zdXBwbHk
+H	tv.wp.pl	-	KjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQ6aGFzKD4gZGl2OmZpcnN0LWNoaWxkID4gYSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl0pOm5vdChbYWx0XSwgW2lkXSwgW3dpZHRoXSwgW2RhdGEtc3JjXSkgKyBkaXY6ZW1wdHkp
+H	tv.wp.pl	-	ZGl2W2hlaWdodD0iYXV0byJdOmhhcyg-IGRpdjpvbmx5LWNoaWxkID4gZGl2OmZpcnN0LWNoaWxkID4gc2NyaXB0Om9ubHktY2hpbGQpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkKQ
 H	tv2.no	-	LmFydGljbGUtcmVjb21tZW5kZWQ
 H	tv247.us	-	LmFmY19wb3B1cA
 H	tv24livestream.de	-	I2FibW14
@@ -8765,8 +9098,11 @@ H	twitchnosub.com	-	c2VjdGlvbjpudGgtb2YtdHlwZSgyKSA-IC5jb250YWluZXIgPiBkaXY6aGFz
 H	twobluescans.com	-	I2FkLWNvbnRhaW5lcg
 H	txxx.*	-	LmluZGV4LXBhZ2UgPiAud3JhcHBlciA-IC5yb3cgKyBkaXZbY2xhc3Nd
 H	txxx.*	-	Lmp3LWF0aXRsZS5ub3BvcDpoYXMoPiBbaHJlZio9ImcyZmFtZS5jb20iXVtocmVmKj0iJmNhbXBhaWduIl0p
+H	txxx.*	-	Lmp3LXRpdGxlLXNlY29uZGFyeQ
 H	txxx.*	-	LnB3YS1hZA
 H	txxx.*	-	LnN1Z2dlc3Rpb24
+H	txxx.*	-	LnN1Z2dnZXN0aW8
+H	txxx.*	-	LnZpZGVvLWNvbnRlbiA-IGRpdjpoYXMoYVtocmVmPSIvc2lnbmluLyJdKQ
 H	txxx.*	-	LnZpZGVvLWNvbnRlbnQgPiBkaXYgKyBkaXY6bGFzdC1jaGlsZA
 H	txxx.*	-	LnZpZGVvLWNvbnRlbnQgPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXZbY2xhc3NdOmhhcyg-IGRpdiA-IGFbaHJlZj0iIyJdKQ
 H	txxx.*	-	LnZpZGVvLXZpZGVvcy1zbGlkZXI
@@ -8828,6 +9164,8 @@ H	unblocknow.*	-	LmFsZXJ0
 H	unblocksite.pw	-	LmFsbC1saW5rZWQ
 H	unblocksite.pw	-	LmFudG9pYw
 H	unblocksite.pw	-	ZGl2W2lkXVtvbmNsaWNrXj0id2luZG93Lm9wZW4oJ2h0dHBzOi8vdnBuLW9mZmVycy5jb20vIl0
+H	unbox.ph	-	LmVsZW1lbnRvci13aWRnZXQtaW1hZ2U6aGFzKD4gLmVsZW1lbnRvci13aWRnZXQtY29udGFpbmVyID4gYVtocmVmXj0iaHR0cHM6Ly93d3cuc21jeWJlcnpvbmUuY29tLyJdKQ
+H	unbox.ph	-	ZGl2LmVsZW1lbnRvcltkYXRhLWVsZW1lbnRvci10eXBlPSJ3cC1wYWdlIl0gPiBzZWN0aW9uW2RhdGEtc2V0dGluZ3MqPSJzdHJldGNoX3NlY3Rpb24iXTpoYXMoZGl2LmVsZW1lbnRvci13aWRnZXQtaW1hZ2UgYVtocmVmXSk
 H	underhentai.net	-	LmhpZGRlbi1zbQ
 H	underhentai.net	-	LnNpZGViYXIgPiBkaXZbY2xhc3NdID4gLmxvYWRpbmc
 H	underhentai.net	-	LnZpc2libGUteHM
@@ -8863,6 +9201,7 @@ H	uns.bio	-	I2R5bmFtaWMtb3ZlcmxheQ
 H	unsplash.com	-	ZGl2W2RhdGEtdGVzdD0iU2VhcmNoSW5GZWVkQWQtQWZmaWxpYXRlRmFsbGJhY2stQ29udGFpbmVyIl0
 H	unsplash.com	-	ZGl2W2RhdGEtdGVzdF49Im1hc29ucnktZ3JpZCJdID4gZGl2W3N0eWxlXj0iLS1yb3ciXSA-IGRpdjpub3QoW2l0ZW1wcm9wPSJpbWFnZSJdKQ
 H	uol.com.br	-	LmJnLWJhbm5lcg
+H	up-4ever.net	-	LnU0ZGwtc3BvdGNvbC51NGRsLWNob2ljZQ
 H	up-load.io	-	LmFkcw
 H	updateroj24.com	-	LmFkLWNvbnRhaW5lcg
 H	upfiles-urls.com	-	LmNvbnRlbnQ6aGFzKGgyKQ
@@ -8885,6 +9224,9 @@ H	uploadrar.*	-	Zm9ybSA-IGNlbnRlcjpoYXMoLmJ0bik6aGFzKFtocmVmXSk
 H	uploadrar.*	-	bWFpbiA-IGNlbnRlciA-IGEuYnRuLXByaW1hcnk
 H	uploadshare.net	-	LmFkdmVydC13cmFwcGVy
 H	uploadshare.net	-	aW5zLmFkc2J5Z29vZ2xl
+H	uploadvr.com	-	W2RhdGEtcG9zZWlkb24tcGxhY2VtZW50LW5hbWVePSJ1cGxvYWR2cl9idGZfYWRfIl0
+H	uploadvr.com	-	W2RhdGEtcG9zZWlkb24tcGxhY2VtZW50LW5hbWVePSJ1cGxvYWR2cmNvbV9Jbl9BcnRpY2xlX0FkXyJd
+H	uploadvr.com	-	ZGl2LnBvc2VpZG9uLWNvbnRhaW5lci0tZW1wdHk6aGFzKC5hZC1iZy1sYWJlbCk
 H	uploady.io	-	I2Rsbms
 H	uploady.io	-	I2Rvd25sb2FkYnRuW3N0eWxlJD0iei1pbmRleDogOTk5OTk7Il0
 H	uploady.io	-	I2lmcmFtZV9pZA
@@ -8928,7 +9270,6 @@ H	ustream.to	-	Lm92ZXJsYXk
 H	ustream.to	-	LnBvcHVw
 H	utakmice.net	-	I3Jjb3JuZXJzMmJvdHRvbQ
 H	utakmice.net	-	I3Jjb3JuZXJzMnRvcA
-H	utkarshonlinetest.com	-	LnByb2Nlc3MsIC50eHRfdG9w
 H	utreon.com	-	LmFkLWJhbm5lci1zdGF0aWM
 H	uwatchfree.*	-	LmhkLWxpbmtz
 H	uwatchfree.*	-	W2hyZWYqPSJkZWNlaXR0b3VyZWQuY29tIl0
@@ -8938,12 +9279,15 @@ H	v1.safevideo.click	-	I3JlZ2lzdGVyLW92ZXJsYXk
 H	v1.safevideo.click	-	I3ZpZGVvLWNvbnRhaW5lcg
 H	v1.safevideo.click	-	LmJ1dHQ
 H	v1.safevideo.click	-	Lmhvdg
+H	v2ex.com	-	aW5zLmFkc2J5Z29vZ2xlW2RhdGEtYWQtY2xpZW50XQ
+H	v2ex.com	-	aW5zLmFkc2J5Z29vZ2xlW2RhdGEtYWQtc2xvdF0
 H	v2links.me	-	I2Zvb3Rlcg
 H	v2movies.click	-	W2hyZWZePSJodHRwczovL3JlZnBhNTgxNDQuY29tLyJd
 H	v2movies.me	-	W2hyZWZePSJodHRwczovL3JlZnBhNTgxNDQuY29tLyJd
 H	v6embed.xyz	-	Ym9keSA-IGRpdltjbGFzc106ZW1wdHk
 H	vaa.jp	-	I25hbmthZml4
 H	vancouversun.com	-	LmZlYXR1cmVkLXZpZGVv
+H	vancouversun.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	vanillatweaks.net	-	LmJhbm5lci1zcG90
 H	variety.com	-	LmFkbXo
 H	varnascan.com	-	I2Zsb2F0Y2VudGVy
@@ -8976,12 +9320,19 @@ H	vibuxer.com	-	Ym9keSA-IGRpdltzdHlsZSo9IjIxNDc0ODM2NDciXQ
 H	vice.com	-	LmNvZGUtYmxvY2s
 H	vid-guard.com	-	Ym9keSA-IGRpdltjbGFzc106ZW1wdHk
 H	vid4up.*	-	I2FvdmVybGF5
+H	vidara.so	-	ZGl2Lm1heC13LTN4bC5teC1hdXRvID4gZGl2LnJlbGF0aXZlLm1iLTUucm91bmRlZC14bC5wLTcudGV4dC1jZW50ZXI
+H	vidara.to	-	ZGl2Lm1heC13LTN4bC5teC1hdXRvID4gZGl2LnJlbGF0aXZlLm1iLTUucm91bmRlZC14bC5wLTcudGV4dC1jZW50ZXI
+H	vidavra.com	-	ZGl2Lm1heC13LTN4bC5teC1hdXRvID4gZGl2LnJlbGF0aXZlLm1iLTUucm91bmRlZC14bC5wLTcudGV4dC1jZW50ZXI
 H	vidbox.dev	-	LmRhcmtcOmJnLWJsYWNrLnB0LTIwLmJnLXdoaXRlLnctZnVsbC56LTEwLnJlbGF0aXZlID4gLmxnXDpweC04Lm1kXDpweC02LnB4LTQubWF4LXctXFsxNDQwcHhcXS5teC1hdXRvOmhhcygjYWQtY29udGFpbmVyKQ
+H	vidbox.dev	-	YnV0dG9uW2FyaWEtbGFiZWw9IkNvbnRpbnVlIHRvIHBsYXllciJd
 H	vidbox.dev	-	c2VjdGlvblthcmlhLWxhYmVsPSJTcG9uc29yZWQgY29udGVudCJd
+H	vidbox.vc	-	LmRhcmtcOmJnLWJsYWNrLnB0LTIwLmJnLXdoaXRlLnctZnVsbC56LTEwLnJlbGF0aXZlID4gLmxnXDpweC04Lm1kXDpweC02LnB4LTQubWF4LXctXFsxNDQwcHhcXS5teC1hdXRvOmhhcygjYWQtY29udGFpbmVyKQ
+H	vidbox.vc	-	YnV0dG9uW2FyaWEtbGFiZWw9IkNvbnRpbnVlIHRvIHBsYXllciJd
+H	vidbox.vc	-	c2VjdGlvblthcmlhLWxhYmVsPSJTcG9uc29yZWQgY29udGVudCJd
 H	vidcloud.*	-	I292ZXJsYXktY2VudGVy
 H	vide-greniers.org	-	I21uZkRldGFpbF9hZFNlbnNlSGVhZA
-H	video.sibnet.ru	-	I3Zqcy1vdmVybGF5Y2xpcC1ib3g
-H	video.sibnet.ru	-	LnZqcy1vdmVybGF5Y2xpcC1ib3gtY2xvc2U
+H	videonode.de	-	I292ZXJsYXk
+H	videonode.de	-	Ym9keSA-IGFbdGFyZ2V0PSJfYmxhbmsiXQ
 H	videosbizarre.com	-	W2hyZWZePSJodHRwczovL3d3dy5za3lwZWlzIl0
 H	videoszoofiliahd.com	-	W2hyZWZePSJodHRwczovL3JlZGlyZWN0LmVyby1hZHZlcnRpc2luZy5jb20vIl0
 H	videovard.*	-	I251eCA-IGRpdiA-IGRpdiA-IGRpdltpZF0
@@ -9020,6 +9371,8 @@ H	vijaykarnataka.com	-	W2hyZWZePSJodHRwczovL2FwbmFiYXphYXIuaW5kaWF0aW1lcy5jb20vI
 H	vijaykarnataka.com	-	ZGl2ID4gLmFkLXdyYXBwZXItNjI1
 H	vijaykarnataka.com	-	ZGl2W2NsYXNzPSJuZXdzLWNhcmQgY29sNCJd
 H	vik1ngfile.site	-	YVtocmVmPSIvZmFzdC1kb3dubG9hZCJd
+H	vikuy.click	-	I3ZpZFByb3RlY3RPdmVybGF5
+H	vikuy.click	-	LndhdGNoLWFkLXNsb3Q
 H	vimm.net	-	I2Zvb3RlckNvbnRhaW5lcg
 H	vimm.net	-	I2hlYWRlckFkQ29udGFpbmVySW5saW5l
 H	vinaurl.*	-	I2Fkcy1ub3RpY2U
@@ -9084,6 +9437,7 @@ H	vladan.fr	-	W2hyZWZePSJodHRwczovL3d3dy5uYWtpdm8uY29tLyJd
 H	vladan.fr	-	W2hyZWZePSJodHRwczovL3d3dy5zdGFyd2luZHNvZnR3YXJlLmNvbS8iXQ
 H	vlr.gg	-	I3dyYXBwZXIgPiAuY29sLWNvbnRhaW5lciA-IC5jb2wgPiBkaXZbY2xhc3NdOmhhcyg-IGEuYm90ZC1uKQ
 H	vlr.gg	-	YS5ib3RkLW4
+H	vnexpress.net	-	LndyYXAtaGQtYWRibG9jaw
 H	vnjpclub.com	-	LnZuanAtYWQtc2xvdA
 H	vocalley.com	-	I2dhZHM
 H	voirfilms.*	-	LmxlZmVybWV1cg
@@ -9124,6 +9478,8 @@ H	wallpapers.ispazio.net	-	LmJveC1hcHBsZXNfc2luZ2xlX3JlY2xhbWU
 H	wallpapersmania.com	-	I2NwYV93cmFw
 H	wallpapersmania.com	-	LmpzX2Rpc2FibGVk
 H	wallpaperwaifu.com	-	aW5zLmFkc2J5Z29vZ2xl
+H	walterfootball.com	-	I2Jsb2NrLTc6aGFzKCNkZXNrdG9wX3JhaWxfMSk
+H	walterfootball.com	-	LmhlYWRlci1sYXlvdXQtYmFubmVyLXR3bw
 H	wanchan.jp	-	LnJlY29tbWVuZF9oZWFkZXI
 H	wanchan.jp	-	LnJlY29tbWVuZF9oZWFkZXIgKyBkaXZbc3R5bGVePSJhc3BlY3QtcmF0aW86Il0
 H	waploaded.com	-	LmFk
@@ -9227,7 +9583,7 @@ H	webtor.io	-	Lm1lLWFkLWNvbnRhaW5lcg
 H	webtvhd.com	-	W2lkKj0iU2NyaXB0Um9vdCJd
 H	webtvhd.com	-	aW5zLmFkc2J5Z29vZ2xl
 H	weebcentral.com	-	ZGl2W2NsYXNzXVtzdHlsZV06aGFzKD4gZGl2Lm5vdHJhbnNsYXRlID4gaWZyYW1lW3NhbmRib3gqPSJhbGxvdy1wb3B1cHMiXSk
-H	weloma.art	-	I3VubG9ja19ib3g
+H	weloma.*	-	I3VubG9ja19ib3g
 H	welt.de	-	LmMtYWQtY29udGFpbmVy
 H	welt.de	-	LnEtYWR2ZXJ0aXNlbWVudC1iYW5uZXI
 H	welt.de	-	W2lkXj0ib3V0YnJhaW5fd2lkZ2V0XyJdLk9VVEJSQUlOW2RhdGEtc3JjXTpoYXMoOnNoYWRvdygub2Itd2lkZ2V0ID4gLm9iLXdpZGdldC1pdGVtcy1jb250YWluZXIgPiAub2ItZHluYW1pYy1yZWMtY29udGFpbmVyID4gYVtkYXRhLWFkdi1pZF1bcmVsKj0ic3BvbnNvcmVkIl0pKQ
@@ -9293,11 +9649,13 @@ H	windowcleaningforums.co.uk	-	YVtocmVmXj0iaHR0cHM6Ly93aW5kb3djbGVhbmluZ2ZvcnVtc
 H	windowscentral.com	-	LnZhbl90YWJvb2xh
 H	windowsmatters.com	-	ZGl2W2NsYXNzJD0iLXF1aWNrLWFkc2Vuc2UiXQ
 H	windsorstar.com	-	LmZlYXR1cmVkLXZpZGVv
+H	windsorstar.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	winfuture.de	-	W2lkJD0iX2FkQ29udGFpbmVyIl0
 H	winit.heatworld.com	-	LnN0aWNreS1hZC11bml0LWRlZmF1bHQ
 H	winit.heatworld.com	-	LnN0aWNreS1hZC11bml0LXNwYWNlci1kZWZhdWx0
 H	winlator.com	-	ZGl2W2lkXj0id3BzYWZlLXdhaXQiXQ
 H	winnipegsun.com	-	LmZlYXR1cmVkLXZpZGVv
+H	winnipegsun.com	-	LnBtZC1hZC1jb250ZW50LXBsYWNlaG9sZGVy
 H	wiour.com	-	LnBvc3QgPiBjZW50ZXIgPiBbaHJlZl0gPiBpbWc
 H	wired.com	-	I2Fyb3VuZC10aGUtd2Vi
 H	wired.com	-	LmNvbnN1bWVyLW1hcmtldGluZy11bml0
@@ -9312,6 +9670,7 @@ H	wirtualnemedia.pl	-	LnB5LTEyOm5vdChbZGF0YS10ZXN0aWQ9InNjcmVlbmluZy1tYWluIl0pOm
 H	wirtualnemedia.pl	-	LndtLWNhdGVnb3J5dGVhc2Vyc2VjdGlvbi1hZC1sYXJnZQ
 H	wirtualnemedia.pl	-	LndwLXNjcmVlbmluZy1wbGFjZWhvbGRlci1jb250YWluZXI
 H	wirtualnemedia.pl	-	Ym9keSBkaXZbY2xhc3NdOm5vdChbaWRdKTpoYXMoPiBpbWdbc3JjPSIvc3RhdGljZmlsZXMvd20tcGxhY2Vob2xkZXIucG5nIl0p
+H	wispbyte.com	-	LnNsb3Qtbm90ZQ
 H	wkyc.com	-	LmdyaWRfX3N0aWNreS1jb2x1bW5fc2lkZV9sZWZ0
 H	wmoviesfree.*	-	Lm9yYW5nZS5iaWctY29sb3ItYnRu
 H	wnynewsnow.com	-	Lmc
@@ -9348,7 +9707,10 @@ H	wowescape.com	-	LmNvbC0xMjpoYXMoPiAuYWRzYnlnb29nbGUp
 H	wowescape.com	-	LmNvbC0xMjpoYXMoPiAuYWRzYnl2bGkp
 H	wowroms.com	-	LnVscm9tbGlzdCA-IC5lbGVtZW50Omhhcyg-IHVsID4gbGkgPiAuYWRzYnlnb29nbGUp
 H	wp.pl	-	I2NvbW1lbnRzID4gZGl2ID4gZGl2ID4gZGl2Omhhcyg-IGRpdjpmaXJzdC1jaGlsZCA-IGRpdjpvbmx5LWNoaWxkID4gZGl2Om9ubHktY2hpbGQgPiBkaXY6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCA-IGRpdiA-IGEgPiBpbWdbc3JjXj0iaHR0cHM6Ly92LndwaW1nLnBsLyJdW2FsdD0ibnVsbCJdKQ
+H	wp.pl	www.wp.pl	LndwLWNvY2tyb2FjaC10ZWFzZXI6aGFzKD4gLnNpemUtZnVsbCA-IFtkYXRhLXBvc2l0aW9uXSA-IGFbZGF0YS1iZWZvcmU9IlJFS0xBTUEiXSk
 H	wp.pl	-	LndwLWNvbW1lbnRzLWFkdi13cmFwcGVyOm5vdCg6aGFzKD4gLndwLWNvbW1lbnRzLW1vdGgtdGVhc2VyLWNvbnRhaW5lcikpOmhhcyg-IC53cC1jb21tZW50cy1hZHZbZGF0YS10ZXN0aWRePSJhZC1zbG90LSJdKQ
+H	wp.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBbY2xhc3NdOm9ubHktY2hpbGQgPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IFtjbGFzc10gPiAuaC0wOmVtcHR5ICsgc2NyaXB0Omxhc3QtY2hpbGQp
+H	wp.pl	www.wp.pl	W2NsYXNzXTpoYXMoPiBpbWdbcm9sZT0icHJlc2VudGF0aW9uIl0uYWJzb2x1dGU6Zmlyc3QtY2hpbGQgKyBkaXYpOmhhcyg-IC5oLTA6ZW1wdHkgKyBzY3JpcHQ6bGFzdC1jaGlsZCk
 H	wp.pl	-	Ym9keSA-IFtkYXRhLWNvbnRhaW5lcl0gPiBkaXZbY2xhc3NdOmVtcHR5
 H	wp.pl	-	Ym9keSA-IFtkYXRhLWNvbnRhaW5lcl0gPiBkaXZbY2xhc3NdOmhhcyg-IGRpdjpvbmx5LWNoaWxkOmVtcHR5KQ
 H	wp.pl	-	Ym9keSA-IGRpdjpoYXMoPiBkaXY6Zmlyc3QtY2hpbGQgPiBkaXY6ZW1wdHkgKyBpbWcgKyBkaXYpOmhhcyg-IGRpdjpmaXJzdC1jaGlsZCArIGE6bGFzdC1jaGlsZCA-IGRpdjpmaXJzdC1jaGlsZCArIGRpdjpsYXN0LWNoaWxkOmVtcHR5KQ
@@ -9376,20 +9738,7 @@ H	wuxia.click	-	Lm1hbnRpbmUtQ2VudGVyLXJvb3QgKyBiciArIGRpdltjbGFzc149Im1hbnRpbmUt
 H	wuxia.click	-	Lm1hbnRpbmUtQ29udGFpbmVyLXJvb3QgKyAubWFudGluZS1Db250YWluZXItcm9vdCArIGJyICsgYnIgKyBkaXZbY2xhc3NePSJtYW50aW5lLSJdOmxhc3Qtb2YtdHlwZTpoYXMoW2FsdH49IkFkIl0p
 H	wvt.free.nf	-	LnRyYWNraW5nLWJ0bg
 H	wvv-fmovies.com	-	Lm1vdmllLWRldGFpbC1iYW5uZXIgPiBkaXZbc3R5bGUqPSJ6LWluZGV4Il0
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtRGV0YWlsIl0gPiAjRzMyID4gI00xID4gW2NsYXNzPSJ3cmFwcGVyLXNhZmUiXSA-IFtjbGFzcz0iZmIgbXQteGwiXSA-IFtjbGFzcz0iZmItY29sLWxnLTQgaXMtaGlkZGVuLXNtIGlzLWhpZGRlbi1tZCJdID4gKjpoYXMoaW1nW3NyYyo9Imh0dHBzOi8vaW0uY2hpcC5kZS9paS8iXSk6bm90KHNlY3Rpb25bY2xhc3M9Im10LW1kIl06aGFzKD4gaDM6Zmlyc3QtY2hpbGQgKyB0YWJsZTpsYXN0LWNoaWxkKSk
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtRGV0YWlsIl0gPiAjRzMyID4gI00xID4gW2NsYXNzPSJ3cmFwcGVyLXNhZmUiXSA-IFtjbGFzcz0iZmIgbXQteGwiXSA-IFtjbGFzcz0iZmItY29sLWxnLTQgaXMtaGlkZGVuLXNtIGlzLWhpZGRlbi1tZCJdID4gc2VjdGlvbltjbGFzcz0ibXQtbWQiXSA-IGgzICsgdGFibGU6aGFzKGltZ1tzcmMqPSJodHRwczovL2ltLmNoaXAuZGUvaWkvIl0p
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtRGV0YWlsIl0gPiAjRzMyID4gI00xID4gW2NsYXNzXTpub3QoLndyYXBwZXItc2FmZSkgLkRvd25sb2Fkcy1BbHRlcm5hdGl2ZTpoYXMoYSBpbWdbc3JjKj0iaHR0cHM6Ly9pbS5jaGlwLmRlL2lpLyJdKQ
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtRGV0YWlsIl0gPiAjRzMyID4gI00xID4gZGl2W2NsYXNzXTpoYXMoPiBkaXZbY2xhc3NdW3N0eWxlPSJtaW4taGVpZ2h0OiAyNTBweDsiXSA-IHVsLmlzLXNlcGFyYXRlZCBhIGltZ1tzcmMqPSJodHRwczovL2ltLmNoaXAuZGUvaWkvIl0p
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtR2V0ZmlsZSJdID4gI0czMiA-ICNNMSA-IDpub3QoW2NsYXNzPSJ3cmFwcGVyLXNhZmUiXSArIC53cmFwcGVyLXNhZmUuZnQtYWx0cykgLkRvd25sb2Fkcy1BbHRlcm5hdGl2ZSBhW2hyZWYqPSJodHRwczovL3d3dy5jaGlwLmRlL2Rvd25sb2Fkcy8iXTpoYXMoaW1nW3NyYyo9Imh0dHBzOi8vaW0uY2hpcC5kZS9paS8iXSk
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtR2V0ZmlsZSJdID4gI0czMiA-ICNNMSA-IFtjbGFzcz0id3JhcHBlci1zYWZlIl0gPiBbY2xhc3M9ImZiIG10LWxnIl0gPiBbY2xhc3M9ImZiLWNvbC1sZy00IGlzLWhpZGRlbi1zbSBpcy1oaWRkZW4tbWQiXSA-IFtjbGFzc106aGFzKGltZ1tzcmMqPSJodHRwczovL2ltLmNoaXAuZGUvaWkvIl0gKyBkaXYgPiBzcGFuW3N0eWxlXj0id2lkdGg6ICJdKQ
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtR2V0ZmlsZSJdID4gI0czMiA-ICNNMSA-IGRpdltjbGFzcz0id3JhcHBlci1zYWZlIl0gPiBbY2xhc3M9ImZiIG10LXhsIl0gPiBbY2xhc3M9ImZiLWNvbC1sZy00IGlzLWhpZGRlbi1zbSBpcy1oaWRkZW4tbWQiXSA-IHNlY3Rpb25bY2xhc3M9Im10LW1kIl06aGFzKHRhYmxlIGltZ1tzcmMqPSJodHRwczovL2ltLmNoaXAuZGUvaWkvIl0p
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtU2VsZWN0Il0gPiAjRzMyID4gI00xID4gW2NsYXNzPSJ3cmFwcGVyLXNhZmUiXSA-IFtjbGFzcz0iZmIgbXQtbGciXSA-IFtjbGFzcz0iZmItY29sLWxnLTQgaXMtaGlkZGVuLXNtIGlzLWhpZGRlbi1tZCJdID4gW2NsYXNzXTpoYXMoaW1nW3NyYyo9Imh0dHBzOi8vaW0uY2hpcC5kZS9paS8iXSArIGRpdiA-IHNwYW5bc3R5bGVePSJ3aWR0aDogIl0p
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtU2VsZWN0Il0gPiAjRzMyID4gI00xID4gW2NsYXNzPSJ3cmFwcGVyLXNhZmUiXSA-IFtjbGFzcz0iZmIgbXQtbGciXSA-IHNlY3Rpb24gPiBkaXZbY2xhc3NdOmhhcyg-IGRpdjpvbmx5LWNoaWxkID4gdWwuaXMtc2VwYXJhdGVkIGEgaW1nKQ
-H	www.chip.de	-	I0NSW2NsYXNzPSJEb3dubG9hZHMtU2VsZWN0Il0gPiAjRzMyID4gI00xID4gW2NsYXNzPSJ3cmFwcGVyLXNhZmUiXSA-IFtjbGFzc149ImZiIG10LSJdID4gc2VjdGlvbltjbGFzcz0iZmItY29sLTEyIGZiLWNvbC1sZy04Il0gPiBbY2xhc3NdOm5vdCguQnV0dG9uQXVzd2FobCk6aGFzKD4gYVtocmVmXj0iaHR0cHM6Ly93d3cuY2hpcC5kZS9kb3dubG9hZHMvIl0p
-H	www.chip.de	-	I0NSW2NsYXNzPSJkb3dubG9hZC1jaGFydHMiXSA-ICNHMzIgPiAjTTEgPiAuYmctd2hpdGUgPiBbY2xhc3M9IndyYXBwZXItc2FmZSBtdC14bCJdID4gLmZiID4gYXNpZGVbY2xhc3M9ImZiLWNvbC1tZC00IGZiLWNvbC1sZy00Il0gPiAqOmhhcyhpbWdbc3JjKj0iaHR0cHM6Ly9pbS5jaGlwLmRlL2lpLyJdKQ
-H	www.chip.de	-	I0NSW2NsYXNzPSJkb3dubG9hZC1jaGFydHMiXSA-ICNHMzIgPiAjTTEgPiBkaXY6bm90KFtjbGFzc10sIFtpZF0pOmhhcyg-IFtjbGFzc10gPiBzZWN0aW9uID4gdWwuaXMtc2VwYXJhdGVkIGEgaW1nW3NyYyo9Imh0dHBzOi8vaW0uY2hpcC5kZS9paS8iXSk
-H	www.chip.de	-	I0NSW2NsYXNzPSJkb3dubG9hZC1saXN0aW5nIl0gPiAjRzMyID4gI00xID4gW2NsYXNzPSJ3cmFwcGVyLXNhZmUgbXQtc20iXSA-IC5mYiA-IC5tdC1tZDpub3QoLmZ0LWNoYXJ0cy1tYWluKTpoYXMoaW1nW3NyYyo9Imh0dHBzOi8vaW0uY2hpcC5kZS9paS8iXSk
-H	www.chip.de	-	I0NSW2NsYXNzPSJkb3dubG9hZC1saXN0aW5nIl0gPiAjRzMyID4gI00xID4gZGl2Om5vdChbY2xhc3NdLCBbaWRdKTpoYXMoPiBkaXYgPiBzZWN0aW9uID4gdWwuaXMtc2VwYXJhdGVkIGEgaW1nW3NyYyo9Imh0dHBzOi8vaW0uY2hpcC5kZS9paS8iXSk
+H	www.chip.de	-	LkRvd25sb2FkQ2hhcnRzLUxpc3QgPiBsaTpoYXMoPiBhID4gYXJ0aWNsZSA-IC5SVUMtRG93bmxvYWRDaGFydHNCbG9jay1BZExhYmVsKQ
 H	www.deeplol.gg	-	I2JpbGxib2FyZA
 H	www.deeplol.gg	-	I2Rlc2t0b3AtdGFrZW92ZXI
 H	www.deeplol.gg	-	I3N1bW1vbmVyX2NvbnRlbnRfYm94IGRpdltjbGFzc149InNjLSJdOm5vdCguYmlnVG9vbHRpcCwgLmRpYW1vbmQsIFtjbGFzcyo9ImZsZXgiXSwgW2NsYXNzKj0ibWFzdGVyIl0sIFtjbGFzcyo9IndyYXBwZXIiXSwgW2lkXSwgW2Rpc2FibGVkXSwgW3N0eWxlXSwgW2hlaWdodF0sIFt3aWR0aF0sIFtzaXplXSk6aGFzKD4gYVtpZF49ImFkZF90b19CYW5uZXIiXSk
@@ -9404,6 +9753,7 @@ H	www.uol	-	LmNvbnRlbnQtbGlnaHRib3g
 H	www.uol	-	Lm92ZXJsYXktbGlnaHRib3g
 H	www.walmart.com	-	W2RhdGEtdGVzdGlkPSJmbGV4LWNvbnRhaW5lciJdID4gZGl2ID4gc3BhbjpoYXMoYVtsaW5rLWlkZW50aWZpZXJdW2hyZWZePSJodHRwczovL3dyZC53YWxtYXJ0LmNvbSJdKQ
 H	www.walmart.com	-	W2RhdGEtdGVzdGlkPSJza3lsaW5lLWFkIl0
+H	www.wp.pl	-	I3BhbmVsLXByZW1pdW06aGFzKD4gZGl2ID4gc3BhbltkYXRhLWR2LXZpZXddW3N0eWxlPSJkaXNwbGF5OiBibG9jazsiXTpmaXJzdC1jaGlsZCArIHNjcmlwdCArIGRpdjpsYXN0LWNoaWxkKQ
 H	www.wp.pl	-	ZGl2OmlzKFtzdHlsZT0id2lkdGg6MTAwJSJdLCBbc3R5bGU9IndpZHRoOjEwMCU7aGVpZ2h0OjEwMCUiXSk6aGFzKD4gZGl2W2NsYXNzXSA-IGltZ1tzcmNePSJodHRwczovL3Yud3BpbWcucGwvIl1bcm9sZT0icHJlc2VudGF0aW9uIl0p
 H	www.yahoo.com	-	LnN0aWNreVtjbGFzcyo9InRvcC0iXTpoYXMoc3R5bGUp
 H	www.yahoo.com	-	ZGl2W2lkXTpoYXMoPiBkaXZbaWRePSJ0b3BfY2VudGVyLWZyb250cGFnZV8iXSk
@@ -9421,10 +9771,16 @@ H	xbjav.com	-	LnBsYWNl
 H	xbjav.com	-	LnBvcGxheWVy
 H	xbjav.com	-	LnRhYmxl
 H	xbooru.com	-	YVtocmVmXj0iaHR0cHM6Ly94Ym9vcnUuY29tL2MuaHRtbCJd
+H	xcook.pl	-	ZGl2W2NsYXNzXTpoYXMoPiBkaXYgPiBhICsgYVtocmVmXj0iaHR0cHM6Ly9hZGluZm8ud3AucGwvIl0p
 H	xda-developers.com	-	LmFkLWN1cnJlbnQ
 H	xdabo.com	-	Zm9vdGVy
 H	xe.com	-	LmFkdmVydFNsb3Q
 H	xemales.com	-	W2hyZWY9Imh0dHBzOi8vbXl0ZWVud2ViY2FtLmNvbS8iXQ
+H	xfeed.com	-	LmJvdHRvbS1vdXRzdHJlYW0
+H	xfeed.com	-	LmhpbGwtdG9wLXNsb3Q
+H	xfeed.com	-	LnBybS13cmFwcGVy
+H	xfeed.com	-	W2RhdGEtYmFkZ2U9IkFkIl0
+H	xfeed.com	-	ZGl2LmNvbHVtbjpoYXMoZGl2W2NsYXNzPSJzcG9ucyJdKQ
 H	xgroovy.com	-	LmZsdWlkX2h0bWxfb25fcGF1c2U
 H	xhaccess.com	-	LnRodW1iLWxpc3RfX2l0ZW06aGFzKD4gZGl2W2NsYXNzKj0ic2tlbGV0b24tIl0p
 H	xhaccess.com	-	LnZpZGVvLXRodW1iW2NsYXNzKj0iX19sb29rLWxpa2UtaXRlbSJd
@@ -10117,6 +10473,7 @@ H	xnxx-sexfilme.com	-	LnByZXJvbGwtYmxvY2tlcg
 H	xnxx-sexfilme.com	-	LnByZXJvbGwtc2tpcC1idXR0b24
 H	xnxx-sexfilme.com	-	LnZqcy1vdmVybGF5ZWQ
 H	xnxx.*	-	I2FkLWZvb3Rlcg
+H	xnxx.*	-	I21vYmlsZS1tZW51ID4gdWwgPiBsaTpub3QoW2NsYXNzXSk6aGFzKD4gYVtocmVmXj0iaHR0cCJdOm5vdChbaHJlZio9InhueHgiXSkp
 H	xnxx.com	-	I2FkLWhlYWRlci1tb2JpbGU
 H	xnxx.com	-	LnZpZGVvYWQtdGl0bGU
 H	xnxxcom.xyz	-	LmZsdWlkLXNwb3Rz
@@ -10144,6 +10501,7 @@ H	xup.in	-	ZGl2W3N0eWxlPSJ3aWR0aDo3MjhweDsgb3ZlcmZsb3c6aGlkZGVuOyBoZWlnaHQ6OTBwe
 H	xup.in	-	ZmllbGRzZXQjb3B0aW9uOm50aC1vZi10eXBlKDEpID4gW2hyZWZePSJodHRwczovL3d3dy54dXAuaW4vYmxvZy8iXQ
 H	xvideo.party	-	LnByaWRlLmR1bXA
 H	xvideos.*	-	I2FkLWZvb3Rlcg
+H	xvideos.*	-	dWwuaGVhZF9fbWVudS1saW5lX19tYWluLW1lbnUgPiBsaTpub3QoW2NsYXNzXSk6aGFzKD4gYTppcygubGl2ZS1jYW1zLCAuaWdub3JlLXBvcHVuZGVyLCAubnV0YWt1LWdhbWVzKSk
 H	xvideos.com	-	I2FkLWhlYWRlci1tb2JpbGU
 H	xvideos.com	-	YVtocmVmKj0iL2dvLnBocD8iXVtocmVmKj0iJmFkPSJd
 H	xxmovz.com	-	LmFk
@@ -10196,8 +10554,10 @@ H	you-porn.com	-	LmFkLWJvdHRvbS10ZXh0
 H	you-porn.com	-	LmFkTGlua1RleHQ
 H	you-porn.com	-	LmFkc2J5dHJhZmZpY2p1bmt5
 H	you-porn.com	-	LmU4LWNvbHVtbg
+H	you-porn.com	-	LnBjLnZpZGVvLWJveDpoYXMoLmFkc2J5dHJhZmZpY2p1bmt5KQ
 H	you-porn.com	-	W2RhdGEtcmVtb3ZlbGluaz0icmVtb3ZlTGluayJd
 H	you-porn.com	-	W2lkXj0iYWRibG9jayJd
+H	you-porn.com	-	bGkucGFpZFRhYi5qc19wYWlkVGFiLm1lbnUtaXRlbTpoYXMoLmpzX3RyYWNraW5nLWxpbmsp
 H	youjizz.com	-	I2Rlc2t0b3BGb290ZXJQcg
 H	youjizz.com	-	LnRvcF9wcg
 H	youmath.it	-	I0NfMQ

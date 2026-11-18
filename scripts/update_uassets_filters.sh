@@ -4,7 +4,7 @@ set -eu
 # Compile only the exact network semantics supported by Candy from uBlock Origin's
 # supplementary Ads list. The complete pinned source and GPL-3.0 license are shipped beside
 # the generated files so recipients receive the corresponding source for this transformation.
-SOURCE_REVISION="05bc031ad40c2270223f068f052970201ca1bf14"
+SOURCE_REVISION="b0190a2003f870536b8bd1058013f6dc4d435de0"
 SOURCE_ROOT="https://raw.githubusercontent.com/uBlockOrigin/uAssets/$SOURCE_REVISION"
 SOURCE_URL="$SOURCE_ROOT/filters/filters.txt"
 ADVANCED_SOURCE_NAMES="filters.txt filters-general.txt filters-mobile.txt filters-2020.txt filters-2021.txt filters-2022.txt filters-2023.txt filters-2024.txt filters-2025.txt filters-2026.txt ubo-link-shorteners.txt"

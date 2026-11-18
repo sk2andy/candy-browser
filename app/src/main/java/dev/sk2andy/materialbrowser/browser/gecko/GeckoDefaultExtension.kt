@@ -36,7 +36,7 @@ internal fun interface GeckoDefaultExtensionAssetVerifier {
 internal interface GeckoDefaultExtensionInstaller {
     suspend fun listInstalled(): List<GeckoExtension>
 
-    suspend fun install(extension: GeckoDefaultExtension): GeckoExtension
+    suspend fun install(extension: GeckoDefaultExtension, replaceOlder: Boolean): GeckoExtension
 
     suspend fun uninstall(extensionId: String)
 }
@@ -44,6 +44,7 @@ internal interface GeckoDefaultExtensionInstaller {
 internal enum class GeckoDefaultExtensionProvisioningOutcome {
     AlreadyInstalled,
     Installed,
+    Updated,
     Removed,
     Failed,
 }
@@ -91,16 +92,13 @@ internal class GeckoDefaultExtensionProvisioner(
                 }
                 return@forEach
             }
-            if (existing != null) {
-                val validExisting = !existing.isBuiltIn && !existing.temporary
-                if (validExisting) {
-                    stateStore.write(extension.id, GeckoDefaultExtensionState.Provisioned)
-                }
-                outcomes[extension.id] = if (validExisting) {
-                    GeckoDefaultExtensionProvisioningOutcome.AlreadyInstalled
-                } else {
-                    GeckoDefaultExtensionProvisioningOutcome.Failed
-                }
+            if (existing != null && (existing.isBuiltIn || existing.temporary)) {
+                outcomes[extension.id] = GeckoDefaultExtensionProvisioningOutcome.Failed
+                return@forEach
+            }
+            if (existing != null && !GeckoDefaultExtensionRules.canUpgrade(extension, existing)) {
+                stateStore.write(extension.id, GeckoDefaultExtensionState.Provisioned)
+                outcomes[extension.id] = GeckoDefaultExtensionProvisioningOutcome.AlreadyInstalled
                 return@forEach
             }
 
@@ -110,14 +108,18 @@ internal class GeckoDefaultExtensionProvisioner(
             }
 
             val provisioned = try {
-                installer.install(extension)
+                installer.install(extension, replaceOlder = existing != null)
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Throwable) {
                 null
             }
-            if (provisioned == null || !GeckoDefaultExtensionRules.matches(extension, provisioned)) {
-                if (provisioned != null && !provisioned.isBuiltIn) {
+            if (
+                provisioned == null ||
+                !GeckoDefaultExtensionRules.matchesPackage(extension, provisioned) ||
+                (existing == null && !GeckoDefaultExtensionRules.matchesFreshInstall(provisioned))
+            ) {
+                if (existing == null && provisioned != null && !provisioned.isBuiltIn) {
                     try {
                         installer.uninstall(provisioned.id)
                     } catch (error: CancellationException) {
@@ -132,7 +134,11 @@ internal class GeckoDefaultExtensionProvisioner(
 
             stateStore.write(extension.id, GeckoDefaultExtensionState.Provisioned)
             installed[extension.id] = provisioned
-            outcomes[extension.id] = GeckoDefaultExtensionProvisioningOutcome.Installed
+            outcomes[extension.id] = if (existing == null) {
+                GeckoDefaultExtensionProvisioningOutcome.Installed
+            } else {
+                GeckoDefaultExtensionProvisioningOutcome.Updated
+            }
         }
         return GeckoDefaultExtensionProvisioningResult(outcomes)
     }
@@ -222,16 +228,37 @@ internal object GeckoDefaultExtensionRules {
         }
     }
 
-    fun matches(
+    fun matchesPackage(
         expected: GeckoDefaultExtension,
         actual: GeckoExtension,
     ): Boolean = actual.id == expected.id &&
         actual.version == expected.version &&
-        actual.enabled &&
-        !actual.allowedInPrivateBrowsing &&
         !actual.isBuiltIn &&
         !actual.temporary &&
         actual.signedState >= MIN_TRUSTED_SIGNED_STATE
+
+    fun matchesFreshInstall(actual: GeckoExtension): Boolean =
+        actual.enabled && !actual.allowedInPrivateBrowsing
+
+    fun canUpgrade(expected: GeckoDefaultExtension, actual: GeckoExtension): Boolean {
+        if (
+            expected.delivery != GeckoDefaultExtensionDelivery.Bundled ||
+            actual.id != expected.id || actual.isBuiltIn || actual.temporary ||
+            actual.signedState < MIN_TRUSTED_SIGNED_STATE
+        ) return false
+
+        // Leave versions with qualifiers to Gecko's manual update flow.
+        val bundled = numericVersion(expected.version) ?: return false
+        val installed = actual.version?.let(::numericVersion) ?: return false
+        for (index in 0 until maxOf(bundled.size, installed.size)) {
+            val difference = bundled.getOrElse(index) { 0 }.compareTo(installed.getOrElse(index) { 0 })
+            if (difference != 0) return difference > 0
+        }
+        return false
+    }
+
+    private fun numericVersion(version: String): List<Int>? =
+        version.takeIf(NUMERIC_VERSION_PATTERN::matches)?.split('.')?.map(String::toInt)
 
     private fun isBoundedText(value: String, maxLength: Int): Boolean =
         value.isNotBlank() && value.length <= maxLength && value.none(Char::isISOControl)
@@ -244,6 +271,7 @@ internal object GeckoDefaultExtensionRules {
     private const val MIN_TRUSTED_SIGNED_STATE = 2
     private const val PINNED_AMO_FILE_PREFIX =
         "https://addons.mozilla.org/firefox/downloads/file/"
+    private val NUMERIC_VERSION_PATTERN = Regex("[0-9]{1,8}(\\.[0-9]{1,8}){1,3}")
     private val SHA_256_PATTERN = Regex("[0-9a-f]{64}")
     private val ASSET_PATH_PATTERN = Regex(
         "gecko_default_extensions/[a-z0-9][a-z0-9._-]*\\.xpi",

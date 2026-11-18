@@ -15,7 +15,7 @@ from compile_easylist_cosmetic import (
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 SOURCE = PROJECT_DIR / "app/src/main/assets/uassets_advanced_filters_source.txt"
 ASSET = PROJECT_DIR / "app/src/main/assets/uassets_cosmetic_rules.txt"
-REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
+REVISION = "b0190a2003f870536b8bd1058013f6dc4d435de0"
 
 
 class UassetsCosmeticCompilerTest(unittest.TestCase):
@@ -24,14 +24,14 @@ class UassetsCosmeticCompilerTest(unittest.TestCase):
         cls.records, cls.stats = compile_sources([SOURCE], include_generics=True)
 
     def test_pinned_snapshot_counts(self):
-        self.assertEqual(8_630, self.stats.hide_rules)
-        self.assertEqual(467, self.stats.exception_rules)
-        self.assertEqual(272, self.stats.generic_rules)
-        self.assertEqual(1_168, self.stats.generic_hide_exceptions)
-        self.assertEqual(10_394, self.stats.unsupported_rules)
-        self.assertEqual(899, self.stats.conditional_lines)
-        self.assertEqual(4_949, len({record[1] for record in self.records}))
-        self.assertEqual(("*", 222, 9_608), maximum_pattern_load(self.records))
+        self.assertEqual(8_970, self.stats.hide_rules)
+        self.assertEqual(471, self.stats.exception_rules)
+        self.assertEqual(293, self.stats.generic_rules)
+        self.assertEqual(1_184, self.stats.generic_hide_exceptions)
+        self.assertEqual(10_699, self.stats.unsupported_rules)
+        self.assertEqual(988, self.stats.conditional_lines)
+        self.assertEqual(5_066, len({record[1] for record in self.records}))
+        self.assertEqual(("*", 243, 10_541), maximum_pattern_load(self.records))
 
     def test_representative_localized_rules_and_procedural_exclusions(self):
         selectors = {

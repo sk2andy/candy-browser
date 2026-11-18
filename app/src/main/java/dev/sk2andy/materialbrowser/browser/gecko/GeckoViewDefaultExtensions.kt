@@ -142,36 +142,43 @@ internal class GeckoViewDefaultExtensionInstaller(
     private val installMutex = Mutex()
     private val remoteSource = GeckoDefaultExtensionRemoteSource(context.applicationContext)
 
-    @Volatile
-    private var pendingInstall: GeckoDefaultExtension? = null
+    private data class PendingInstall(
+        val extension: GeckoDefaultExtension,
+        val uri: String,
+        val replaceOlder: Boolean,
+    )
+
+    private var pendingInstall: PendingInstall? = null
 
     override suspend fun listInstalled(): List<GeckoExtension> =
         controller.list().awaitDefaultExtensionResult().map { it.toDefaultExtension() }
 
-    override suspend fun install(extension: GeckoDefaultExtension): GeckoExtension =
-        installMutex.withLock {
-            check(pendingInstall == null) { "Default Gecko extension install already active" }
-            pendingInstall = extension
-            var downloaded: File? = null
-            try {
-                val installUri = if (extension.delivery == GeckoDefaultExtensionDelivery.Remote) {
-                    remoteSource.download(extension).also { file -> downloaded = file }
-                        .toURI()
-                        .toASCIIString()
-                } else {
-                    extension.installUri
-                }
-                controller.install(
-                    installUri,
-                    WebExtensionController.INSTALLATION_METHOD_ONBOARDING,
-                ).awaitDefaultExtensionResult().toDefaultExtension()
-            } finally {
-                pendingInstall = null
-                withContext(NonCancellable + Dispatchers.IO) {
-                    downloaded?.delete()
-                }
+    override suspend fun install(
+        extension: GeckoDefaultExtension,
+        replaceOlder: Boolean,
+    ): GeckoExtension = installMutex.withLock {
+        var downloaded: File? = null
+        try {
+            val installUri = if (extension.delivery == GeckoDefaultExtensionDelivery.Remote) {
+                remoteSource.download(extension).also { file -> downloaded = file }
+                    .toPath()
+                    .toUri()
+                    .toASCIIString()
+            } else {
+                extension.installUri
+            }
+            pendingInstall = PendingInstall(extension, installUri, replaceOlder)
+            controller.install(
+                installUri,
+                WebExtensionController.INSTALLATION_METHOD_ONBOARDING,
+            ).awaitDefaultExtensionResult().toDefaultExtension()
+        } finally {
+            pendingInstall = null
+            withContext(NonCancellable + Dispatchers.IO) {
+                downloaded?.delete()
             }
         }
+    }
 
     override suspend fun uninstall(extensionId: String) {
         val installed = controller.list().awaitDefaultExtensionResult()
@@ -180,13 +187,43 @@ internal class GeckoViewDefaultExtensionInstaller(
         controller.uninstall(installed).awaitDefaultExtensionCompletion()
     }
 
-    fun automaticPermissionDecision(extension: WebExtension): GeckoExtensionPermissionDecision? {
-        val expected = pendingInstall ?: return null
-        if (extension.id != expected.id || extension.metaData.version != expected.version) return null
+    suspend fun automaticPermissionDecision(extension: WebExtension): GeckoExtensionPermissionDecision? {
+        val pending = pendingInstall ?: return null
+        val expected = pending.extension
+        if (extension.location != pending.uri) return null
+        if (!GeckoDefaultExtensionRules.matchesPackage(expected, extension.toDefaultExtension())) {
+            return GeckoExtensionPermissionDecision.Denied
+        }
+        val existing = controller.list().awaitDefaultExtensionResult()
+            .firstOrNull { installed -> installed.id == expected.id }
+        if (existing == null && !pending.replaceOlder) {
+            return GeckoExtensionPermissionDecision(grantPermissions = true, allowInPrivateBrowsing = false)
+        }
+        if (
+            existing == null || !pending.replaceOlder ||
+            !GeckoDefaultExtensionRules.canUpgrade(expected, existing.toDefaultExtension()) ||
+            !hasOnlyAuditedUpgradePermissions(existing, extension)
+        ) return GeckoExtensionPermissionDecision.Denied
+
+        // Gecko's install prompt writes private access even when replacing an existing add-on.
         return GeckoExtensionPermissionDecision(
             grantPermissions = true,
-            allowInPrivateBrowsing = false,
+            allowInPrivateBrowsing = existing.metaData.allowedInPrivateBrowsing,
         )
+    }
+
+    private fun hasOnlyAuditedUpgradePermissions(
+        existing: WebExtension,
+        incoming: WebExtension,
+    ): Boolean {
+        val current = existing.metaData
+        val update = incoming.metaData
+        return update.requiredPermissions.all { permission ->
+            permission in current.requiredPermissions ||
+                // Gecko's public suffix lookup is a no-prompt permission added by uBlock 1.76.
+                (incoming.id == "uBlock0@raymondhill.net" && permission == "publicSuffix")
+        } && update.requiredOrigins.all { it in current.requiredOrigins } &&
+            update.requiredDataCollectionPermissions.all { it in current.requiredDataCollectionPermissions }
     }
 }
 
@@ -366,7 +403,7 @@ private val GeckoDefaultExtensionProvisioningResult.hasFailure: Boolean
         outcome == GeckoDefaultExtensionProvisioningOutcome.Failed
     }
 
-private suspend fun WebExtension.toDefaultExtension() = GeckoExtension(
+private fun WebExtension.toDefaultExtension() = GeckoExtension(
     id = id,
     name = metaData.name,
     version = metaData.version,
@@ -380,7 +417,6 @@ private suspend fun WebExtension.toDefaultExtension() = GeckoExtension(
     baseUrl = metaData.baseUrl,
     optionsPageUrl = metaData.optionsPageUrl,
     opensOptionsPageInTab = metaData.openOptionsPageInTab,
-    icon = runCatching { metaData.icon.getBitmap(64).awaitDefaultExtensionResult() }.getOrNull(),
 )
 
 private suspend fun <T> GeckoResult<T>.awaitDefaultExtensionResult(): T =

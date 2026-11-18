@@ -472,18 +472,21 @@ and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/bl
   dismissal and lifecycle failure deny access. The URL field requests a URI keyboard with
   autocorrection and automatic capitalization disabled so typed package addresses remain unchanged.
 - Android's Gecko runtime provisions two normal, deinstallable defaults through
-  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.75.0`
+  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.76.4`
   ships as the original Mozilla-signed AMO XPI, so a clean profile gets it without network access.
   `I still don't care about cookies` `1.1.9` ships the same way from its original Mozilla-signed AMO
   XPI. Both extensions therefore install on the first offline start. Their corresponding sources
-  and licenses are pinned to Git commits `21f0e686506bb21b514b451c8c6cb9bf8c82d232` and
+  and licenses are pinned to Git commits `3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db` and
   `e763f24f79c5803774d28730649aef9aae3998ca`.
 - Default permission approval exists only while Candy installs the exact catalog ID and version.
   Gecko still validates Mozilla's signature; bundled bytes must also match their pinned SHA-256.
-  Private-browsing access is always denied. Default installation never uses `installBuiltIn` or
-  grants GeckoView-only native-messaging privileges to third-party code.
-- Provisioning deduplicates by stable extension ID and never replaces, downgrades, reenables, or
-  changes private access on an existing install. A durable global marker records successful seeding.
+  Fresh installs start with private-browsing access disabled. Default installation uses the normal
+  signed extension profile without granting GeckoView-only native-messaging privileges.
+- Provisioning upgrades older signed copies of bundled defaults in place. Gecko keeps the extension's
+  storage and disabled state, and Candy passes the existing private-browsing choice to Gecko's install
+  prompt. Candy leaves equal, newer, and unrecognized versions installed and defers permission
+  expansions beyond audited no-prompt APIs to the manual update flow.
+  A durable global marker records successful seeding.
   Only an explicit user uninstall creates a removal tombstone, which Candy persists before asking
   Gecko to uninstall. A provisioned-but-missing ID is retried because Gecko can report installation
   before its profile checkpoint reaches durable storage; an explicitly removed default still does

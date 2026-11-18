@@ -1,21 +1,21 @@
 Candy Browser Gecko default extensions
 ======================================
 
-uBlock Origin 1.75.0
+uBlock Origin 1.76.4
 --------------------
 
 Copyright Raymond Hill and contributors.
 License: GNU General Public License version 3 only (GPL-3.0-only).
 
 Candy Browser redistributes the original, unmodified Mozilla-signed Firefox XPI from:
-https://addons.mozilla.org/firefox/downloads/file/5034826/ublock_origin-1.75.0.xpi
+https://addons.mozilla.org/firefox/downloads/file/5257481/ublock_origin-1.76.4.xpi
 
 SHA-256:
-5b74415860456370644bd80f16125e865b0e6c356bb5dfcfb84069967eaa5287
+66d0e3f21ce3b32b1bc0a9399b93cb2c9aa598ef18805d92118c76f66e266c1e
 
 Corresponding source and complete license:
-https://github.com/gorhill/uBlock/tree/21f0e686506bb21b514b451c8c6cb9bf8c82d232
-https://github.com/gorhill/uBlock/blob/21f0e686506bb21b514b451c8c6cb9bf8c82d232/LICENSE.txt
+https://github.com/gorhill/uBlock/tree/3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db
+https://github.com/gorhill/uBlock/blob/3cca944b4a4c5f3473d6cb7153e6fb99b5f7d1db/LICENSE.txt
 
 The XPI also contains its complete GPL-3.0 license and upstream third-party notices. Candy does not
 unpack, modify, or re-sign it. The complete GPL-3.0 text is also shipped in uassets.LICENSE.txt.

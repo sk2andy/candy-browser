@@ -10,7 +10,7 @@ from compile_procedural_cosmetic import compile_sources, maximum_bucket, write_a
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 PINNED_SOURCE = PROJECT_DIR / "app/src/main/assets/uassets_advanced_filters_source.txt"
 PINNED_ASSET = PROJECT_DIR / "app/src/main/assets/uassets_procedural_cosmetic_rules.txt"
-REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
+REVISION = "b0190a2003f870536b8bd1058013f6dc4d435de0"
 
 
 class ProceduralCosmeticCompilerTest(unittest.TestCase):
@@ -56,8 +56,8 @@ class ProceduralCosmeticCompilerTest(unittest.TestCase):
 
     def test_pinned_snapshot_matches_checked_in_asset(self):
         records, stats = compile_sources([PINNED_SOURCE])
-        self.assertEqual(156, stats.hide_rules)
-        self.assertEqual(76, stats.remove_rules)
+        self.assertEqual(155, stats.hide_rules)
+        self.assertEqual(78, stats.remove_rules)
         self.assertEqual(("skai.gr", 4), maximum_bucket(records))
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "procedural.txt"

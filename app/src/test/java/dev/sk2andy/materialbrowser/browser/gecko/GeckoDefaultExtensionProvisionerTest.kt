@@ -49,6 +49,60 @@ class GeckoDefaultExtensionProvisionerTest {
     }
 
     @Test
+    fun `older signed default is upgraded in place with its settings`() = runBlocking {
+        val existing = installedExtension(U_BLOCK).copy(
+            version = "1.75.0",
+            enabled = false,
+            allowedInPrivateBrowsing = true,
+        )
+        val installer = FakeInstaller(installed = linkedMapOf(U_BLOCK.id to existing))
+        val provisioner = provisioner(installer = installer)
+
+        val result = provisioner.provision()
+
+        assertEquals(GeckoDefaultExtensionProvisioningOutcome.Updated, result.outcomes[U_BLOCK.id])
+        assertEquals(existing.copy(version = U_BLOCK.version), installer.installed[U_BLOCK.id])
+        assertEquals(listOf(U_BLOCK.id), installer.upgradeCalls)
+        assertTrue(installer.uninstallCalls.isEmpty())
+        assertEquals(
+            GeckoDefaultExtensionProvisioningOutcome.AlreadyInstalled,
+            provisioner.provision().outcomes[U_BLOCK.id],
+        )
+        assertEquals(listOf(U_BLOCK.id), installer.upgradeCalls)
+    }
+
+    @Test
+    fun `newer equivalent and unrecognized versions are left installed`() = runBlocking {
+        for (version in listOf("1.100.0", "1.76.4.1", "1.76.4.0", "1.76.5b1", null)) {
+            val existing = installedExtension(U_BLOCK).copy(version = version)
+            val installer = FakeInstaller(installed = linkedMapOf(U_BLOCK.id to existing))
+
+            val result = provisioner(installer = installer).provision()
+
+            assertEquals(GeckoDefaultExtensionProvisioningOutcome.AlreadyInstalled, result.outcomes[U_BLOCK.id])
+            assertEquals(existing, installer.installed[U_BLOCK.id])
+            assertTrue(U_BLOCK.id !in installer.installCalls)
+            assertTrue(installer.uninstallCalls.isEmpty())
+        }
+    }
+
+    @Test
+    fun `failed bundle verification leaves the older install available`() = runBlocking {
+        val existing = installedExtension(U_BLOCK).copy(version = "1.75.0")
+        val installer = FakeInstaller(installed = linkedMapOf(U_BLOCK.id to existing))
+
+        val result = provisioner(
+            verifier = FakeAssetVerifier(valid = false),
+            installer = installer,
+        ).provision()
+
+        assertEquals(GeckoDefaultExtensionProvisioningOutcome.Failed, result.outcomes[U_BLOCK.id])
+        assertEquals(existing, installer.installed[U_BLOCK.id])
+        assertTrue(installer.installCalls.isEmpty())
+        assertTrue(installer.uninstallCalls.isEmpty())
+    }
+
+    @Test
     fun `missing provisioned default retries after a persistence checkpoint gap`() = runBlocking {
         val state = FakeStateStore(
             U_BLOCK.id to GeckoDefaultExtensionState.Provisioned,
@@ -77,7 +131,7 @@ class GeckoDefaultExtensionProvisionerTest {
     fun `removal tombstone wins over a stale Gecko registry entry`() = runBlocking {
         val state = FakeStateStore(U_BLOCK.id to GeckoDefaultExtensionState.Removed)
         val installer = FakeInstaller(
-            installed = linkedMapOf(U_BLOCK.id to installedExtension(U_BLOCK)),
+            installed = linkedMapOf(U_BLOCK.id to installedExtension(U_BLOCK).copy(version = "1.75.0")),
         )
 
         val result = provisioner(state = state, installer = installer).provision()
@@ -167,14 +221,12 @@ class GeckoDefaultExtensionProvisionerTest {
     fun `new default must be signed persistent enabled and private denied`() {
         val valid = installedExtension(U_BLOCK)
 
-        assertTrue(GeckoDefaultExtensionRules.matches(U_BLOCK, valid))
-        assertFalse(GeckoDefaultExtensionRules.matches(U_BLOCK, valid.copy(signedState = 1)))
-        assertFalse(GeckoDefaultExtensionRules.matches(U_BLOCK, valid.copy(temporary = true)))
+        assertTrue(GeckoDefaultExtensionRules.matchesPackage(U_BLOCK, valid))
+        assertTrue(GeckoDefaultExtensionRules.matchesFreshInstall(valid))
+        assertFalse(GeckoDefaultExtensionRules.matchesPackage(U_BLOCK, valid.copy(signedState = 1)))
+        assertFalse(GeckoDefaultExtensionRules.matchesPackage(U_BLOCK, valid.copy(temporary = true)))
         assertFalse(
-            GeckoDefaultExtensionRules.matches(
-                U_BLOCK,
-                valid.copy(allowedInPrivateBrowsing = true),
-            ),
+            GeckoDefaultExtensionRules.matchesFreshInstall(valid.copy(allowedInPrivateBrowsing = true)),
         )
     }
 
@@ -272,13 +324,23 @@ class GeckoDefaultExtensionProvisionerTest {
         private val installResult: GeckoExtension? = null,
     ) : GeckoDefaultExtensionInstaller {
         val installCalls = mutableListOf<String>()
+        val upgradeCalls = mutableListOf<String>()
         val uninstallCalls = mutableListOf<String>()
 
         override suspend fun listInstalled(): List<GeckoExtension> = installed.values.toList()
 
-        override suspend fun install(extension: GeckoDefaultExtension): GeckoExtension {
+        override suspend fun install(
+            extension: GeckoDefaultExtension,
+            replaceOlder: Boolean,
+        ): GeckoExtension {
             installCalls += extension.id
-            return (installResult ?: installedExtension(extension)).also { result ->
+            val result = if (replaceOlder) {
+                upgradeCalls += extension.id
+                installed.getValue(extension.id).copy(version = extension.version)
+            } else {
+                installedExtension(extension)
+            }
+            return (installResult ?: result).also { result ->
                 installed[result.id] = result
             }
         }
@@ -296,7 +358,7 @@ class GeckoDefaultExtensionProvisionerTest {
             delivery = GeckoDefaultExtensionDelivery.Bundled,
             installUri = "resource://android/assets/gecko_default_extensions/ublock.xpi",
             assetPath = "gecko_default_extensions/ublock.xpi",
-        )
+        ).copy(version = "1.76.4")
         val COOKIE_HELPER = defaultExtension(
             id = "idcac-pub@guus.ninja",
             name = "I still don't care about cookies",

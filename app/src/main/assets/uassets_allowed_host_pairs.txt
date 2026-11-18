@@ -1,6 +1,6 @@
 # Generated uAssets allow exceptions. Do not edit by hand.
-# Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/05bc031ad40c2270223f068f052970201ca1bf14/filters/filters.txt
-# Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
+# Source: https://raw.githubusercontent.com/uBlockOrigin/uAssets/b0190a2003f870536b8bd1058013f6dc4d435de0/filters/filters.txt
+# Source revision: b0190a2003f870536b8bd1058013f6dc4d435de0
 # License: GPL-3.0; see uassets.LICENSE.txt
 # Generated rules: 1
 # Format: request-host<TAB>page-host; * means every page host

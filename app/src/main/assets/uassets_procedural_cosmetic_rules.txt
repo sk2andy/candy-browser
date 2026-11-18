@@ -1,18 +1,20 @@
 candy-procedural-cosmetic:1
 # Generated bounded uAssets procedural cosmetic subset. Do not edit by hand.
 # Source: https://github.com/uBlockOrigin/uAssets
-# Source revision: 05bc031ad40c2270223f068f052970201ca1bf14
+# Source revision: b0190a2003f870536b8bd1058013f6dc4d435de0
 # License: GPL-3.0; see uassets.LICENSE.txt
-# Rules: 232
-# Text-hide rules: 156
-# Remove rules: 76
+# Rules: 233
+# Text-hide rules: 155
+# Remove rules: 78
 # Maximum host bucket: skai.gr 4
 # Skipped unsupported rules: 215
-# Skipped conditional lines: 1016
+# Skipped conditional lines: 1110
 H	0123movies.*	Lmxlcy10aXRsZQ	SEQ	s
 H	5movies.*	Lmxlcy10aXRsZQ	SEQ	s
 H	9gag.com	W2lkXj0ic2lkZWJhci1zdHJlYW0tIl0gPiBoNA	QWR2ZXJ0aXNlbWVudA	s
+H	ab.nanacdn.com	LmxvYWRpbmctb3ZlcmxheQ	YWQ	s
 H	abysscdn.com	LmxvYWRpbmctb3ZlcmxheQ	YWQ	s
+H	abyssplayer.com	LmxvYWRpbmctb3ZlcmxheQ	YWQ	s
 H	allcalidad.*	LnRhYmxlLWhvdmVyLnRhYmxlID4gdGJvZHkgPiB0cg	RGVzY2FyZ2FyIFByZW1pdW0	s
 H	alltechnerd.com	LmNvZGUtYmxvY2s	QURW	s
 H	alrincon.com	Y2VudGVy	ZGVhbA	s
@@ -56,6 +58,7 @@ H	games2rule.com	ZGl2LmJvcmRlcl9yYWRpdXM	QWR2ZXJ0aXNlbWVudA	s
 H	getsexgames.com	LmxlZnRNZW51IC5tZW51SGVhZGxpbmU	M0Q	s
 H	girlsofdesire.org	ZGl2W2lkJD0iX2ZyYW1lX2NvbnRlbnQiXVtjbGFzcz0id2lkZV9ib3hjb250ZW50Il0	QWRibG9jaw	s
 H	glebul.com	cA	Pz8_Pz8_Pw	s
+H	gogatv.net	LmxvYWRpbmctb3ZlcmxheQ	YWQ	s
 H	google.com	W2RhdGEtcHJvZmlsZS11cmwtcGF0aF49Ii9sb2NhbHNlcnZpY2VzIl0	Z29vZ2xlIHNjcmVlbmVk	i
 H	greatandhra.com	LmdyZWF0X2FuZGhyYV9sb2dvX3BhbmVsID4gZGl2W2NsYXNzXQ	QWR2ZXJ0aXNlbWVudA	s
 H	greenwichtime.com	Lm1iMzI	QWR2ZXJ0aXNlbWVudA	s
@@ -121,8 +124,6 @@ H	seznamzpravy.cz	LnN0aWNreS1jb250ZW50	UmVr	s
 H	seznamzpravy.cz	LnN0aWNreS1jb250ZW50	UmVrbGFtYQ	s
 H	seznamzpravy.cz	LnN0aWNreS1jb250ZW50	a2xhbWE	s
 H	sfchronicle.com	Lm1iMzI	QWR2ZXJ0aXNlbWVudA	s
-H	sheepesports.com	Lm1pbi13LTAgPiAubWluLXctMCA-IGRpdiA-IC5ib3JkZXItYi5qdXN0aWZ5LWNlbnRlci5pdGVtcy1jZW50ZXIuZmxleA	YWxsb3dpbmcgYWRz	s
-H	sheepesports.com	ZGl2LmgtZnVsbC5wLTQueGxcOmJsb2NrLmhpZGRlbiA-IC5oLWZ1bGw	YWxsb3dpbmcgYWRz	s
 H	sheltonherald.com	Lm1iMzI	QWR2ZXJ0aXNlbWVudA	s
 H	skidrowcodex.net	LndpZGdldF90ZXh0	QWR2ZXJ0aXNlbWVudA	s
 H	solarmovie.*	ZGl2LnJvdw	aW4gSEQ	s
@@ -147,8 +148,6 @@ H	torrentz2.*	W2NsYXNzXTpub3QoYm9keSk6bm90KGh0bWwp	UHJvdGVjdCB5b3VyIHByaXZhY3k	i
 H	torrentz2.*	W2NsYXNzXTpub3QoYm9keSk6bm90KGh0bWwp	U3BvbnNvcmVk	s
 H	tricksplit.io	cA	QWR2ZXJ0aXNlbWVudA	s
 H	trumbulltimes.com	Lm1iMzI	QWR2ZXJ0aXNlbWVudA	s
-H	turkanime.*	LnBhbmVsLXRpdGxl	UkVLTEFN	s
-H	turkanime.*	ZGl2LmNvbC14cy0xMg	TU1QT1JHIE9ZVU5MQVI	s
 H	upornia.com	aDU	QWR2ZXJ0aXNlbWVudA	s
 H	userupload.*	LmJ0bi1kYW5nZXI	ZG93bmxvYWQ	i
 H	vivasexe.com	I3NrZWwtbGF5ZXJzLXdyYXBwZXIgPiAjbWFpbi13cmFwcGVy	QW5ub25jZXMgc2ltaWxhaXJlcyA6	s
@@ -189,12 +188,13 @@ R	creativebloq.com	LmFkLXVuaXQ	-	s
 R	creepypasta.com	W2RhdGEtcGlkXj0iYWQtIl0	-	s
 R	ctrlv.*	YS5kb3dubG9hZFt0YXJnZXQ9Il9ibGFuayJdOm5vdChhW2hyZWYqPSJjdHJsdi4iXSk	-	s
 R	cut-fly.com	Zm9ybSNnby1wb3B1cA	-	s
-R	dragontea.ink	c3R5bGU	LnJlYWRpbmctY29udGVudCBpbWc	s
 R	duelingbook.com	ZGl2W2lkXj0ibWVzIl0	-	s
+R	embed.nana2play.com	LnZhc3QtYWQtb3ZlcmxheQ	-	s
 R	embedplayer.xyz	bWV0YVtuYW1lXj0iYWRzLSJd	-	s
 R	euronews.com	I28tc2l0ZS1ocl9fbGVhZGVyYm9hcmQtd2FsbHBhcGVyLnUtc2hvdy1mb3IteGxhcmdl	-	s
 R	euronews.com	W2RhdGEtYWQtbmFtZV0	-	s
 R	feet9.com	W2RhdGEtdmlkXj0ibGl2ZS0iXQ	-	s
+R	fileroy.com	LmZyLWRvd25sb2FkLWd1YXJk	-	s
 R	foxseotools.com	Zm9ybSNnby1wb3B1cA	-	s
 R	frag-mutti.de	LmFkLWxvYWRpbmc	-	s
 R	game8.co	LmpzLXNpZGUtYWRzLW1vdmllLWNvbnRhaW5lcg	-	s
@@ -204,6 +204,7 @@ R	insideevs.com	YW1wLWlmcmFtZTpoYXMoW3NyY149Imh0dHBzOi8vd2lkZ2V0LnNlbGx3aWxkLmNv
 R	jpopsingles.eu	c3R5bGVbaWQkPSItY3NzIl0	-	s
 R	kingjav.biz	I292ZXJsYXktd3JhcA	-	s
 R	lankapradeepa.com	LmpzLWFudGlhZGJsb2NrZXI	-	s
+R	leakgallery.com	YXBwLXRvcC1zdHJpcA	-	s
 R	m.drtuber.com	I2Jhbm5lcl9vdmVybGF5LXBvc3RpdGlhbC12aWRlbw	-	s
 R	metager.org	LnJlc3VsdDpoYXMoLnJlc3VsdC1vcGVuLW1ldGFnZXJrZXkp	-	s
 R	money.pl	ZGl2Omhhcyg-IGE6Zmlyc3QtY2hpbGQ6aGFzKD4gZGl2OmVtcHR5Om9ubHktY2hpbGQpICsgZGl2OmVtcHR5Omxhc3QtY2hpbGQp	-	s

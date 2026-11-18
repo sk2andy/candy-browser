@@ -10,7 +10,7 @@ from compile_advanced_filters import compile_sources, maximum_bucket, write_asse
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 PINNED_SOURCE = PROJECT_DIR / "app/src/main/assets/uassets_advanced_filters_source.txt"
 PINNED_ASSET = PROJECT_DIR / "app/src/main/assets/uassets_advanced_filters.txt"
-REVISION = "05bc031ad40c2270223f068f052970201ca1bf14"
+REVISION = "b0190a2003f870536b8bd1058013f6dc4d435de0"
 
 
 class AdvancedFilterCompilerTest(unittest.TestCase):
@@ -112,11 +112,11 @@ class AdvancedFilterCompilerTest(unittest.TestCase):
 
     def test_pinned_snapshot_matches_checked_in_asset(self):
         records, stats = compile_sources([PINNED_SOURCE])
-        self.assertEqual(747, stats.request_rules)
-        self.assertEqual(703, stats.popup_rules)
-        self.assertEqual(24, stats.popunder_rules)
-        self.assertEqual(89, stats.allow_rules)
-        self.assertEqual(("target:st.pussyspace.com", 13), maximum_bucket(records))
+        self.assertEqual(878, stats.request_rules)
+        self.assertEqual(719, stats.popup_rules)
+        self.assertEqual(23, stats.popunder_rules)
+        self.assertEqual(113, stats.allow_rules)
+        self.assertEqual(("target:igorslab.de", 38), maximum_bucket(records))
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "advanced.txt"
             write_asset(output, REVISION, records, stats)
