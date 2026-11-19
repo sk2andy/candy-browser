@@ -75,7 +75,8 @@ and engine actions. The exact acceptance surface and evidence are defined in
 - The separately installed `systemwebview` distribution fixes the engine to Android System WebView,
   removes the engine selector and ships no GeckoView runtime, Gecko native libraries, Privacy host,
   or bundled Firefox extensions. It uses package `dev.sk2andy.materialbrowser.systemwebview` and a
-  dedicated GitHub release/update asset.
+  dedicated GitHub release/update asset. Standalone Glean also ships a library named `libxul.so`;
+  the APK check distinguishes it from Gecko's library using Gecko's `XRE_InitChildProcess` export.
 - Tabs, bookmarks, history, profiles and Candy settings remain shared. Cookies, logins, native
   back-forward lists and engine-owned session state intentionally stay separate.
 - `AndroidBrowserEngineFactory` is the process-level seam. Concrete implementations live under

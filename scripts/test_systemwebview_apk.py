@@ -45,8 +45,8 @@ FORBIDDEN_NATIVE_LIBRARIES = {
     "libnss3.so",
     "libplugin-container.so",
     "libsoftokn3.so",
-    "libxul.so",
 }
+GECKO_XUL_EXPORT = b"XRE_InitChildProcess\x00"
 FORBIDDEN_DEX_MARKERS = (
     b"org/mozilla/geckoview",
     b"Lorg/mozilla/geckoview",
@@ -151,6 +151,10 @@ class SystemWebViewApkTest(unittest.TestCase):
             )
             or name.endswith(".xpi")
             or Path(name).name in FORBIDDEN_NATIVE_LIBRARIES
+            or (
+                Path(name).name == "libxul.so"
+                and GECKO_XUL_EXPORT in self.archive.read(name)
+            )
             or name == "assets/omni.ja"
         )
         self.assertEqual([], violations)

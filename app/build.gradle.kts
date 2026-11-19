@@ -727,6 +727,10 @@ listOf("release", "nightly").forEach { buildType ->
 
 val geckoViewDependency = "org.mozilla.geckoview:geckoview-omni:160.0.20261104181552"
 
+configurations.named("fossImplementation") {
+    exclude(group = "com.google.android.gms", module = "play-services-fido")
+}
+
 // GeckoView Omni supplies Glean's native library inside libxul; package it only once.
 configurations.configureEach {
     resolutionStrategy.capabilitiesResolution.withCapability("org.mozilla.telemetry:glean-native") {
@@ -770,9 +774,7 @@ dependencies {
     implementation("org.mozilla.telemetry:glean:70.3.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     "fullImplementation"(geckoViewDependency)
-    "fossImplementation"(geckoViewDependency) {
-        exclude(group = "com.google.android.gms", module = "play-services-fido")
-    }
+    "fossImplementation"(geckoViewDependency)
     "systemwebviewCompileOnly"(geckoViewDependency)
     implementation(platform("androidx.compose:compose-bom:2025.05.01"))
     implementation("androidx.compose.foundation:foundation")
