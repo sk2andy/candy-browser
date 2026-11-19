@@ -17,7 +17,7 @@ jobs:
   nightly:
     name: Build changed main and publish Nightly
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     environment: release
     outputs:
       build: ${{ steps.metadata.outputs.build }}
