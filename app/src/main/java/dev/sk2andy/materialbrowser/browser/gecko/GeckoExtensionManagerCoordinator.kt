@@ -29,6 +29,14 @@ internal enum class GeckoExtensionManagerMessage {
     InstallPostponed,
     ActionRejected,
     ActionFailed,
+    InventoryFailed,
+    InventoryTimedOut,
+    OptionsFailed,
+    EnableFailed,
+    DisableFailed,
+    UpdateFailed,
+    UninstallFailed,
+    PrivateAccessFailed,
 }
 
 internal data class GeckoExtensionManagerState(
@@ -36,6 +44,7 @@ internal data class GeckoExtensionManagerState(
     val managementContext: GeckoExtensionManagementContext =
         GeckoExtensionManagementContext(profileId = DEFAULT_PROFILE_ID, isPrivate = false),
     val busy: Boolean = false,
+    val inventoryLoaded: Boolean = false,
     val message: GeckoExtensionManagerMessage? = null,
     val permissionRequest: GeckoExtensionPermissionRequest? = null,
 ) {
@@ -59,7 +68,7 @@ internal class GeckoExtensionManagerCoordinator(
     private val onPageRuntimeChanged: () -> Unit = {},
     private val onOpenOptionsPage: (GeckoExtensionOptionsTarget) -> Boolean = { false },
 ) {
-    private val repository = GeckoExtensionRepository(runtime, ::requestPermission)
+    private val repository = GeckoExtensionRepository(runtime, permissionPrompt = ::requestPermission)
     private val extensionRuntime = runtime
     private var permissionDecision: CompletableDeferred<GeckoExtensionPermissionDecision>? = null
     private var visible = false
@@ -77,6 +86,7 @@ internal class GeckoExtensionManagerCoordinator(
             snapshot = GeckoExtensionSnapshot(emptyList()),
             managementContext = context,
             busy = false,
+            inventoryLoaded = false,
             message = null,
             permissionRequest = null,
         )
@@ -102,12 +112,12 @@ internal class GeckoExtensionManagerCoordinator(
                     if (!isCurrentRegularState(generation)) return@launch
                     state = state.copy(
                         busy = false,
-                        message = GeckoExtensionManagerMessage.ActionFailed,
+                        message = inventoryFailureMessage(result.error),
                     )
                 }
                 is GeckoExtensionReadResult.Loaded -> {
                     if (!isCurrentRegularState(generation)) return@launch
-                    state = state.copy(snapshot = result.snapshot, busy = false)
+                    state = state.copy(snapshot = result.snapshot, busy = false, inventoryLoaded = true)
                     val target = result.snapshot.extension(extensionId)
                         ?.let(GeckoExtensionChromeRules::optionsPageTarget)
                     if (target == null) {
@@ -116,7 +126,7 @@ internal class GeckoExtensionManagerCoordinator(
                         dismiss()
                         onOpened()
                     } else {
-                        state = state.copy(message = GeckoExtensionManagerMessage.ActionFailed)
+                        state = state.copy(message = GeckoExtensionManagerMessage.OptionsFailed)
                     }
                 }
             }
@@ -133,11 +143,12 @@ internal class GeckoExtensionManagerCoordinator(
             state = when (result) {
                 is GeckoExtensionReadResult.Loaded -> state.copy(
                     snapshot = result.snapshot,
+                    inventoryLoaded = true,
                     busy = false,
                 )
                 is GeckoExtensionReadResult.Failed -> state.copy(
                     busy = false,
-                    message = GeckoExtensionManagerMessage.ActionFailed,
+                    message = inventoryFailureMessage(result.error),
                 )
             }
         }
@@ -147,7 +158,10 @@ internal class GeckoExtensionManagerCoordinator(
         repository.installSignedXpi(rawUri, state.managementContext)
     }
 
-    fun setEnabled(extension: GeckoExtension, enabled: Boolean): Job? = mutate {
+    fun setEnabled(extension: GeckoExtension, enabled: Boolean): Job? = mutate(
+        failureMessage = if (enabled) GeckoExtensionManagerMessage.EnableFailed
+            else GeckoExtensionManagerMessage.DisableFailed,
+    ) {
         if (enabled) {
             repository.enable(extension.id, state.managementContext)
         } else {
@@ -157,15 +171,20 @@ internal class GeckoExtensionManagerCoordinator(
 
     fun setAllowedInPrivateBrowsing(extension: GeckoExtension, allowed: Boolean): Job? = mutate(
         reloadSelectedPage = false,
+        failureMessage = GeckoExtensionManagerMessage.PrivateAccessFailed,
     ) {
         repository.setAllowedInPrivateBrowsing(extension.id, allowed, state.managementContext)
     }
 
-    fun update(extension: GeckoExtension): Job? = mutate {
+    fun update(extension: GeckoExtension): Job? = mutate(
+        failureMessage = GeckoExtensionManagerMessage.UpdateFailed,
+    ) {
         repository.update(extension.id, state.managementContext)
     }
 
-    fun uninstall(extension: GeckoExtension): Job? = mutate {
+    fun uninstall(extension: GeckoExtension): Job? = mutate(
+        failureMessage = GeckoExtensionManagerMessage.UninstallFailed,
+    ) {
         repository.uninstall(extension.id, state.managementContext)
     }
 
@@ -196,6 +215,7 @@ internal class GeckoExtensionManagerCoordinator(
 
     private fun mutate(
         reloadSelectedPage: Boolean = true,
+        failureMessage: GeckoExtensionManagerMessage = GeckoExtensionManagerMessage.ActionFailed,
         mutation: suspend () -> GeckoExtensionMutationResult,
     ): Job? {
         if (!visible || !state.canManage) return null
@@ -222,11 +242,17 @@ internal class GeckoExtensionManagerCoordinator(
                 )
                 is GeckoExtensionMutationResult.Failed -> state.copy(
                     busy = false,
-                    message = GeckoExtensionInstallFailureRules.managerMessage(result.error),
+                    message = GeckoExtensionInstallFailureRules.managerMessage(result.error).let { message ->
+                        if (message == GeckoExtensionManagerMessage.ActionFailed) failureMessage else message
+                    },
                 )
             }
         }
     }
+
+    private fun inventoryFailureMessage(error: Throwable): GeckoExtensionManagerMessage =
+        if (error is GeckoExtensionReadTimeoutException) GeckoExtensionManagerMessage.InventoryTimedOut
+        else GeckoExtensionManagerMessage.InventoryFailed
 
     private fun isCurrentRegularState(generation: Long): Boolean =
         visible && stateGeneration == generation && !state.managementContext.isPrivate

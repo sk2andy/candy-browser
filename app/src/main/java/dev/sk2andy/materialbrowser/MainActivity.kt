@@ -889,6 +889,7 @@ open class MainActivity : AppCompatActivity() {
                     if (firefoxExtensionsVisible) {
                         firefoxExtensionManager?.let { manager ->
                             FirefoxExtensionManagerOverlay(
+                                onRefresh = { manager.refresh() },
                                 state = manager.state,
                                 onInstall = manager::install,
                                 onSetEnabled = manager::setEnabled,

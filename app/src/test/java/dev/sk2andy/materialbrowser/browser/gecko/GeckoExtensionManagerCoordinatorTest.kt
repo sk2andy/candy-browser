@@ -12,6 +12,42 @@ import org.junit.Test
 
 class GeckoExtensionManagerCoordinatorTest {
     @Test
+    fun `failed inventory is not a successful empty list and retry recovers`() = runBlocking {
+        val runtime = FakeExtensionRuntime(
+            installed = linkedMapOf("addon@example.com" to extension()),
+            readFailure = IllegalStateException("engine unavailable"),
+        )
+        val coordinator = coordinator(runtime)
+        coordinator.open(regularContext)?.join()
+        assertFalse(coordinator.state.inventoryLoaded)
+        assertFalse(coordinator.state.busy)
+        assertEquals(GeckoExtensionManagerMessage.InventoryFailed, coordinator.state.message)
+
+        runtime.readFailure = null
+        coordinator.refresh()?.join()
+        assertTrue(coordinator.state.inventoryLoaded)
+        assertNull(coordinator.state.message)
+        assertEquals(1, coordinator.state.snapshot.extensions.size)
+        runtime.readFailure = GeckoExtensionReadTimeoutException()
+        coordinator.refresh()?.join()
+        assertEquals(GeckoExtensionManagerMessage.InventoryTimedOut, coordinator.state.message)
+        assertEquals(1, coordinator.state.snapshot.extensions.size)
+    }
+
+    @Test
+    fun `unknown update failure identifies update rather than installation`() = runBlocking {
+        val runtime = FakeExtensionRuntime(
+            installed = linkedMapOf("addon@example.com" to extension()),
+            updateFailure = IllegalStateException("engine unavailable"),
+        )
+        val coordinator = coordinator(runtime)
+        coordinator.open(regularContext)?.join()
+        coordinator.update(extension())?.join()
+        assertEquals(GeckoExtensionManagerMessage.UpdateFailed, coordinator.state.message)
+        assertFalse(coordinator.state.busy)
+    }
+
+    @Test
     fun `open loads extensions and binds selected tab context`() = runBlocking {
         val runtime = FakeExtensionRuntime(
             installed = linkedMapOf("addon@example.com" to extension()),
@@ -421,6 +457,7 @@ class GeckoExtensionManagerCoordinatorTest {
     private class FakeExtensionRuntime(
         private val installed: LinkedHashMap<String, GeckoExtension> = linkedMapOf(),
         private val listInstalledGate: CompletableDeferred<Unit>? = null,
+        var readFailure: Throwable? = null,
         private val installFailure: Throwable? = null,
         private val updateFailure: Throwable? = null,
     ) : GeckoExtensionRuntime {
@@ -435,6 +472,7 @@ class GeckoExtensionManagerCoordinatorTest {
 
         override suspend fun listInstalled(): List<GeckoExtension> {
             listInstalledCount++
+            readFailure?.let { throw it }
             listInstalledGate?.await()
             return installed.values.toList()
         }

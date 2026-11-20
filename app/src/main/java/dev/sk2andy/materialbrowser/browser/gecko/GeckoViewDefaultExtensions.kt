@@ -330,6 +330,7 @@ internal class GeckoDefaultExtensionStartup(
     private var retryAttempts = 0
     private var lastRetryNanos: Long? = null
     private var provisioner: GeckoDefaultExtensionProvisioner? = null
+    private var startupFailure: Throwable? = null
 
     @Volatile
     var result: GeckoDefaultExtensionProvisioningResult? = null
@@ -338,9 +339,8 @@ internal class GeckoDefaultExtensionStartup(
     init {
         runAfterInternalHostInitialization { initialized ->
             if (!initialized) {
-                completion.completeExceptionally(
-                    IllegalStateException("Candy internal extension hosts failed to initialize"),
-                )
+                startupFailure = IllegalStateException("Candy internal extension hosts failed to initialize")
+                completion.complete(Unit)
                 return@runAfterInternalHostInitialization
             }
             scope.launch {
@@ -354,24 +354,54 @@ internal class GeckoDefaultExtensionStartup(
                     completion.cancel(error)
                     throw error
                 } catch (error: Throwable) {
-                    completion.completeExceptionally(error)
+                    startupFailure = error
+                    lastRetryNanos = nanoTime()
+                    completion.complete(Unit)
                 }
             }
         }
     }
 
-    suspend fun await() = completion.await()
+    suspend fun await() {
+        completion.await()
+        retryMutex.withLock {
+            if (startupFailure is GeckoDefaultExtensionInventoryException && retryIsDue()) {
+                retryAttempts++
+                try {
+                    // Only the pre-mutation inventory failure is safe to replay automatically.
+                    result = requireNotNull(provisioner).provision()
+                    startupFailure = null
+                } catch (error: CancellationException) {
+                    startupFailure = IllegalStateException("Default extension provisioning was interrupted", error)
+                    throw error
+                } catch (error: Throwable) {
+                    startupFailure = error
+                } finally {
+                    lastRetryNanos = nanoTime()
+                }
+            }
+            startupFailure?.let { throw it }
+        }
+    }
+
+    private fun retryIsDue(): Boolean {
+        if (retryAttempts >= MAX_RETRY_ATTEMPTS) return false
+        val lastRetry = lastRetryNanos ?: return true
+        return nanoTime() - lastRetry >= RETRY_INTERVAL_NANOS
+    }
 
     suspend fun retryFailedIfDue() {
         await()
         retryMutex.withLock {
-            if (retryAttempts >= MAX_RETRY_ATTEMPTS || result?.hasFailure != true) return
-            val now = nanoTime()
-            val lastRetry = lastRetryNanos
-            if (lastRetry != null && now - lastRetry < RETRY_INTERVAL_NANOS) return
+            startupFailure?.let { throw it }
+            if (result?.hasFailure != true || !retryIsDue()) return
             retryAttempts++
             try {
                 result = requireNotNull(provisioner).provision()
+            } catch (error: CancellationException) {
+                // Gecko may have accepted a mutation before the caller stopped waiting.
+                startupFailure = IllegalStateException("Default extension provisioning was interrupted", error)
+                throw error
             } finally {
                 lastRetryNanos = nanoTime()
             }

@@ -103,6 +103,7 @@ internal fun FirefoxExtensionManagerOverlay(
     onOpenOptionsPage: (GeckoExtension) -> Unit,
     onPermissionDecision: (Boolean, Boolean) -> Unit,
     onDismiss: () -> Unit,
+    onRefresh: () -> Unit = {},
 ) {
     var installDialogVisible by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
@@ -243,10 +244,33 @@ internal fun FirefoxExtensionManagerOverlay(
                             R.string.gecko_extension_install_postponed
                         GeckoExtensionManagerMessage.ActionRejected ->
                             R.string.gecko_extension_action_rejected
+                        GeckoExtensionManagerMessage.InventoryFailed ->
+                            R.string.gecko_extension_inventory_failed
+                        GeckoExtensionManagerMessage.InventoryTimedOut ->
+                            R.string.gecko_extension_inventory_timed_out
+                        GeckoExtensionManagerMessage.OptionsFailed ->
+                            R.string.gecko_extension_options_failed
+                        GeckoExtensionManagerMessage.EnableFailed ->
+                            R.string.gecko_extension_enable_failed
+                        GeckoExtensionManagerMessage.DisableFailed ->
+                            R.string.gecko_extension_disable_failed
+                        GeckoExtensionManagerMessage.UpdateFailed ->
+                            R.string.gecko_extension_update_failed
+                        GeckoExtensionManagerMessage.UninstallFailed ->
+                            R.string.gecko_extension_uninstall_failed
+                        GeckoExtensionManagerMessage.PrivateAccessFailed ->
+                            R.string.gecko_extension_private_access_failed
                         GeckoExtensionManagerMessage.ActionFailed ->
                             R.string.gecko_extension_action_failed
                     },
                 )
+            }
+            if (!state.managementContext.isPrivate &&
+                (state.message != null || state.inventoryLoaded)
+            ) {
+                TextButton(onClick = onRefresh, enabled = !state.busy) {
+                    Text(stringResource(R.string.gecko_extensions_retry_inventory))
+                }
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -260,7 +284,10 @@ internal fun FirefoxExtensionManagerOverlay(
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                     )
                 }
-                if (state.snapshot.extensions.isEmpty()) {
+                if (state.snapshot.extensions.isEmpty() && state.inventoryLoaded &&
+                    state.message != GeckoExtensionManagerMessage.InventoryFailed &&
+                    state.message != GeckoExtensionManagerMessage.InventoryTimedOut
+                ) {
                     item {
                         Text(
                             stringResource(R.string.gecko_extensions_empty),
@@ -268,7 +295,7 @@ internal fun FirefoxExtensionManagerOverlay(
                             modifier = Modifier.padding(vertical = 12.dp),
                         )
                     }
-                } else {
+                } else if (state.snapshot.extensions.isNotEmpty()) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(

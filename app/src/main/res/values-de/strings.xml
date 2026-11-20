@@ -1609,4 +1609,13 @@
     <string name="settings_home_pages_invalid">Eine gültige HTTP- oder HTTPS-Webadresse eingeben.</string>
     <string name="settings_new_tabs_in_current_stack_title">Neue Tabs im aktuellen Stack öffnen</string>
     <string name="settings_new_tabs_in_current_stack_summary">Wenn der aktuelle Tab in einem Stack liegt, kompatible neue Tabs dort hinzufügen. Standardmäßig aus.</string>
+    <string name="gecko_extension_inventory_failed">Installierte Firefox-Erweiterungen konnten nicht geladen werden. Ihre Daten wurden nicht gelöscht. Erneut versuchen; wenn auch Webseiten nicht laden, Candy neu starten. Bei erneutem Fehler App-Logs aktivieren und dem Fehlerbericht beifügen.</string>
+    <string name="gecko_extension_inventory_timed_out">Firefox-Erweiterungen haben nicht rechtzeitig geantwortet. Erneut versuchen; wenn auch Webseiten nicht laden, Candy neu starten. Erweiterungsdaten wurden nicht gelöscht.</string>
+    <string name="gecko_extension_options_failed">Die Einstellungsseite der Erweiterung konnte nicht geöffnet werden. Die Erweiterungsliste erneut laden.</string>
+    <string name="gecko_extension_enable_failed">Die Erweiterung konnte nicht aktiviert werden. Vor einem erneuten Versuch die Liste neu laden, um ihren aktuellen Zustand zu prüfen.</string>
+    <string name="gecko_extension_disable_failed">Die Erweiterung konnte nicht deaktiviert werden. Vor einem erneuten Versuch die Liste neu laden, um ihren aktuellen Zustand zu prüfen.</string>
+    <string name="gecko_extension_update_failed">Die Erweiterung konnte nicht aktualisiert werden. Vor einem erneuten Versuch die Liste neu laden, um ihre aktuelle Version zu prüfen.</string>
+    <string name="gecko_extension_uninstall_failed">Die Erweiterung konnte nicht entfernt werden. Die Liste neu laden, um zu prüfen, ob sie noch installiert ist.</string>
+    <string name="gecko_extension_private_access_failed">Der Zugriff im privaten Modus konnte nicht geändert werden. Die Liste neu laden, um die aktuelle Berechtigung zu prüfen.</string>
+    <string name="gecko_extensions_retry_inventory">Erweiterungsliste neu laden</string>
 </resources>

@@ -1627,4 +1627,13 @@
     <string name="settings_home_pages_invalid" tools:ignore="MissingTranslation">Enter a valid HTTP or HTTPS website address.</string>
     <string name="settings_new_tabs_in_current_stack_title" tools:ignore="MissingTranslation">Open new tabs in the current stack</string>
     <string name="settings_new_tabs_in_current_stack_summary" tools:ignore="MissingTranslation">When the current tab belongs to a stack, add compatible new tabs to it. Off by default.</string>
+    <string name="gecko_extension_inventory_failed" tools:ignore="MissingTranslation">Could not read installed Firefox extensions. Their data has not been deleted. Retry; if pages also fail to load, restart Candy. If this continues, enable app logs and include them in a bug report.</string>
+    <string name="gecko_extension_inventory_timed_out" tools:ignore="MissingTranslation">Firefox extensions did not respond in time. Retry; if pages also fail to load, restart Candy. Extension data has not been deleted.</string>
+    <string name="gecko_extension_options_failed" tools:ignore="MissingTranslation">Could not open the extension settings page. Try reloading the extension list.</string>
+    <string name="gecko_extension_enable_failed" tools:ignore="MissingTranslation">Could not enable the extension. Reload the list to check its current state before retrying.</string>
+    <string name="gecko_extension_disable_failed" tools:ignore="MissingTranslation">Could not disable the extension. Reload the list to check its current state before retrying.</string>
+    <string name="gecko_extension_update_failed" tools:ignore="MissingTranslation">Could not update the extension. Reload the list to check its current version before retrying.</string>
+    <string name="gecko_extension_uninstall_failed" tools:ignore="MissingTranslation">Could not remove the extension. Reload the list to check whether it is still installed.</string>
+    <string name="gecko_extension_private_access_failed" tools:ignore="MissingTranslation">Could not change private-browsing access. Reload the list to check the current permission.</string>
+    <string name="gecko_extensions_retry_inventory" tools:ignore="MissingTranslation">Reload extension list</string>
 </resources>
