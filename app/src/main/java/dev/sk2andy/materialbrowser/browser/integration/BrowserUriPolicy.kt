@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.integration
 
 import dev.sk2andy.materialbrowser.browser.SiteDomainRules
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import java.net.IDN
 import java.net.URI
 
@@ -84,12 +85,16 @@ object ExternalNavigationPolicy {
         hasUserNavigationGrant: Boolean = false,
         currentPageUrl: String? = null,
         targetUrl: String? = null,
+        initialSystemPopupOpenerUrl: String? = null,
     ): Boolean {
         if (!isForMainFrame) return false
         val normalizedScheme = scheme?.lowercase()?.takeIf(String::isNotBlank) ?: return false
         if (normalizedScheme == "http" || normalizedScheme == "https") {
             if (
-                isSameSiteWebNavigation(currentPageUrl, targetUrl) &&
+                (
+                    isSameSiteWebNavigation(initialSystemPopupOpenerUrl ?: currentPageUrl, targetUrl) ||
+                        isSameOriginPopupNavigation(initialSystemPopupOpenerUrl, targetUrl)
+                ) &&
                 !GooglePlayAppLinkRules.shouldOpenInPlayStore(targetUrl)
             ) return false
             return hasGesture || (isRedirect && hasUserNavigationGrant)
@@ -107,6 +112,12 @@ object ExternalNavigationPolicy {
         val currentSite = SiteDomainRules.domainForUrl(currentPageUrl) ?: return false
         val targetSite = SiteDomainRules.domainForUrl(targetUrl) ?: return false
         return currentSite == targetSite
+    }
+
+    private fun isSameOriginPopupNavigation(openerUrl: String?, targetUrl: String?): Boolean {
+        // An IP literal need not have a site key, so compare the validated origin.
+        val openerOrigin = PermissionOrigin.normalize(openerUrl) ?: return false
+        return openerOrigin == PermissionOrigin.normalize(targetUrl)
     }
 }
 

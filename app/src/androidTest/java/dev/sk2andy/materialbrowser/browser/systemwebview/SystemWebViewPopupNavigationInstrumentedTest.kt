@@ -112,6 +112,30 @@ class SystemWebViewPopupNavigationInstrumentedTest {
     }
 
     @Test
+    fun ordinarySameSiteTargetBlankLoadsWithAutomaticAppHandoff() {
+        verifyOrdinaryTargetBlank(ExternalAppLinkHandling.Automatic)
+    }
+
+    @Test
+    fun ordinarySameSiteTargetBlankLoadsWithAskAppHandoff() {
+        verifyOrdinaryTargetBlank(ExternalAppLinkHandling.AskEveryTime)
+    }
+
+    private fun verifyOrdinaryTargetBlank(mode: ExternalAppLinkHandling) {
+        composeRule.runOnIdle { controller.updateExternalAppLinkHandling(mode) }
+        PopupFixtureServer().use { server ->
+            openPage(server.url("/ordinary-anchor"), "Ordinary anchor")
+            val openerId = composeRule.runOnIdle { controller.selectedTabId }
+            val popupId = openPopup(openerId, server.url("/ordinary-result"), "Ordinary destination")
+            composeRule.runOnIdle {
+                assertEquals(popupId, controller.selectedTabId)
+                assertEquals(openerId, controller.selectedTab.openerTabId)
+                assertNull(controller.externalAppPrompt)
+            }
+        }
+    }
+
+    @Test
     fun privateOAuthPopupDeliversResultWithoutPersistingAuthPages() {
         verifyOAuthCompletion(isPrivate = true)
     }
@@ -585,6 +609,11 @@ class SystemWebViewPopupNavigationInstrumentedTest {
         }
 
         private fun response(path: String): String = when (path) {
+            "/ordinary-anchor" -> page(
+                "Ordinary anchor",
+                "<a style='position:fixed;inset:0' href='/ordinary-result' target='_blank'>Open link</a>",
+            )
+            "/ordinary-result" -> page("Ordinary destination", "Destination")
             "/oauth-opener" -> oauthOpener(
                 "authPopup=window.open('/oauth-consent','candy-auth');",
             )

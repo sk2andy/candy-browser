@@ -13455,6 +13455,16 @@ class BrowserController(
                 GeckoNavigationRequestDecision.Deny
             }
         }
+        // WebView learns the first popup URL from the child, which still has an empty
+        // document. Compare its user-driven HTTP link with the opener for app handoff.
+        val firstSystemPopupOpenerUrl = pendingPopupNavigations[tabId]?.takeIf {
+            !usesGeckoEngine &&
+                nativePopupSessions[tabId] === session &&
+                safeHttpUrl != null &&
+                request.hasUserGesture &&
+                !request.isRedirect &&
+                request.target == BrowserEngineNavigationTarget.Current
+        }?.openerUrl
         if (handlePendingPopupNavigation(tabId, session, request.url).isBlocked) {
             return GeckoNavigationRequestDecision.Deny
         }
@@ -13561,6 +13571,7 @@ class BrowserController(
                 hasUserNavigationGrant = hasGrant,
                 currentPageUrl = currentPageUrl,
                 targetUrl = safeHttpUrl,
+                initialSystemPopupOpenerUrl = firstSystemPopupOpenerUrl,
             )
         ) {
             val requestUri = Uri.parse(request.url)

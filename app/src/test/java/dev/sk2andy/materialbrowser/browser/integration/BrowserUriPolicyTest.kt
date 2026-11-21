@@ -220,6 +220,23 @@ class BrowserUriPolicyTest {
     }
 
     @Test
+    fun `native popup uses same origin opener even when target is an IP literal`() {
+        fun shouldHandoff(target: String) = ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+            scheme = "http",
+            isForMainFrame = true,
+            hasGesture = true,
+            isRedirect = false,
+            currentPageUrl = "about:blank",
+            targetUrl = target,
+            initialSystemPopupOpenerUrl = "http://127.0.0.1:8080/source",
+        )
+
+        assertFalse(shouldHandoff("http://127.0.0.1:8080/new-tab"))
+        assertTrue(shouldHandoff("http://127.0.0.1:8000/new-tab"))
+        assertTrue(shouldHandoff("http://127.0.0.2:8080/new-tab"))
+    }
+
+    @Test
     fun `same registrable site subdomain links stay in Gecko`() {
         assertFalse(
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
