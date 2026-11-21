@@ -526,7 +526,10 @@ predecessor was protected. No 500-ms background DOM scan is introduced.
 
 The selector experiment protects predeclared class-driven states: when scrolling adds a persistent
 header class, the engine applies the matching CSS rule without a new Candy style/geometry measurement.
-New elements matching an admitted selector also inherit protection without discovery. The initial
+New elements matching an admitted selector also inherit protection without discovery. A simple
+`#id.class` anchor can ignore a plain, normal `#id` static/auto default it necessarily outranks.
+Conditional rules and other possible cascade conflicts still block clones. A separate logical
+inset that can map to the physical top keeps the document on the original conservative policy. The initial
 CSS scan and any bounded reconciliation alternate with element discovery in the same cooperative worker;
 ordinary scroll does not initiate scanning or selector classification.
 

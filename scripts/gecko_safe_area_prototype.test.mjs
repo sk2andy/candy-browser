@@ -3238,6 +3238,61 @@ test('full selector rules protect passive class activation and new matching node
   assert.equal(priority.computed(same).top, '52px', 'Same-priority duplicates preserve source order');
 });
 
+test('passive fixed ID/class anchor outranks ordinary static ID defaults without DOM work', () => {
+  const defaults = { selector: '#latent, #other', declarations: { position: 'static', top: 'auto', display: 'none' } };
+  const anchor = { selector: '#latent.active',
+    declarations: { position: 'fixed', top: '0px', display: 'block' } };
+  for (const important of [false, true]) {
+    const f = fixture();
+    f.sheet([defaults]);
+    f.sheet([{ ...anchor, important }]);
+    const latent = f.element('static', 'auto'); latent.id = 'latent';
+    f.start();
+    assert.equal(f.computed(latent).top, 'auto');
+    const reads = { ...f.reads };
+    latent.classes = ['active'];
+    assert.equal(f.computed(latent).top, '32px', 'CSS applies in the same frame, before any observer');
+    assert.deepEqual(f.reads, reads);
+    const later = f.element('static', 'auto'); later.id = 'latent'; later.classes = ['active'];
+    assert.equal(f.computed(later).top, '32px');
+    f.configure({ enabled: false });
+    assert.equal(f.computed(latent).top, '0px');
+  }
+
+  for (const extra of [
+    { ...defaults, important: true },
+    { selector: defaults.selector, declarations: { position: 'relative', top: '60px' }, important: true },
+    { selector: defaults.selector, declarations: { position: 'static', top: 'auto', bottom: '0px' } },
+    { selector: defaults.selector, declarations: { position: 'static', top: 'auto', 'inset-inline-start': '0px' } },
+    { type: 4, children: [defaults] },
+    { type: 0, children: [defaults] }, // Gecko reports CSSLayerBlockRule using UNKNOWN_RULE.
+  ]) {
+    for (const rules of [[extra, defaults], [defaults, extra]]) {
+      for (const separateSheet of [false, true]) {
+        const f = fixture();
+        f.sheet(separateSheet ? [rules[0]] : [...rules, anchor]);
+        if (separateSheet) f.sheet([rules[1], anchor]);
+        f.start();
+        const latent = f.element('static', 'auto'); latent.id = 'latent'; latent.classes = ['active'];
+        assert.notEqual(f.computed(latent).top, '32px', 'Real or ambiguous overrides keep their exclusion');
+      }
+    }
+  }
+});
+
+test('standalone logical inline inset disables only the new static-ID exception', () => {
+  const f = fixture();
+  f.sheet([{ selector: '#latent', declarations: { position: 'static', top: 'auto' } },
+    { selector: '#latent.active', declarations: { position: 'fixed', top: '0px' } },
+    { selector: '.unrelated', declarations: { position: 'fixed', top: '4px' } }]);
+  f.sheet([{ selector: '.vertical-align', declarations: { 'inset-inline-start': '17px' }, important: true }]);
+  f.start();
+  const latent = f.element('static', 'auto'); latent.id = 'latent'; latent.classes = ['active', 'vertical-align'];
+  const existing = f.element('static', 'auto'); existing.classes = ['unrelated'];
+  assert.equal(f.computed(latent).top, '0px', 'Keep the old exclusion so a physical top clone cannot replace a logical one');
+  assert.equal(f.computed(existing).top, '36px', 'Do not change eligibility of existing safe-area clones');
+});
+
 test('split top declarations use resolved author layout instead of a stale selector clone', () => {
   for (const separateSheet of [false, true]) {
     const f = fixture();

@@ -1088,7 +1088,9 @@
       if (source) ordered.push(source);
     }
     selectorBuild = { phase: "collect", sources: ordered.values(), candidates: null,
-      sourcesComplete: ordered.every((source) => !source.incomplete), result: new Map(), matcherLength: 0 };
+      sourcesComplete: ordered.every((source) => !source.incomplete),
+      canProveStaticDefaults: ordered.every((source) => !source.hasIgnoredInlineInset),
+      result: new Map(), matcherLength: 0 };
   }
 
   function buildSelectorStep() {
@@ -1121,7 +1123,9 @@
       if (!previous) build.matcherLength += selector.length + 2;
       // Map order follows the last applicable declaration's source order.
       build.result.delete(selector);
-      build.result.set(selector, previous?.blocked ? previous : candidate);
+      const winner = previous?.blocked ? previous : candidate;
+      build.result.set(selector, { ...winner, staticIdDefault: candidate.staticIdDefault &&
+        (!previous || previous.staticIdDefault) });
       return;
     }
     if (build.phase === "insert") {
@@ -1165,8 +1169,14 @@
         // A cloned !important top must not outrank a different author selector.
         // Let the bounded DOM path read the actual cascade wherever selectors
         // overlap; keep passive CSS protection only for unambiguous matches.
-        const conflicts = [...build.result.keys()].filter((other) => other !== selector).join(", ");
-        const protectedSelector = topSelector(selector, conflicts);
+        // A simple #id.class anchor necessarily outranks an unlayered, normal
+        // static/auto #id default. Anything else can still change the cascade.
+        const hasSpecificId = build.canProveStaticDefaults && /^#[a-z_][\w-]*\.[a-z_][\w-]*$/i.test(selector);
+        const conflicts = [];
+        for (const [other, entry] of build.result) {
+          if (other !== selector && !(hasSpecificId && entry.staticIdDefault)) conflicts.push(other);
+        }
+        const protectedSelector = topSelector(selector, conflicts.join(", "));
         if (build.selectorLength + protectedSelector.length + 2 > 32768) { cssCounts.capped++; return; }
         const text = `${protectedSelector} { top: ${candidate.top + inset}px !important; }`;
         const index = sheet.insertRule(text, sheet.cssRules.length);
@@ -1181,6 +1191,11 @@
     else if (selectorOwns(next.value[0])) releaseElementTop(next.value[0]);
   }
 
+  function hasInlineInset(style) {
+    return Boolean(style.getPropertyValue("inset-inline") || style.getPropertyValue("inset-inline-start") ||
+      style.getPropertyValue("inset-inline-end"));
+  }
+
   function scanSelectorStep() {
     const scan = selectorScan;
     if (scan.source.revision !== scan.revision) { selectorScan = null; return; }
@@ -1189,6 +1204,7 @@
         cssCounts.capped++; invalidateSelectorInventory(scan.source);
       }
       scan.source.candidates = scan.candidates;
+      scan.source.hasIgnoredInlineInset = scan.hasIgnoredInlineInset;
       selectorScan = null;
       cssCounts.scans++;
       if (!sourceQueue.some((source) => source.due <= performance.now())) beginSelectorBuild();
@@ -1219,16 +1235,29 @@
     }
     const otherInset = ["bottom", "inset", "inset-block", "inset-block-start", "inset-block-end", "all"]
       .some((name) => rule.style.getPropertyValue(name));
-    if (!position && !declaredTop && !otherInset) return;
+    if (!position && !declaredTop && !otherInset) {
+      // Keep the previous eligibility for ordinary clones, but don't prove an
+      // inert fallback safe when an ignored inset can map to top.
+      scan.hasIgnoredInlineInset ||= hasInlineInset(rule.style);
+      return;
+    }
     const blocked = frame.conflictOnly || (position !== "fixed" && position !== "sticky") || top === null || otherInset;
     const important = rule.style.getPropertyPriority("top") === "important";
+    const staticIdDefault = !frame.conflictOnly && position === "static" && declaredTop === "auto" &&
+      !otherInset && !important && rule.style.getPropertyPriority("position") !== "important" &&
+      /^#[a-z_][\w-]*(?:\s*,\s*#[a-z_][\w-]*)*$/i.test(selector) && !hasInlineInset(rule.style);
     const previous = scan.candidates.get(selector);
-    if (previous?.blocked || (!blocked && !important && previous?.important)) return;
+    if (previous?.blocked) {
+      previous.staticIdDefault &&= staticIdDefault;
+      return;
+    }
+    if (!blocked && !important && previous?.important) return;
     if (!scan.candidates.has(selector) && scan.candidates.size >= cssLimits.selectors) {
       cssCounts.capped++; invalidateSelectorInventory(scan.source); return;
     }
     scan.candidates.delete(selector);
-    scan.candidates.set(selector, { top, important, blocked });
+    scan.candidates.set(selector, { top, important, blocked,
+      staticIdDefault: staticIdDefault && (!previous || previous.staticIdDefault) });
   }
 
   function cssSourceStep() {
@@ -1265,7 +1294,7 @@
       if (error?.name === "SecurityError") cssCounts.errors++;
       else cssCounts.unsupported++;
     } // No cross-origin fetch or permission bypass.
-    selectorScan = { source, revision: source.revision, visited: 0, candidates: new Map(),
+    selectorScan = { source, revision: source.revision, visited: 0, candidates: new Map(), hasIgnoredInlineInset: false,
       stack: [{ list, index: 0, conflictOnly: !!source.sheet.media?.mediaText && source.sheet.media.mediaText !== "all" }] };
     return true;
   }
