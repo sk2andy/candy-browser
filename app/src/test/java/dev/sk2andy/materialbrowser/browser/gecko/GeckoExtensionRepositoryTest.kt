@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,6 +13,34 @@ class GeckoExtensionRepositoryTest {
         profileId = "default",
         isPrivate = false,
     )
+
+    @Test
+    fun `inventory timeout releases lock and allows read-only retry`() = runBlocking {
+        val runtime = FakeGeckoExtensionRuntime()
+        runtime.listGate = CompletableDeferred()
+        val repository = GeckoExtensionRepository(
+            runtime, permissionPrompt = GeckoExtensionPermissionPrompt { GeckoExtensionPermissionDecision.Denied },
+            readTimeoutMillis = 10,
+        )
+        val failed = repository.refresh() as GeckoExtensionReadResult.Failed
+        assertTrue(failed.error is GeckoExtensionReadTimeoutException)
+        runtime.listGate = null
+        assertTrue(repository.refresh() is GeckoExtensionReadResult.Loaded)
+        assertEquals(0, runtime.installCount)
+    }
+
+    @Test
+    fun `caller cancellation is not reported as inventory timeout`() = runBlocking {
+        val runtime = FakeGeckoExtensionRuntime()
+        runtime.listGate = CompletableDeferred<Unit>().also { it.cancel() }
+        val repository = repository(runtime)
+        try {
+            repository.refresh()
+            throw AssertionError("Cancellation should propagate")
+        } catch (_: CancellationException) {
+            // Lifecycle cancellation must not become UI failure feedback.
+        }
+    }
 
     @Test
     fun `refresh publishes canonical runtime snapshot`() = runBlocking {
@@ -173,7 +203,7 @@ class GeckoExtensionRepositoryTest {
         prompt: GeckoExtensionPermissionPrompt = GeckoExtensionPermissionPrompt {
             GeckoExtensionPermissionDecision(grantPermissions = true)
         },
-    ) = GeckoExtensionRepository(runtime, prompt)
+    ) = GeckoExtensionRepository(runtime, permissionPrompt = prompt)
 
     private fun extension(
         id: String = "addon@example.com",
@@ -215,7 +245,12 @@ class GeckoExtensionRepositoryTest {
             permissionPrompt = prompt
         }
 
-        override suspend fun listInstalled(): List<GeckoExtension> = installed.values.toList()
+        var listGate: CompletableDeferred<Unit>? = null
+
+        override suspend fun listInstalled(): List<GeckoExtension> {
+            listGate?.await()
+            return installed.values.toList()
+        }
 
         override suspend fun installSignedXpi(
             uri: String,

@@ -681,3 +681,33 @@ implements them.
 
 Do not model Firefox extensions as Toppings: their capability and permission contracts are
 different. Both may share catalog metadata later, but execution remains engine-specific.
+
+### Extension inventory failure and retry
+
+The Firefox extension manager distinguishes a failed or timed-out inventory read from a
+successfully loaded empty inventory. A failed refresh retains the last displayed inventory;
+opening the manager in a private context still clears it. Inventory requests time out
+at 15 seconds so a hung Gecko response does not leave the manager busy indefinitely. The reload
+button requests current state again; it does not replay user installs, enable/disable operations or
+removal. The existing default-extension provisioning policy may run while inventory becomes ready;
+its separate retry boundary is described below.
+Operation-specific feedback distinguishes inventory, options, enable, disable, update, removal
+and private-access failures while retaining Gecko's detailed signed-XPI install errors. Feedback
+never exposes raw exception text or recommends deleting app data. New messages are available in
+English and German; other locales use the English fallback until translated. Persistent Gecko profile damage
+and the reporter's nondeterministic crash are not repaired by inventory retry.
+
+### Default-extension startup recovery
+
+- An initial installed-extension inventory read can fail before Gecko's add-on controller is ready.
+  `GeckoDefaultExtensionInventoryException` identifies only this pre-mutation boundary. Manager
+  reads retry that startup step serially after a 30-second cooldown, at most three times per process.
+  Every retry reads the actual installed inventory again before normal provisioning continues.
+- Internal Privacy-host failure remains fail-closed. Catalog/factory errors and failures after
+  provisioning may have mutated an extension are not automatically replayed. No recovery path
+  clears app/profile data, disables extensions, or recreates the process-owned Gecko runtime.
+- A manager read timeout does not cancel the shared initial startup task. Cancellation during a
+  reader-triggered retry aborts that reader and leaves a terminal interruption error for later
+  readers, rather than replaying an uncertain mutation or propagating stale cancellation.
+- `GeckoDefaultExtensionProvisionerTest` covers inventory recovery/cooldown/bounds, privacy failure,
+  post-mutation failure, cancellation, and a manager timeout while shared startup continues.

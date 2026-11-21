@@ -53,6 +53,10 @@ internal data class GeckoDefaultExtensionProvisioningResult(
     val outcomes: Map<String, GeckoDefaultExtensionProvisioningOutcome>,
 )
 
+/** A failed inventory read guarantees that provisioning has not mutated any extension yet. */
+internal class GeckoDefaultExtensionInventoryException(cause: Throwable) :
+    IllegalStateException("Installed Firefox extensions could not be read during startup", cause)
+
 internal class GeckoDefaultExtensionProvisioner(
     private val extensions: List<GeckoDefaultExtension>,
     private val stateStore: GeckoDefaultExtensionStateStore,
@@ -69,7 +73,13 @@ internal class GeckoDefaultExtensionProvisioner(
     }
 
     suspend fun provision(): GeckoDefaultExtensionProvisioningResult {
-        val installed = installer.listInstalled().associateBy(GeckoExtension::id).toMutableMap()
+        val installed = try {
+            installer.listInstalled()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            throw GeckoDefaultExtensionInventoryException(error)
+        }.associateBy(GeckoExtension::id).toMutableMap()
         uninstallRetiredDefaults(installed)
         val outcomes = linkedMapOf<String, GeckoDefaultExtensionProvisioningOutcome>()
         extensions.forEach { extension ->

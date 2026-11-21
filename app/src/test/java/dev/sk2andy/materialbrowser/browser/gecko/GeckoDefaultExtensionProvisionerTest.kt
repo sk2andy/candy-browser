@@ -1,8 +1,17 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -276,6 +285,184 @@ class GeckoDefaultExtensionProvisionerTest {
         )
     }
 
+    @Test
+    fun `startup inventory failure retries after cooldown and preserves installed extensions`() = runBlocking {
+        val installer = FakeInstaller(linkedMapOf(U_BLOCK.id to installedExtension(U_BLOCK)))
+        installer.listFailure = IllegalStateException("Gecko not ready")
+        var nowNanos = 0L
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(true) },
+            provisionerFactory = { provisioner(installer = installer) },
+            nanoTime = { nowNanos },
+        )
+
+        assertTrue(runCatching { startup.await() }.exceptionOrNull() is GeckoDefaultExtensionInventoryException)
+        assertEquals(1, installer.listCalls)
+        installer.listFailure = null
+        assertTrue(runCatching { startup.await() }.exceptionOrNull() is GeckoDefaultExtensionInventoryException)
+        assertEquals(1, installer.listCalls)
+
+        nowNanos += 30_000_000_000L
+        startup.await()
+        startup.await()
+        assertEquals(2, installer.listCalls)
+        assertEquals(listOf(COOKIE_HELPER.id), installer.installCalls)
+        assertTrue(installer.uninstallCalls.isEmpty())
+        assertEquals(GeckoDefaultExtensionProvisioningOutcome.AlreadyInstalled, startup.result?.outcomes?.get(U_BLOCK.id))
+    }
+
+    @Test
+    fun `startup inventory retry stops after three failed attempts`() = runBlocking {
+        val installer = FakeInstaller().apply { listFailure = IllegalStateException("Gecko unavailable") }
+        var nowNanos = 0L
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(true) },
+            provisionerFactory = { provisioner(installer = installer) },
+            nanoTime = { nowNanos },
+        )
+
+        repeat(6) {
+            assertTrue(runCatching { startup.await() }.exceptionOrNull() is GeckoDefaultExtensionInventoryException)
+            nowNanos += 30_000_000_000L
+        }
+        assertEquals(4, installer.listCalls)
+        assertTrue(installer.installCalls.isEmpty())
+    }
+
+    @Test
+    fun `failed internal privacy initialization never retries provisioning`() = runBlocking {
+        var factoryCalls = 0
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(false) },
+            provisionerFactory = { factoryCalls++; provisioner() },
+        )
+
+        repeat(2) {
+            assertTrue(runCatching { startup.await() }.exceptionOrNull() is IllegalStateException)
+        }
+        assertEquals(0, factoryCalls)
+    }
+
+    @Test
+    fun `failure after a provisioning mutation is not automatically replayed`() = runBlocking {
+        val failure = IllegalStateException("State read failed after first install")
+        val state = object : GeckoDefaultExtensionStateStore {
+            override suspend fun read(extensionId: String): GeckoDefaultExtensionState? {
+                if (extensionId == COOKIE_HELPER.id) throw failure
+                return null
+            }
+            override suspend fun write(extensionId: String, state: GeckoDefaultExtensionState) = true
+        }
+        val installer = FakeInstaller()
+        var nowNanos = 0L
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(true) },
+            provisionerFactory = {
+                GeckoDefaultExtensionProvisioner(listOf(U_BLOCK, COOKIE_HELPER), state, FakeAssetVerifier(), installer)
+            },
+            nanoTime = { nowNanos },
+        )
+
+        assertSame(failure, runCatching { startup.await() }.exceptionOrNull())
+        nowNanos += 30_000_000_000L
+        assertSame(failure, runCatching { startup.await() }.exceptionOrNull())
+        assertEquals(1, installer.listCalls)
+        assertEquals(listOf(U_BLOCK.id), installer.installCalls)
+    }
+
+    @Test
+    fun `inventory cancellation is not classified as retryable failure`() = runBlocking {
+        val cancellation = CancellationException("cancelled")
+        val installer = FakeInstaller().apply { listFailure = cancellation }
+        assertSame(cancellation, runCatching { provisioner(installer = installer).provision() }.exceptionOrNull())
+        assertTrue(installer.installCalls.isEmpty())
+    }
+
+    @Test
+    fun `timed out manager reader does not cancel shared startup`() = runBlocking {
+        val releaseFactory = CompletableDeferred<Unit>()
+        val installer = FakeInstaller()
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(true) },
+            provisionerFactory = {
+                releaseFactory.await()
+                provisioner(installer = installer)
+            },
+        )
+        val reader = async { withTimeoutOrNull(1) { startup.await(); true } }
+        yield()
+        assertEquals(null, reader.await())
+        releaseFactory.complete(Unit)
+        startup.await()
+        assertEquals(1, installer.listCalls)
+        assertEquals(listOf(U_BLOCK.id, COOKIE_HELPER.id), installer.installCalls)
+    }
+
+    @Test
+    fun `cancelled retry is not replayed or exposed as cancellation to later readers`() = runBlocking {
+        val installer = FakeInstaller().apply { listFailure = IllegalStateException("Not ready") }
+        var nowNanos = 0L
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(true) },
+            provisionerFactory = { provisioner(installer = installer) },
+            nanoTime = { nowNanos },
+        )
+        assertTrue(runCatching { startup.await() }.exceptionOrNull() is GeckoDefaultExtensionInventoryException)
+        val cancellation = CancellationException("Reader cancelled")
+        installer.listFailure = cancellation
+        nowNanos += 30_000_000_000L
+        assertSame(cancellation, runCatching { startup.await() }.exceptionOrNull())
+        installer.listFailure = null
+        nowNanos += 30_000_000_000L
+        val subsequentFailure = runCatching { startup.await() }.exceptionOrNull()
+        assertTrue(subsequentFailure is IllegalStateException)
+        assertFalse(subsequentFailure is CancellationException)
+        assertSame(cancellation, subsequentFailure?.cause)
+        assertEquals(2, installer.listCalls)
+        assertTrue(installer.installCalls.isEmpty())
+    }
+
+    @Test
+    fun `cancelled retry of reported default failures never replays a dispatched install`() = runBlocking {
+        val verifier = FakeAssetVerifier(valid = false)
+        val installer = FakeInstaller()
+        val installStarted = CompletableDeferred<Unit>()
+        var nowNanos = 0L
+        val startup = GeckoDefaultExtensionStartup(
+            scope = this,
+            runAfterInternalHostInitialization = { it(true) },
+            provisionerFactory = { provisioner(verifier = verifier, installer = installer) },
+            nanoTime = { nowNanos },
+        )
+        startup.await()
+        assertEquals(GeckoDefaultExtensionProvisioningOutcome.Failed, startup.result?.outcomes?.get(U_BLOCK.id))
+        assertTrue(installer.installCalls.isEmpty())
+        verifier.valid = true
+        installer.onInstall = {
+            installStarted.complete(Unit)
+            awaitCancellation()
+        }
+        nowNanos += 30_000_000_000L
+
+        val reader = launch { startup.retryFailedIfDue() }
+        installStarted.await()
+        reader.cancelAndJoin()
+        nowNanos += 30_000_000_000L
+
+        installer.onInstall = {}
+        val subsequentFailure = runCatching { startup.retryFailedIfDue() }.exceptionOrNull()
+        assertTrue(subsequentFailure is IllegalStateException)
+        assertTrue(subsequentFailure?.cause is CancellationException)
+        assertEquals(2, installer.listCalls)
+        assertEquals(listOf(U_BLOCK.id), installer.installCalls)
+    }
+
     private fun provisioner(
         state: FakeStateStore = FakeStateStore(),
         verifier: FakeAssetVerifier = FakeAssetVerifier(),
@@ -327,13 +514,22 @@ class GeckoDefaultExtensionProvisionerTest {
         val upgradeCalls = mutableListOf<String>()
         val uninstallCalls = mutableListOf<String>()
 
-        override suspend fun listInstalled(): List<GeckoExtension> = installed.values.toList()
+        var listCalls = 0
+        var listFailure: Throwable? = null
+        var onInstall: suspend () -> Unit = {}
+
+        override suspend fun listInstalled(): List<GeckoExtension> {
+            listCalls++
+            listFailure?.let { throw it }
+            return installed.values.toList()
+        }
 
         override suspend fun install(
             extension: GeckoDefaultExtension,
             replaceOlder: Boolean,
         ): GeckoExtension {
             installCalls += extension.id
+            onInstall()
             val result = if (replaceOlder) {
                 upgradeCalls += extension.id
                 installed.getValue(extension.id).copy(version = extension.version)

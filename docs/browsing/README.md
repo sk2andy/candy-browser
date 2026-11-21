@@ -14,6 +14,7 @@
 | Installed app lookup and empty-root-path compatibility | [`runtime-and-navigation.md`](runtime-and-navigation.md#invariants) | `ExternalAppWebUrlRules`, `ExternalAppLauncher`, opt-in `InstalledGitHubAppInstrumentedTest` |
 | App-link source identity when an engine reports the target before its request | [`runtime-and-navigation.md`](runtime-and-navigation.md#invariants) | `BrowserController`, `BrowserUriPolicy`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
 | Default-on Auto De-AMP navigation and trusted URL shapes | [`runtime-and-navigation.md`](runtime-and-navigation.md#navigation-paths) | `AutoDeAmpRules`, `BrowserController`, `BrowserSessionStore`, `ProtectionSettingsPage` |
+| Extension inventory timeout, safe reload and operation-specific feedback | [`platform-engines.md`](platform-engines.md#extension-inventory-failure-and-retry) | `GeckoExtensionRepository`, `GeckoExtensionManagerCoordinator`, `FirefoxExtensionManagerOverlay` |
 | Android Gecko, Firefox extensions and iOS WebKit boundary | [`platform-engines.md`](platform-engines.md) | `BrowserController`, `browser/gecko`, `shared`, `iosApp` |
 | HTTPS-only modes, local warning and session exceptions | [`platform-engines.md`](platform-engines.md#https-only) | `HttpsOnlyMode`, `GeckoHttpsOnlyErrorPage`, `ProtectionSettingsPage` |
 | Shared Gecko / System WebView CSS safe-area protection and developer tuning | [`runtime-and-navigation.md`](runtime-and-navigation.md#shared-css-safe-area-controls) | `GeckoSafeAreaSettings`, `SystemWebViewSafeAreaScript`, `DeveloperOptionsSettingsPage` |

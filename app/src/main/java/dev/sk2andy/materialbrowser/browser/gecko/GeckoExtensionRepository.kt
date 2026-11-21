@@ -3,11 +3,13 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.AppLogging
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal class GeckoExtensionRepository(
     private val runtime: GeckoExtensionRuntime,
+    private val readTimeoutMillis: Long = 15_000,
     permissionPrompt: GeckoExtensionPermissionPrompt,
 ) {
     private val mutationMutex = Mutex()
@@ -29,7 +31,9 @@ internal class GeckoExtensionRepository(
 
     suspend fun refresh(): GeckoExtensionReadResult = mutationMutex.withLock {
         try {
-            val loaded = GeckoExtensionRules.canonicalSnapshot(runtime.listInstalled())
+            val installed = withTimeoutOrNull(readTimeoutMillis) { runtime.listInstalled() }
+                ?: throw GeckoExtensionReadTimeoutException()
+            val loaded = GeckoExtensionRules.canonicalSnapshot(installed)
             currentSnapshot = loaded
             GeckoExtensionReadResult.Loaded(loaded)
         } catch (error: CancellationException) {
@@ -174,3 +178,5 @@ internal class GeckoExtensionRepository(
         const val INSTALLATION_METHOD_MANAGER = "manager"
     }
 }
+
+internal class GeckoExtensionReadTimeoutException : Exception("Extension inventory timed out")
