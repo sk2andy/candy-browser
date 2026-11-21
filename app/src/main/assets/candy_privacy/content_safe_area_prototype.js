@@ -14,6 +14,7 @@
   let negativeTopMarker = "";
   const hostname = typeof globalThis.location?.hostname === "string" ? globalThis.location.hostname.toLowerCase().replace(/\.$/, "") : "";
   const amazonIndia = hostname === "amazon.in" || hostname.endsWith(".amazon.in");
+  const arogga = hostname === "arogga.com" || hostname === "www.arogga.com";
   const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
     [":root #btf-sub-nav-top-navigation-bar.persistent-header"] :
     amazonIndia ? [":root .s-mobile-toolbar-sticky"] :
@@ -691,7 +692,11 @@
     layer = document.createElement("style");
     // Amazon hides its sticky toolbar by translating its full height above top 0.
     // Preserve that anchor while hidden; class changes stay entirely in CSS.
-    layer.textContent = configuration?.cover ? "" : [
+    // Arogga separates its fixed header from document flow with an empty spacer.
+    // Match Candy's ownership marker so the spacer follows the same top adjustment.
+    layer.textContent = configuration?.cover ? (arogga ?
+      `:root > body > header.fixed.top-0.w-full[${markerName}] ~ div#content:empty ` +
+      `{ min-height: var(--candy-safe-area-inset-top) !important; }` : "") : [
       ...knownTopSelectors.map((selector) =>
         `${topSelector(selector)} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`),
       ...hiddenTopSelectors.map((selector) => `${topSelector(selector)} { top: 0px !important; }`)

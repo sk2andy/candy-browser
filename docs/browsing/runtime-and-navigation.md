@@ -515,6 +515,7 @@ WebView's version-dependent native inset behavior is described in
 | Settings | Existing enable, DOM mutation/interaction, batch and resize controls remain; CSS sources reuse worker batch/time limits with fixed prototype source limits; only post-load sources use the 500-ms cooldown |
 | Native / privacy | The outer host remains full-window. Top-header and emergency fallback state is memory-only, tab/navigation-scoped, revision-validated, and cleared on navigation or tab removal. |
 | Reddit component exception | `content_safe_area_reddit.js` supplies scoped app-flow/header rules in the document and observed open component roots, including `reddit-header-small`, `reddit-header-large`, and `shreddit-header`. It uses the greater of the renderer's `env(safe-area-inset-top)` and Candy's bounded inset; scroll-state attributes remain CSS-only. |
+| Arogga fixed-header spacer | On arogga.com and www.arogga.com, an empty direct-body spacer following the fixed full-width header reserves the same top inset only while Candy offsets that header on a cover page. Both changes use the existing stylesheet and ownership marker, without extra DOM reads, observers, or scroll work. |
 
 This iteration uses persistent author-origin CSS with event-driven known-header refreshes. Each
 document owns separate element and selector stylesheets and bounded element markers. Rules persist while that document and

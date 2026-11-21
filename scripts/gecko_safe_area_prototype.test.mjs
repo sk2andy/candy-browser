@@ -1729,6 +1729,37 @@ test('known Google menu and focus CSS are seeded before activation and removed w
   }
 });
 
+test('Arogga cover spacer is tied to the existing header rule and exact hosts', () => {
+  const spacerSelector = '~ div#content:empty';
+  for (const hostname of ['arogga.com', 'www.arogga.com.', 'shop.arogga.com', 'arogga.com.example.org']) {
+    const f = fixture({ hostname, viewportContent: 'viewport-fit=cover', reparseStyles: true });
+    const header = f.element('fixed', '0px', 'header');
+    header.classes = ['fixed', 'top-0', 'w-full'];
+    header.rect = { top: 0, left: 0, width: 800, height: 140, right: 800, bottom: 140 };
+    const spacer = f.element('static', 'auto');
+    spacer.id = 'content';
+    f.start();
+    assert.equal(f.computed(header).top, '32px');
+    const layer = f.sheets.find((sheet) => sheet.textContent.includes(spacerSelector));
+    if (hostname !== 'arogga.com' && hostname !== 'www.arogga.com.') {
+      assert.equal(layer, undefined);
+      continue;
+    }
+    const [marker] = header.attributes.keys();
+    assert.ok(marker?.startsWith('data-candy-safe-area-'));
+    assert.ok(layer.textContent.includes(`header.fixed.top-0.w-full[${marker}] ${spacerSelector}`));
+    assert.match(layer.textContent, /min-height: var\(--candy-safe-area-inset-top\) !important/);
+    assert.equal(spacer.style.getPropertyValue('min-height'), '');
+    f.configure({ enabled: false });
+    assert.equal(layer.isConnected, false);
+    assert.equal(header.hasAttribute(marker), false);
+  }
+  const nonCover = fixture({ hostname: 'arogga.com', viewportContent: 'width=device-width' });
+  nonCover.element('fixed', '0px', 'header');
+  nonCover.start();
+  assert.equal(nonCover.sheets.some((sheet) => sheet.textContent.includes(spacerSelector)), false);
+});
+
 test('Amazon India toolbar keeps its translated offscreen state without recurring discovery', () => {
   for (const hostname of ['amazon.in', 'www.amazon.in', 'www.amazon.in.']) {
     const f = fixture({ hostname, reparseStyles: true });
