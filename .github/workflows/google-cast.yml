@@ -113,6 +113,22 @@ jobs:
             :app:connectedFullDebugAndroidTest \
             -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.ui.CastControlsInstrumentedTest
 
+      - name: Check Gecko terminal navigation events
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon \
+            :app:connectedFullDebugAndroidTest \
+            '-Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyHostFailureInstrumentedTest#privacyHostFailureDoesNotRestartNavigation'
+
+      - name: Check Gecko extension inventory and normal navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon \
+            :app:connectedFullDebugAndroidTest \
+            '-Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionRuntimeInstrumentedTest#installedBuiltInFixtureIsListedAndRunsAcrossRealisticNavigation'
+
       - name: Show Android test results after failure
         if: failure()
         shell: bash
