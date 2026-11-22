@@ -115,26 +115,42 @@ class GeckoExtensionRuntimeInstrumentedTest {
 
         lateinit var regularSession: GeckoBrowserSession
         lateinit var regularView: View
+        val googleUrl = server.url(GOOGLE_HOST)
+        val redditUrl = server.url(REDDIT_HOST)
         val googleMarked = CountDownLatch(1)
         val redditMarked = CountDownLatch(1)
+        val latestState = AtomicReference<GeckoBrowserSessionState>()
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             regularSession = runtime.createSession("firefox-extension-regular", isPrivate = false)
             regularView = regularSession.createView(context)
+            regularSession.setActive(true)
             regularSession.setStateListener { state ->
-                when (state.title) {
-                    "$MARKER_PREFIX$GOOGLE_HOST" -> googleMarked.countDown()
-                    "$MARKER_PREFIX$REDDIT_HOST" -> redditMarked.countDown()
+                latestState.set(state)
+                if (state.isLoading || state.lastNavigationSucceeded != true) return@setStateListener
+                when {
+                    state.url == googleUrl && state.title == "$MARKER_PREFIX$GOOGLE_HOST" ->
+                        googleMarked.countDown()
+                    state.url == redditUrl && state.title == "$MARKER_PREFIX$REDDIT_HOST" ->
+                        redditMarked.countDown()
                 }
             }
-            assertTrue(regularSession.loadUrl(server.url(GOOGLE_HOST)))
+            assertTrue(regularSession.loadUrl(googleUrl))
         }
 
         try {
-            assertTrue("Fixture did not run on Google-like page", googleMarked.await(20, TimeUnit.SECONDS))
+            val googleCompleted = googleMarked.await(20, TimeUnit.SECONDS)
+            assertTrue(
+                "Fixture did not complete Google-like navigation: state=${latestState.get()}",
+                googleCompleted,
+            )
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                assertTrue(regularSession.loadUrl(server.url(REDDIT_HOST)))
+                assertTrue(regularSession.loadUrl(redditUrl))
             }
-            assertTrue("Fixture did not run after Reddit-like navigation", redditMarked.await(20, TimeUnit.SECONDS))
+            val redditCompleted = redditMarked.await(20, TimeUnit.SECONDS)
+            assertTrue(
+                "Fixture did not complete Reddit-like navigation: state=${latestState.get()}",
+                redditCompleted,
+            )
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 regularSession.releaseView(regularView)
