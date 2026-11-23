@@ -95,7 +95,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
@@ -190,6 +189,7 @@ internal fun ExpandedBottomBarContent(
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
     onTabs: () -> Unit,
+    onShowPinnedTabs: () -> Unit,
     onReload: () -> Unit,
     onStop: () -> Unit,
     onNewTab: () -> Unit,
@@ -333,6 +333,7 @@ internal fun ExpandedBottomBarContent(
         ).filter { action ->
             action == AddressBarAction.Tabs ||
                 action == AddressBarAction.NewTab ||
+                action == AddressBarAction.PinnedTabs ||
                 action == AddressBarAction.CloseTab ||
                 action == AddressBarAction.ParkRight
         }
@@ -359,6 +360,7 @@ internal fun ExpandedBottomBarContent(
     )
     val actionCallbacks = AddressBarActionCallbacks(
         onTabs = onTabs,
+        onShowPinnedTabs = onShowPinnedTabs,
         onToggleFavorite = onToggleFavorite,
         onTogglePinned = onTogglePinned,
         onDesktopViewChange = onDesktopViewChange,
@@ -782,6 +784,7 @@ internal fun ExpandedBottomBarContent(
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 onTabs = onTabs,
+                                onShowPinnedTabs = onShowPinnedTabs,
                                 onNewTab = onNewTab,
                                 onDuplicateTab = onDuplicateTab,
                                 onCloseTab = onCloseTab,
@@ -961,17 +964,18 @@ internal fun AddressAiModeToggle(
 internal fun AddressBarTabCounterButton(
     tabCount: Int,
     onClick: () -> Unit,
+    onLongPress: () -> Unit,
 ) {
     val description = pluralStringResource(
         R.plurals.cd_open_tab_overview_count,
         tabCount,
         tabCount,
     )
-    IconButton(
+    AddressBarTabShortcutButton(
         onClick = onClick,
-        modifier = Modifier
-            .testTag(AddressBarTestTags.TabButton)
-            .semantics { contentDescription = description },
+        onLongPress = onLongPress,
+        description = description,
+        modifier = Modifier.testTag(AddressBarTestTags.TabButton),
     ) {
         AddressBarTabCounterGlyph(tabCount = tabCount)
     }

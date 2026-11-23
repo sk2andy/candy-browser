@@ -115,6 +115,7 @@ private fun AddressBarActionCallbacks.committingWith(
     commit: (() -> Unit) -> Unit,
 ): AddressBarActionCallbacks = copy(
     onTabs = { commit(onTabs) },
+    onShowPinnedTabs = { commit(onShowPinnedTabs) },
     onToggleFavorite = { commit(onToggleFavorite) },
     onTogglePinned = { commit(onTogglePinned) },
     onDesktopViewChange = { checked -> commit { onDesktopViewChange(checked) } },

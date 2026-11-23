@@ -14,6 +14,10 @@ class AddressBarActionLayoutTest {
             AddressBarAction.ParkRight,
             AddressBarAction.fromWireValue("park_right"),
         )
+        assertEquals(
+            AddressBarAction.PinnedTabs,
+            AddressBarAction.fromWireValue("pinned_tabs"),
+        )
         assertNull(AddressBarAction.fromWireValue(null))
         assertNull(AddressBarAction.fromWireValue("unknown"))
     }

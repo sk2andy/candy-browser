@@ -1087,6 +1087,7 @@ class BrowserMenuBottomSheetInstrumentedTest {
                                         onForward = {},
                                         onParkRight = {},
                                         onNewTabButtonBounds = {},
+                                        onShowPinnedTabs = {},
                                     ),
                                     commit = commit,
                                     onAddress = onAddressClick,

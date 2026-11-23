@@ -2,8 +2,10 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -37,6 +39,56 @@ class AddressBarActionsInstrumentedTest {
         composeRule.runOnIdle { assertEquals(1, homeInvocations) }
     }
 
+    @Test
+    fun plusLongPressOpensPinsWhileClickCreatesNewTab() {
+        var newTabs = 0
+        var pinnedOverviews = 0
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                AddressBarActionButton(
+                    action = AddressBarAction.NewTab,
+                    state = actionState(),
+                    callbacks = actionCallbacks(
+                        onNewTab = { newTabs++ },
+                        onShowPinnedTabs = { pinnedOverviews++ },
+                    ),
+                )
+            }
+        }
+        val plus = composeRule.onNodeWithTag(AddressBarActionTestTags.action(AddressBarAction.NewTab))
+
+        plus.performTouchInput { longClick() }
+        composeRule.runOnIdle {
+            assertEquals(0, newTabs)
+            assertEquals(1, pinnedOverviews)
+        }
+        plus.performClick()
+        composeRule.runOnIdle {
+            assertEquals(1, newTabs)
+            assertEquals(1, pinnedOverviews)
+        }
+    }
+
+    @Test
+    fun configurablePinnedTabsActionOpensOverviewWithOneClick() {
+        var pinnedOverviews = 0
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                AddressBarActionButton(
+                    action = AddressBarAction.PinnedTabs,
+                    state = actionState(),
+                    callbacks = actionCallbacks(onShowPinnedTabs = { pinnedOverviews++ }),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarActionTestTags.action(AddressBarAction.PinnedTabs))
+            .assertHasClickAction()
+            .performClick()
+
+        composeRule.runOnIdle { assertEquals(1, pinnedOverviews) }
+    }
+
     private fun actionState() = AddressBarActionState(
         tabCount = 1,
         isLoading = false,
@@ -56,7 +108,11 @@ class AddressBarActionsInstrumentedTest {
         newTabPulseScale = 1f,
     )
 
-    private fun actionCallbacks(onHome: () -> Unit) = AddressBarActionCallbacks(
+    private fun actionCallbacks(
+        onHome: () -> Unit = {},
+        onNewTab: () -> Unit = {},
+        onShowPinnedTabs: () -> Unit = {},
+    ) = AddressBarActionCallbacks(
         onTabs = {},
         onToggleFavorite = {},
         onTogglePinned = {},
@@ -66,7 +122,8 @@ class AddressBarActionsInstrumentedTest {
         onFindInPage = {},
         onShare = {},
         onPrint = {},
-        onNewTab = {},
+        onNewTab = onNewTab,
+        onShowPinnedTabs = onShowPinnedTabs,
         onHome = onHome,
         onReloadOrStop = {},
         onCloseTab = {},

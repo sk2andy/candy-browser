@@ -175,6 +175,36 @@ internal fun BoxScope.BrowserAddressChrome(
         if (!tabSwipeEnabled) browserDragOffset.floatValue = 0f
     }
     val rootView = LocalView.current
+    val pinnedTabsProfileId = controller.activeProfileId
+    val pinnedTabsPrivate = selectedTab.isIncognito
+    val pinnedTabsProfileLocked = controller.isActiveProfileLocked
+    var pinnedTabsVisible by remember(pinnedTabsProfileId, pinnedTabsPrivate, pinnedTabsProfileLocked) {
+        mutableStateOf(false)
+    }
+    if (pinnedTabsVisible && !pinnedTabsProfileLocked) {
+        PinnedTabsSheet(
+            tabs = PinnedTabQuickAccessRules.eligibleTabs(
+                tabs = controller.activeTabs,
+                profileId = pinnedTabsProfileId,
+                isIncognito = pinnedTabsPrivate,
+            ),
+            selectedTabId = selectedTab.id,
+            onDismiss = { pinnedTabsVisible = false },
+            onSelect = { tabId ->
+                pinnedTabsVisible = false
+                if (
+                    !controller.isActiveProfileLocked &&
+                    controller.activeProfileId == pinnedTabsProfileId &&
+                    controller.selectedTab.isIncognito == pinnedTabsPrivate &&
+                    controller.activeTabs.any { tab ->
+                        tab.id == tabId && tab.isPinned && tab.isIncognito == pinnedTabsPrivate
+                    }
+                ) {
+                    controller.selectTab(tabId)
+                }
+            },
+        )
+    }
     val longPressActionHapticNonce = controller.contentActions.longPressActionHapticNonce
     LaunchedEffect(longPressActionHapticNonce) {
         if (longPressActionHapticNonce != 0) {
@@ -555,6 +585,12 @@ internal fun BoxScope.BrowserAddressChrome(
             }
         },
         onTabs = onTabs,
+        onShowPinnedTabs = {
+            if (!controller.isActiveProfileLocked) {
+                onAddressEditorDismiss()
+                pinnedTabsVisible = true
+            }
+        },
         overviewGestureEnabled = !tabOverviewOpening && !tabOverviewVisible,
         overviewGestureProgress = overviewGestureProgress,
         showingTabOverview = tabOverviewVisible,

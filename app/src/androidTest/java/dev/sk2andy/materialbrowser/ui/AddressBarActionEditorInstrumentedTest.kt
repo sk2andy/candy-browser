@@ -48,6 +48,22 @@ class AddressBarActionEditorInstrumentedTest {
     }
 
     @Test
+    fun pinnedTabsOverviewCanBeAddedFromPaletteSeparatelyFromPinning() {
+        var layout by mutableStateOf(AddressBarActionLayout.Default)
+        setEditorContent(layout = { layout }, onLayoutChanged = { layout = it })
+
+        performCustomAction(AddressBarAction.PinnedTabs, index = 0)
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(AddressBarAction.Tabs, AddressBarAction.PinnedTabs),
+                layout.beforeAddress,
+            )
+            assertEquals(listOf(AddressBarAction.NewTab), layout.afterAddress)
+        }
+    }
+
+    @Test
     fun rightParkActionCanBeAddedFromPalette() {
         var layout by mutableStateOf(AddressBarActionLayout.Default)
         setEditorContent(layout = { layout }, onLayoutChanged = { layout = it })

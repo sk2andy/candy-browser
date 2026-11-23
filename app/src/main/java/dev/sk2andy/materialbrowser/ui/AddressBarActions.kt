@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -16,6 +17,7 @@ import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -23,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -76,6 +79,7 @@ internal data class AddressBarActionCallbacks(
     val onForward: () -> Unit,
     val onParkRight: () -> Unit,
     val onNewTabButtonBounds: (Rect?) -> Unit,
+    val onShowPinnedTabs: () -> Unit,
 )
 
 @Composable
@@ -96,6 +100,28 @@ internal fun AddressBarActionButton(
             AddressBarTabCounterButton(
                 tabCount = state.tabCount,
                 onClick = callbacks.onTabs,
+                onLongPress = callbacks.onShowPinnedTabs,
+            )
+        }
+        AddressBarAction.NewTab -> AddressBarTabShortcutButton(
+            onClick = callbacks.onNewTab,
+            onLongPress = callbacks.onShowPinnedTabs,
+            description = stringResource(R.string.cd_new_tab),
+            modifier = modifier
+                .testTag(AddressBarActionTestTags.action(action))
+                .onGloballyPositioned { coordinates ->
+                    callbacks.onNewTabButtonBounds(coordinates.boundsInRoot())
+                }
+                .graphicsLayer {
+                    scaleX = state.newTabPulseScale
+                    scaleY = state.newTabPulseScale
+                },
+        ) {
+            AddressBarActionGlyph(
+                action = action,
+                selected = false,
+                isLoading = false,
+                contentDescription = null,
             )
         }
         AddressBarAction.Favorite -> AddressBarToggleActionButton(
@@ -179,7 +205,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.FindInPage -> callbacks.onFindInPage
         AddressBarAction.Share -> callbacks.onShare
         AddressBarAction.Print -> callbacks.onPrint
-        AddressBarAction.NewTab -> callbacks.onNewTab
+        AddressBarAction.PinnedTabs -> callbacks.onShowPinnedTabs
         AddressBarAction.Home -> callbacks.onHome
         AddressBarAction.Reload -> callbacks.onReloadOrStop
         AddressBarAction.CloseTab -> callbacks.onCloseTab
@@ -193,7 +219,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.FindInPage -> stringResource(R.string.action_find_in_page)
         AddressBarAction.Share -> stringResource(R.string.action_share)
         AddressBarAction.Print -> stringResource(R.string.action_print)
-        AddressBarAction.NewTab -> stringResource(R.string.cd_new_tab)
+        AddressBarAction.PinnedTabs -> stringResource(R.string.pinned_tabs_title)
         AddressBarAction.Home -> stringResource(R.string.action_home)
         AddressBarAction.Reload -> stringResource(
             if (state.isLoading) R.string.action_stop_loading else R.string.action_reload,
@@ -207,21 +233,7 @@ private fun AddressBarRegularActionButton(
     IconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier
-            .then(
-                if (action == AddressBarAction.NewTab) {
-                    Modifier
-                        .onGloballyPositioned { coordinates ->
-                            callbacks.onNewTabButtonBounds(coordinates.boundsInRoot())
-                        }
-                        .graphicsLayer {
-                            scaleX = state.newTabPulseScale
-                            scaleY = state.newTabPulseScale
-                        }
-                } else {
-                    Modifier
-                },
-            ),
+        modifier = modifier,
     ) {
         AddressBarActionGlyph(
             action = action,
@@ -230,6 +242,33 @@ private fun AddressBarRegularActionButton(
             contentDescription = description,
             enabled = enabled,
         )
+    }
+}
+
+@Composable
+internal fun AddressBarTabShortcutButton(
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    description: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val longPressLabel = stringResource(R.string.cd_scroll_to_pinned_tabs)
+    Box(
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .size(40.dp)
+            .clip(CircleShape)
+            .addressBarPressActions(
+                longPressEnabled = true,
+                onClick = onClick,
+                onLongPress = onLongPress,
+                longPressLabel = longPressLabel,
+            )
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -332,6 +371,7 @@ internal fun AddressBarActionGlyph(
                         R.drawable.ic_symbol_favorite
                     }
                     AddressBarAction.Pin -> R.drawable.ic_push_pin
+                    AddressBarAction.PinnedTabs -> R.drawable.ic_pinned_tabs
                     AddressBarAction.Desktop -> R.drawable.ic_symbol_desktop
                     AddressBarAction.ForceVerticalScroll ->
                         R.drawable.ic_symbol_vertical_scroll
@@ -408,4 +448,5 @@ internal fun AddressBarAction.labelRes(): Int = when (this) {
     AddressBarAction.Back -> R.string.action_back
     AddressBarAction.Forward -> R.string.action_forward
     AddressBarAction.ParkRight -> R.string.action_park_address_pill_right
+    AddressBarAction.PinnedTabs -> R.string.pinned_tabs_title
 }

@@ -313,6 +313,7 @@ internal fun BrowserMainMenu(
     canCloseTab: Boolean = true,
     userScriptMenuCommands: List<UserScriptMenuCommand> = emptyList(),
     onTabs: () -> Unit = {},
+    onShowPinnedTabs: (() -> Unit)? = null,
     onNewTab: () -> Unit = {},
     onDuplicateTab: () -> Unit = {},
     onCloseTab: () -> Unit = {},
@@ -473,6 +474,16 @@ internal fun BrowserMainMenu(
         {}
     }
     val workflowContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = { commit ->
+        if (AddressBarAction.PinnedTabs in overflowAddressBarActions && onShowPinnedTabs != null) {
+            BrowserMenuRow(
+                label = stringResource(R.string.pinned_tabs_title),
+                icon = {
+                    Icon(painterResource(R.drawable.ic_pinned_tabs), contentDescription = null)
+                },
+                shape = MaterialTheme.shapes.large,
+                onClick = { commit(onShowPinnedTabs) },
+            )
+        }
         if (workflowActions.menuActions.isNotEmpty() || onManageWorkflows != null) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 4.dp),

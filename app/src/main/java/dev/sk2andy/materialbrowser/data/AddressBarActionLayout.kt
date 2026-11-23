@@ -17,6 +17,7 @@ enum class AddressBarAction(val wireValue: String) {
     Back("back"),
     Forward("forward"),
     ParkRight("park_right"),
+    PinnedTabs("pinned_tabs"),
     ;
 
     companion object {
