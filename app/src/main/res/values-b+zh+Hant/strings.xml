@@ -1609,4 +1609,6 @@
     <string name="settings_home_pages_internal">內建起始頁</string>
     <string name="settings_home_pages_empty">留空 = 內建起始頁</string>
     <string name="settings_home_pages_invalid">請輸入有效的 HTTP 或 HTTPS 網址。</string>
+    <string name="settings_auto_create_link_stacks_title">自動為連結建立分頁群組</string>
+    <string name="settings_auto_create_link_stacks_summary">從未分組的分頁在新分頁中開啟連結時，將兩個分頁放入同一個新群組。預設關閉。</string>
 </resources>

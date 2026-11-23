@@ -50,6 +50,7 @@ import kotlin.math.roundToInt
 
 internal object TabSettingsTestTags {
     const val StackFolderMode = "tab_settings_stack_folder_mode"
+    const val AutoCreateLinkStacks = "tab_settings_auto_create_link_stacks"
     const val ResidentTabLimit = "tab_settings_resident_limit"
     const val ListStartsAtBottom = "tab_settings_list_starts_at_bottom"
     const val AutomaticSorting = "tab_settings_automatic_sorting"
@@ -83,6 +84,7 @@ internal fun TabsAndGesturesSettingsPage(
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
     newTabsInCurrentStackEnabled: Boolean = false,
+    autoCreateLinkStacksEnabled: Boolean = false,
     isClosedTabUndoEnabled: Boolean = false,
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
@@ -100,6 +102,7 @@ internal fun TabsAndGesturesSettingsPage(
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
     onNewTabsInCurrentStackEnabledChanged: (Boolean) -> Unit = {},
+    onAutoCreateLinkStacksEnabledChanged: (Boolean) -> Unit = {},
     onClosedTabUndoEnabledChanged: (Boolean) -> Unit = {},
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
@@ -180,6 +183,14 @@ internal fun TabsAndGesturesSettingsPage(
                     checked = newTabsInCurrentStackEnabled,
                     onCheckedChange = onNewTabsInCurrentStackEnabledChanged,
                     modifier = Modifier.testTag("tab_settings_new_tabs_in_current_stack"),
+                )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_auto_create_link_stacks_title),
+                    subtitle = stringResource(R.string.settings_auto_create_link_stacks_summary),
+                    checked = autoCreateLinkStacksEnabled,
+                    onCheckedChange = onAutoCreateLinkStacksEnabledChanged,
+                    modifier = Modifier.testTag(TabSettingsTestTags.AutoCreateLinkStacks),
                 )
                 SettingsPreferenceDivider()
                 SettingsSwitch(

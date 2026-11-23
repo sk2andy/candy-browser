@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Intern Startsäit</string>
     <string name="settings_home_pages_empty">Eidel = intern Startsäit</string>
     <string name="settings_home_pages_invalid">Gëff eng gülteg HTTP- oder HTTPS-Webadress an.</string>
+    <string name="settings_auto_create_link_stacks_title">Automatesch Stacke fir Linken uleeën</string>
+    <string name="settings_auto_create_link_stacks_summary">Wann e Link vun engem Tab ouni Grupp an engem neien Tab opgeet, kommen déi zwee Tabs an en neie Stack. Standardméisseg aus.</string>
 </resources>

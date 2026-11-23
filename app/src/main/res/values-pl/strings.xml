@@ -1657,4 +1657,6 @@
     <string name="settings_home_pages_internal">Wewnętrzna strona startowa</string>
     <string name="settings_home_pages_empty">Puste = wewnętrzna strona startowa</string>
     <string name="settings_home_pages_invalid">Wpisz prawidłowy adres strony HTTP lub HTTPS.</string>
+    <string name="settings_auto_create_link_stacks_title">Automatycznie twórz stosy dla linków</string>
+    <string name="settings_auto_create_link_stacks_summary">Gdy link z niepogrupowanej karty otwiera nową kartę, umieść obie karty w nowym stosie. Domyślnie wyłączone.</string>
 </resources>

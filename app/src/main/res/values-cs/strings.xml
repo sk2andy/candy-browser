@@ -1657,4 +1657,6 @@
     <string name="settings_home_pages_internal">Interní úvodní stránka</string>
     <string name="settings_home_pages_empty">Prázdné = interní úvodní stránka</string>
     <string name="settings_home_pages_invalid">Zadejte platnou webovou adresu HTTP nebo HTTPS.</string>
+    <string name="settings_auto_create_link_stacks_title">Automaticky vytvářet skupiny pro odkazy</string>
+    <string name="settings_auto_create_link_stacks_summary">Pokud odkaz z neseskupené karty otevře novou kartu, zařadí se obě karty do nové skupiny. Ve výchozím nastavení vypnuto.</string>
 </resources>

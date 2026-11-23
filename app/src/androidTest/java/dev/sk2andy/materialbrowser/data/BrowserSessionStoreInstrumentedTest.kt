@@ -1309,6 +1309,24 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun automaticStackCreationDefaultsOffAndPersistsIndependentlyFromJoining() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadAutoCreateLinkStacksEnabled())
+        assertFalse(store.loadNewTabsInCurrentStackEnabled())
+
+        store.saveAutoCreateLinkStacksEnabled(true)
+        val restored = BrowserSessionStore(context)
+        assertTrue(restored.loadAutoCreateLinkStacksEnabled())
+        assertFalse(restored.loadNewTabsInCurrentStackEnabled())
+
+        restored.saveNewTabsInCurrentStackEnabled(true)
+        restored.saveAutoCreateLinkStacksEnabled(false)
+        val restoredAgain = BrowserSessionStore(context)
+        assertFalse(restoredAgain.loadAutoCreateLinkStacksEnabled())
+        assertTrue(restoredAgain.loadNewTabsInCurrentStackEnabled())
+    }
+
+    @Test
     fun tabOrderingPreferencesDefaultOffAndRoundTrip() {
         val store = BrowserSessionStore(context)
         assertFalse(store.loadTabListStartsAtBottom())

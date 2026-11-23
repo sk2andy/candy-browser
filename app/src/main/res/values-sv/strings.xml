@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Inbyggd startsida</string>
     <string name="settings_home_pages_empty">Tomt = inbyggd startsida</string>
     <string name="settings_home_pages_invalid">Ange en giltig HTTP- eller HTTPS-webbadress.</string>
+    <string name="settings_auto_create_link_stacks_title">Skapa staplar automatiskt för länkar</string>
+    <string name="settings_auto_create_link_stacks_summary">När en länk öppnas i en ny flik från en ogrupperad flik läggs båda flikarna i en ny stapel. Av som standard.</string>
 </resources>

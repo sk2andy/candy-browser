@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Faqja e brendshme e nisjes</string>
     <string name="settings_home_pages_empty">Bosh = faqja e brendshme e nisjes</string>
     <string name="settings_home_pages_invalid">Vendosni një adresë të vlefshme interneti HTTP ose HTTPS.</string>
+    <string name="settings_auto_create_link_stacks_title">Krijo automatikisht grupe skedash për lidhjet</string>
+    <string name="settings_auto_create_link_stacks_summary">Kur një lidhje hapet në një skedë të re nga një skedë e pagrupi, të dyja skedat vendosen në një grup të ri. Çaktivizuar si parazgjedhje.</string>
 </resources>

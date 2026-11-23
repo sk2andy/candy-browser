@@ -1609,4 +1609,6 @@
     <string name="settings_home_pages_internal">内置起始页</string>
     <string name="settings_home_pages_empty">留空 = 内置起始页</string>
     <string name="settings_home_pages_invalid">请输入有效的 HTTP 或 HTTPS 网址。</string>
+    <string name="settings_auto_create_link_stacks_title">自动为链接创建标签页组</string>
+    <string name="settings_auto_create_link_stacks_summary">从未分组的标签页在新标签页中打开链接时，将两个标签页放入一个新组。默认关闭。</string>
 </resources>

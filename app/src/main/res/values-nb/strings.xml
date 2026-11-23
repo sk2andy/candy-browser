@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Innebygd startside</string>
     <string name="settings_home_pages_empty">Tomt = innebygd startside</string>
     <string name="settings_home_pages_invalid">Skriv inn en gyldig HTTP- eller HTTPS-nettadresse.</string>
+    <string name="settings_auto_create_link_stacks_title">Opprett stabler automatisk for lenker</string>
+    <string name="settings_auto_create_link_stacks_summary">Når en lenke fra en ugruppert fane åpner en ny fane, legges begge fanene i en ny stabel. Av som standard.</string>
 </resources>

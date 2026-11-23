@@ -1660,4 +1660,6 @@
     <string name="settings_home_pages_internal">Встроенная стартовая страница</string>
     <string name="settings_home_pages_empty">Пустое поле = встроенная стартовая страница</string>
     <string name="settings_home_pages_invalid">Введите действительный веб-адрес HTTP или HTTPS.</string>
+    <string name="settings_auto_create_link_stacks_title">Автоматически создавать группы для ссылок</string>
+    <string name="settings_auto_create_link_stacks_summary">Если ссылка из вкладки без группы открывается в новой вкладке, обе вкладки помещаются в новую группу. По умолчанию выключено.</string>
 </resources>

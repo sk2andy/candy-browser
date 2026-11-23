@@ -1636,4 +1636,6 @@
     <string name="gecko_extension_uninstall_failed" tools:ignore="MissingTranslation">Could not remove the extension. Reload the list to check whether it is still installed.</string>
     <string name="gecko_extension_private_access_failed" tools:ignore="MissingTranslation">Could not change private-browsing access. Reload the list to check the current permission.</string>
     <string name="gecko_extensions_retry_inventory" tools:ignore="MissingTranslation">Reload extension list</string>
+    <string name="settings_auto_create_link_stacks_title">Automatically create stacks for links</string>
+    <string name="settings_auto_create_link_stacks_summary">When a link opens in a new tab from an ungrouped tab, put both tabs in a new stack. Off by default.</string>
 </resources>

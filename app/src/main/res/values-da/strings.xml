@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Indbygget startside</string>
     <string name="settings_home_pages_empty">Tomt = indbygget startside</string>
     <string name="settings_home_pages_invalid">Indtast en gyldig HTTP- eller HTTPS-webadresse.</string>
+    <string name="settings_auto_create_link_stacks_title">Opret automatisk stakke til links</string>
+    <string name="settings_auto_create_link_stacks_summary">Når et link fra en fane uden gruppe åbner en ny fane, lægges begge faner i en ny stak. Slået fra som standard.</string>
 </resources>

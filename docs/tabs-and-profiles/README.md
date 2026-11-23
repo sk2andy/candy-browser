@@ -59,5 +59,7 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 | Setting | Tabs & gestures → Tabs → **Open new tabs in the current stack**; disabled by default. |
 | Creation | Foreground new tabs, background links, engine-created popups, promoted previews and new/reopened Candy Trail forks inherit the opener’s existing stack, or the selected tab’s stack when no opener is supplied. |
 | Boundaries | Never creates a stack, changes profile/privacy mode, or pins a tab. Incompatible profile, privacy or pinned state leaves membership unchanged. Explicit “open in new stack” still moves the resulting tab into the new stack. |
-| Persistence | The global preference persists; private stack membership retains its existing memory-only boundary. |
+| Auto-create from an ungrouped link | A separate **Automatically create stacks for links** option is off by default. With it enabled, opening a web link in another tab groups a compatible ungrouped source and child. It applies to explicit in-page/Link Peek new-tab actions and accepted Gecko/System WebView popups after a real web page commits. Existing groups still use the separate inheritance option. |
+| Auto-create boundaries | No blank or manually opened tabs, external app hand-offs, native login windows, or changes to pinned state, profiles or privacy mode. At the stack limit or with an incompatible/missing opener, the linked tab remains usable without a new stack. |
+| Persistence | Both global preferences persist; private stack membership retains its existing memory-only boundary. |
 | Tests | Shared `TabStackRulesTest`; Android `BrowserControllerTabStackInstrumentedTest` (opt-in, persistence, new/reopened Trail forks) and `TabStackPreviewPromotionInstrumentedTest` (live preview promotion). |

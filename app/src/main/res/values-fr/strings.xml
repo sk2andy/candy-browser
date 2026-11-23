@@ -1633,4 +1633,6 @@
     <string name="settings_home_pages_internal">Page de démarrage interne</string>
     <string name="settings_home_pages_empty">Vide = page de démarrage interne</string>
     <string name="settings_home_pages_invalid">Saisissez une adresse web HTTP ou HTTPS valide.</string>
+    <string name="settings_auto_create_link_stacks_title">Créer automatiquement des piles pour les liens</string>
+    <string name="settings_auto_create_link_stacks_summary">Quand un lien ouvre un nouvel onglet depuis un onglet non groupé, placer les deux onglets dans une nouvelle pile. Désactivé par défaut.</string>
 </resources>

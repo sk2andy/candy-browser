@@ -1642,4 +1642,6 @@
     <string name="settings_home_pages_internal">Pagina de pornire internă</string>
     <string name="settings_home_pages_empty">Gol = pagina de pornire internă</string>
     <string name="settings_home_pages_invalid">Introdu o adresă web HTTP sau HTTPS validă.</string>
+    <string name="settings_auto_create_link_stacks_title">Creează automat grupuri de file pentru linkuri</string>
+    <string name="settings_auto_create_link_stacks_summary">Când un link dintr-o filă negrupată se deschide într-o filă nouă, ambele file sunt puse într-un grup nou. Dezactivat în mod implicit.</string>
 </resources>

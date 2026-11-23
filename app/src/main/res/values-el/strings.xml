@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Ενσωματωμένη σελίδα έναρξης</string>
     <string name="settings_home_pages_empty">Κενό = ενσωματωμένη σελίδα έναρξης</string>
     <string name="settings_home_pages_invalid">Εισαγάγετε μια έγκυρη διεύθυνση ιστοτόπου HTTP ή HTTPS.</string>
+    <string name="settings_auto_create_link_stacks_title">Αυτόματη δημιουργία ομάδων καρτελών για συνδέσμους</string>
+    <string name="settings_auto_create_link_stacks_summary">Όταν ένας σύνδεσμος από καρτέλα εκτός ομάδας ανοίγει σε νέα καρτέλα, και οι δύο καρτέλες μπαίνουν σε νέα ομάδα. Απενεργοποιημένο από προεπιλογή.</string>
 </resources>

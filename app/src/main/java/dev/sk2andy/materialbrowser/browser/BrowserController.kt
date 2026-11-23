@@ -860,6 +860,8 @@ class BrowserController(
         private set
     var newTabsInCurrentStackEnabled by mutableStateOf(false)
         private set
+    var autoCreateLinkStacksEnabled by mutableStateOf(false)
+        private set
 
     var automaticTabSortingEnabled by mutableStateOf(false)
         private set
@@ -1619,6 +1621,14 @@ class BrowserController(
     internal var pageTranslationRecoveryOffer by mutableStateOf<PageTranslationRecoveryOffer?>(null)
         private set
     private var pageTranslationRecoveryOfferSequence = 0L
+    private data class LinkedNativePopup(
+        val opener: PendingPopupNavigation,
+        val session: AndroidBrowserEngineSessionPort,
+        val targetUrl: String,
+        val acceptedAtElapsedRealtime: Long,
+    )
+
+    private val linkedNativePopupOpeners = mutableMapOf<String, LinkedNativePopup>()
     private val federatedLoginPopupTabIds = mutableSetOf<String>()
     private val federatedLoginCompatibilityTabIds = mutableSetOf<String>()
     private val pageUrls = ConcurrentHashMap<String, String>()
@@ -2904,6 +2914,7 @@ class BrowserController(
         tabStackFolderMode = store.loadTabStackFolderMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
         newTabsInCurrentStackEnabled = store.loadNewTabsInCurrentStackEnabled()
+        autoCreateLinkStacksEnabled = store.loadAutoCreateLinkStacksEnabled()
         automaticTabSortingEnabled = store.loadAutomaticTabSortingEnabled()
         isClosedTabUndoEnabled = store.loadClosedTabUndoEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
@@ -5638,6 +5649,8 @@ class BrowserController(
         initialExternalNavigationGrant: ExternalNavigationGrant?,
         allowExternalApps: Boolean = false,
     ) {
+        // Explicit address entry is not the link that originally opened a native popup.
+        linkedNativePopupOpeners.remove(selectedTabId)
         bottomBarCompactStates[selectedTabId] = false
         pendingExternalAppHandoff = null
         clearExternalNavigationAuthorization(selectedTabId)
@@ -6719,6 +6732,7 @@ class BrowserController(
         isIncognito: Boolean = selectedTab.isIncognito,
         openerTabId: String? = null,
         authorizeInitialExternalNavigation: Boolean = false,
+        openedFromPageLink: Boolean = false,
     ): String {
         val nowMillis = System.currentTimeMillis()
         if (!prepareTabCreation(nowMillis = nowMillis)) {
@@ -6766,6 +6780,9 @@ class BrowserController(
         )
         tabs += tab
         inheritCurrentTabStack(tab, openerTabId ?: selectedTabId)
+        if (openedFromPageLink && openerTabId != null && BrowserUriPolicy.normalizeHttpUrl(initialUrl) != null) {
+            createStackForLinkedTab(openerTabId, tab.id)
+        }
         markSyncedTabPending(tab)
         updateSelectedTabId(tab.id)
         rememberSelectedTab(activeProfileId, tab.id)
@@ -6790,6 +6807,7 @@ class BrowserController(
         isIncognito: Boolean? = null,
         transientPopup: Boolean = false,
         showContentActionFeedback: Boolean = true,
+        openedFromPageLink: Boolean = false,
     ): String? {
         pruneStaleTabs()
         if (tabs.size >= MAX_TABS) {
@@ -6828,6 +6846,9 @@ class BrowserController(
         )
         tabs += tab
         inheritCurrentTabStack(tab, openerTabId ?: selectedTabId)
+        if (openedFromPageLink && openerTabId != null && BrowserUriPolicy.normalizeHttpUrl(initialUrl) != null) {
+            createStackForLinkedTab(openerTabId, tab.id)
+        }
         if (!transientPopup) {
             markSyncedTabPending(tab)
             enqueueSyncedTab(tab.id)
@@ -7885,7 +7906,7 @@ class BrowserController(
         val sourceTab = contextLinkSourceTab() ?: return false
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
         contentActions.dismiss()
-        if (createBackgroundTab(safeUrl, openerTabId = sourceTab.id) != null) {
+        if (createBackgroundTab(safeUrl, openerTabId = sourceTab.id, openedFromPageLink = true) != null) {
             contentActions.requestLinkPeekNewTabPulse()
             return true
         }
@@ -7927,6 +7948,7 @@ class BrowserController(
             initialUrl = safeUrl,
             isIncognito = sourceTab.isIncognito,
             openerTabId = sourceTab.id,
+            openedFromPageLink = true,
         )
         return tabId != sourceTab.id && selectedTabId == tabId
     }
@@ -7965,7 +7987,11 @@ class BrowserController(
             }
             LinkLongPressOutcome.OpenInNewTabInBackground -> {
                 contentActions.dismiss()
-                createBackgroundTab(requireNotNull(target.linkUrl), openerTabId = tabId)
+                createBackgroundTab(
+                    initialUrl = requireNotNull(target.linkUrl),
+                    openerTabId = tabId,
+                    openedFromPageLink = true,
+                )
             }
             LinkLongPressOutcome.OpenInNewTabInForeground -> {
                 contentActions.dismiss()
@@ -7974,6 +8000,7 @@ class BrowserController(
                     initialUrl = requireNotNull(target.linkUrl),
                     isIncognito = sourceTab.isIncognito,
                     openerTabId = tabId,
+                    openedFromPageLink = true,
                 )
             }
             LinkLongPressOutcome.OpenInPrivateTabInBackground -> {
@@ -8382,6 +8409,7 @@ class BrowserController(
                 ExternalLaunchResult.AppChooserShown,
                 -> {
                     completeNativePopup(false)
+                    linkedNativePopupOpeners.remove(policyTabId)
                     pendingExternalAppHandoff = ExternalAppHandoffRules.start(
                         targetUrl = webTargetUrl,
                         nowElapsedRealtime = SystemClock.elapsedRealtime(),
@@ -10293,6 +10321,7 @@ class BrowserController(
     }
 
     fun goBack() {
+        linkedNativePopupOpeners.remove(selectedTabId)
         if (isActiveFirefoxExtensionOptionsPage(selectedTabId)) {
             closeTab(selectedTabId)
             return
@@ -10315,6 +10344,7 @@ class BrowserController(
         session.execute(BrowserEngineCommands.back())
     }
     fun goForward() {
+        linkedNativePopupOpeners.remove(selectedTabId)
         if (!selectedTab.canGoForward) return
         clearExternalNavigationAuthorization(selectedTabId)
         stoppedBrowserEngineNavigations.remove(selectedTabId)
@@ -10326,6 +10356,7 @@ class BrowserController(
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.forward())
     }
     fun reload() {
+        linkedNativePopupOpeners.remove(selectedTabId)
         clearExternalNavigationAuthorization(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         updateTab(selectedTabId) {
@@ -10366,6 +10397,7 @@ class BrowserController(
     }
 
     fun retryFailedPage(): Boolean {
+        linkedNativePopupOpeners.remove(selectedTabId)
         val tabId = selectedTabId
         val existingSession = browserEngineSessions[tabId]
         val failedTab = selectedTab
@@ -10392,6 +10424,7 @@ class BrowserController(
     }
 
     fun stopLoading() {
+        linkedNativePopupOpeners.remove(selectedTabId)
         clearExternalNavigationAuthorization(selectedTabId)
         val pending = removePendingInitialBrowserEngineNavigation(selectedTabId)
         val pendingLoad = pendingBrowserEngineLoadRequests.remove(selectedTabId)
@@ -12073,6 +12106,11 @@ class BrowserController(
         store.saveNewTabsInCurrentStackEnabled(enabled)
     }
 
+    fun updateAutoCreateLinkStacksEnabled(enabled: Boolean) {
+        autoCreateLinkStacksEnabled = enabled
+        store.saveAutoCreateLinkStacksEnabled(enabled)
+    }
+
     private fun inheritCurrentTabStack(tab: BrowserTab, sourceTabId: String?) {
         val updated = TabStackRules.inheritForNewTab(
             stacks = tabStacks,
@@ -12080,6 +12118,50 @@ class BrowserController(
             sourceTabId = sourceTabId,
             newTabId = tab.id,
             enabled = newTabsInCurrentStackEnabled,
+        )
+        if (updated != tabStacks) tabStacks.replaceWith(updated)
+    }
+
+    private fun completeLinkedNativePopupStack(tabId: String, address: String?) {
+        val candidate = linkedNativePopupOpeners[tabId] ?: return
+        if (address == BLANK_URL) return
+        linkedNativePopupOpeners.remove(tabId)
+        val linkedUrl = BrowserUriPolicy.normalizeHttpUrl(address) ?: return
+        if (
+            nativePopupSessions[tabId] !== candidate.session ||
+            linkedUrl != candidate.targetUrl ||
+            SystemClock.elapsedRealtime() - candidate.acceptedAtElapsedRealtime >
+                PopupNavigationRules.pendingTimeoutMillis(preopenedBlank = true) ||
+            tabId in transientPopupTabIds ||
+            tabId in federatedLoginPopupTabIds ||
+            FederatedLoginRules.isProviderNavigation(linkedUrl)
+        ) return
+        val sourceUrl = BrowserUriPolicy.normalizeHttpUrl(candidate.opener.openerUrl) ?: return
+        val opener = tabs.firstOrNull { it.id == candidate.opener.openerTabId } ?: return
+        if (opener.profileId != candidate.opener.profileId || opener.isIncognito != candidate.opener.isIncognito) return
+        createStackForLinkedTab(sourceTabId = opener.id, newTabId = tabId, sourceUrl = sourceUrl)
+    }
+
+    private fun createStackForLinkedTab(sourceTabId: String, newTabId: String, sourceUrl: String? = null) {
+        if (!autoCreateLinkStacksEnabled && sourceUrl == null) return
+        val source = tabs.firstOrNull { it.id == sourceTabId } ?: return
+        val currentUrl = BrowserUriPolicy.normalizeHttpUrl(pageUrls[sourceTabId] ?: source.url) ?: return
+        if (sourceUrl != null) {
+            if (currentUrl != sourceUrl) return
+            val child = tabs.firstOrNull { it.id == newTabId } ?: return
+            // When several native links opened before the first commit created a stack, the later
+            // links should still honor the independent existing-stack preference at commit time.
+            inheritCurrentTabStack(child, sourceTabId)
+        }
+        if (!autoCreateLinkStacksEnabled) return
+        val name = Uri.parse(currentUrl).host ?: return
+        val updated = TabStackRules.createForNewLinkedTab(
+            stacks = tabStacks,
+            tabs = tabs,
+            sourceTabId = sourceTabId,
+            newTabId = newTabId,
+            stackId = UUID.randomUUID().toString(),
+            name = name,
         )
         if (updated != tabStacks) tabStacks.replaceWith(updated)
     }
@@ -12960,6 +13042,7 @@ class BrowserController(
         pendingPopunderNavigations.clear()
         transientPopupTabIds.clear()
         nativePopupSessions.clear()
+        linkedNativePopupOpeners.clear()
         blockedPopupOffer = null
         federatedLoginOffer = null
         federatedLoginOfferKeys.clear()
@@ -13415,6 +13498,18 @@ class BrowserController(
             !request.isRedirect &&
             request.target == BrowserEngineNavigationTarget.Current
         if (isQuarantinedPopup(tabId)) return GeckoNavigationRequestDecision.Deny
+        if (request.target == BrowserEngineNavigationTarget.Current && request.url != BLANK_URL) {
+            linkedNativePopupOpeners[tabId]?.let { candidate ->
+                when {
+                    candidate.session !== session ||
+                        safeHttpUrl == null ||
+                        FederatedLoginRules.isProviderNavigation(safeHttpUrl) -> linkedNativePopupOpeners.remove(tabId)
+                    safeHttpUrl == candidate.targetUrl -> Unit
+                    request.isRedirect -> linkedNativePopupOpeners[tabId] = candidate.copy(targetUrl = safeHttpUrl)
+                    else -> linkedNativePopupOpeners.remove(tabId)
+                }
+            }
+        }
         val extensionChrome = firefoxExtensionOptionsTabs[tabId]
         val currentUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
         val isCurrentExtensionPage = currentUrl?.let { extensionChrome?.owns(it) } == true
@@ -13589,6 +13684,7 @@ class BrowserController(
             if (appNavigationHandling == ExternalAppNavigationHandling.Prompted ||
                 appNavigationHandling == ExternalAppNavigationHandling.OpenedInCandy
             ) {
+                linkedNativePopupOpeners.remove(tabId)
                 rememberExternalAppNavigationRecovery(tabId, session, request.url)
                 return GeckoNavigationRequestDecision.Deny
             }
@@ -15208,6 +15304,7 @@ class BrowserController(
                 }
                 val committedUrl = event.address ?: currentTab?.url
                 if (committedUrl != null) {
+                    completeLinkedNativePopupStack(event.tabId, event.address)
                     val committedTitle = event.title.orEmpty()
                         .ifBlank { currentTab?.title.orEmpty() }
                     recordHistory(event.tabId, committedUrl, committedTitle)
@@ -15228,6 +15325,7 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.NavigationFailed -> {
+                linkedNativePopupOpeners.remove(event.tabId)
                 pendingNativePopupNavigations.remove(event.tabId)
                 if (restoreExternalAppNavigationSource(event)) {
                     engineViewRevision++
@@ -15324,6 +15422,7 @@ class BrowserController(
                     (binding.view.parent as? ViewGroup)?.removeView(binding.view)
                 }
                 nativePopupSessions.remove(event.tabId)
+                linkedNativePopupOpeners.remove(event.tabId)
                 browserEngineSessions.remove(event.tabId)?.let(browserEngineMediaSessionIds::remove)
                 reconcileInlineVideoGestureHapticOwner()
                 updateTab(event.tabId) { tab ->
@@ -15353,6 +15452,7 @@ class BrowserController(
                 inlineMediaPlayerReadyTabIds.remove(event.tabId)
                 browserEngineContentFullscreenTabIds.remove(event.tabId)
                 nativePopupSessions.remove(event.tabId)
+                linkedNativePopupOpeners.remove(event.tabId)
                 browserEngineSessions.remove(event.tabId)?.let(browserEngineMediaSessionIds::remove)
                 reconcileInlineVideoGestureHapticOwner()
             }
@@ -15777,6 +15877,7 @@ class BrowserController(
         cancelPendingPopupTimeout(tabId)
         releaseDownloadChoicesForSource(tabId)
         nativePopupSessions.remove(tabId)
+        linkedNativePopupOpeners.remove(tabId)
         pendingNativePopupNavigations.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
         cancelPendingAutomaticExternalAppRequest(tabId)
@@ -16534,7 +16635,7 @@ class BrowserController(
         }
         if (decision == PopupNavigationDecision.AllowSameSite) {
             recordPopunderChildNavigation(pending, tabId, targetUrl)
-            promoteTransientPopup(pending, tabId)
+            promoteTransientPopup(pending, tabId, targetUrl)
         } else if (decision == PopupNavigationDecision.Allow ||
             decision == PopupNavigationDecision.AllowListed
         ) {
@@ -16548,7 +16649,7 @@ class BrowserController(
             } else {
                 recordPopunderChildNavigation(pending, tabId, targetUrl)
             }
-            promoteTransientPopup(pending, tabId)
+            promoteTransientPopup(pending, tabId, targetUrl)
         } else if (decision == PopupNavigationDecision.BlockListed) {
             view.execute(BrowserEngineCommands.stop())
             mainHandler.post {
@@ -16566,8 +16667,26 @@ class BrowserController(
         return decision
     }
 
-    private fun promoteTransientPopup(pending: PendingPopupNavigation, tabId: String) {
+    private fun promoteTransientPopup(pending: PendingPopupNavigation, tabId: String, targetUrl: String) {
         if (!transientPopupTabIds.remove(tabId)) return
+        // An accepted real native link can still hand off to Android; create a stack only
+        // after a successful web commit. Blank allocation and explicit app fallbacks do not opt in.
+        val linkedSession = nativePopupSessions[tabId]
+        val linkedUrl = BrowserUriPolicy.normalizeHttpUrl(targetUrl)
+        if (
+            autoCreateLinkStacksEnabled &&
+            linkedSession != null &&
+            linkedUrl != null &&
+            BrowserUriPolicy.normalizeHttpUrl(pending.openerUrl) != null &&
+            !FederatedLoginRules.isProviderNavigation(linkedUrl)
+        ) {
+            linkedNativePopupOpeners[tabId] = LinkedNativePopup(
+                opener = pending,
+                session = linkedSession,
+                targetUrl = linkedUrl,
+                acceptedAtElapsedRealtime = SystemClock.elapsedRealtime(),
+            )
+        }
         scheduleResidentSessionTrim()
         val selectedTabIdAtPromotion = selectedTabId
         val activeProfileIdAtPromotion = activeProfileId
@@ -18648,6 +18767,7 @@ class BrowserController(
         federatedLoginPopupTabIds.remove(tabId)
         federatedLoginCompatibilityTabIds.remove(tabId)
         nativePopupSessions.remove(tabId)
+        linkedNativePopupOpeners.remove(tabId)
         if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
@@ -18685,6 +18805,7 @@ class BrowserController(
         federatedLoginPopupTabIds.remove(tab.id)
         federatedLoginCompatibilityTabIds.remove(tab.id)
         nativePopupSessions.remove(tab.id)
+        linkedNativePopupOpeners.remove(tab.id)
         if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tab.id) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tab.id) captchaCompatibilityOffer = null

@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Вградена почетна страница</string>
     <string name="settings_home_pages_empty">Празно = вградена почетна страница</string>
     <string name="settings_home_pages_invalid">Внесете важечка HTTP или HTTPS веб-адреса.</string>
+    <string name="settings_auto_create_link_stacks_title">Автоматски создавај групи јазичиња за врски</string>
+    <string name="settings_auto_create_link_stacks_summary">Кога врска од негрупирано јазиче ќе се отвори во ново јазиче, и двете се ставаат во нова група. Стандардно е исклучено.</string>
 </resources>

@@ -1642,4 +1642,6 @@
     <string name="settings_home_pages_internal">Ugrađena početna stranica</string>
     <string name="settings_home_pages_empty">Prazno = ugrađena početna stranica</string>
     <string name="settings_home_pages_invalid">Unesite valjanu HTTP ili HTTPS web-adresu.</string>
+    <string name="settings_auto_create_link_stacks_title">Automatski stvori grupe kartica za poveznice</string>
+    <string name="settings_auto_create_link_stacks_summary">Kada se poveznica iz negrupirane kartice otvori u novoj kartici, obje se kartice stavljaju u novu grupu. Isključeno prema zadanim postavkama.</string>
 </resources>

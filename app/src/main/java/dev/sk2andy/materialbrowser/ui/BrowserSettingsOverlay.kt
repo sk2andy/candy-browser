@@ -210,6 +210,8 @@ internal fun BrowserSettingsOverlay(
             automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
             newTabsInCurrentStackEnabled = controller.newTabsInCurrentStackEnabled,
             onNewTabsInCurrentStackEnabledChanged = controller::updateNewTabsInCurrentStackEnabled,
+            autoCreateLinkStacksEnabled = controller.autoCreateLinkStacksEnabled,
+            onAutoCreateLinkStacksEnabledChanged = controller::updateAutoCreateLinkStacksEnabled,
             isClosedTabUndoEnabled = controller.isClosedTabUndoEnabled,
             dismissResistancePercent = controller.dismissResistancePercent,
             profilesEnabled = controller.profilesEnabled,

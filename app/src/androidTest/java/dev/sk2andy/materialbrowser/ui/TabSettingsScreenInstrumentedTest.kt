@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Density
@@ -52,6 +54,50 @@ class TabSettingsScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun automaticLinkStackCreationHasAnIndependentSwitch() {
+        var createStack by mutableStateOf(false)
+        var joinStack by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Grid,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    newTabsInCurrentStackEnabled = joinStack,
+                    autoCreateLinkStacksEnabled = createStack,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onNewTabsInCurrentStackEnabledChanged = { joinStack = it },
+                    onAutoCreateLinkStacksEnabledChanged = { createStack = it },
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onAddressBarActions = {},
+                    onBack = {},
+                    section = TabSettingsSection.Tabs,
+                )
+            }
+        }
+
+        val create = composeRule.onNodeWithTag(TabSettingsTestTags.AutoCreateLinkStacks)
+        val join = composeRule.onNodeWithTag("tab_settings_new_tabs_in_current_stack")
+        create.performScrollTo().assertIsOff().performClick().assertIsOn()
+        join.performScrollTo().assertIsOff().performClick().assertIsOn()
+        create.performScrollTo().assertIsOn().performClick().assertIsOff()
+        join.performScrollTo().assertIsOn()
+    }
 
     @Test
     fun statusBarWidthLabelsRemainLegibleAtDoubleFontScaleOnCompactPage() {

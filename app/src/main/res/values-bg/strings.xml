@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Вградена начална страница</string>
     <string name="settings_home_pages_empty">Празно = вградена начална страница</string>
     <string name="settings_home_pages_invalid">Въведете валиден HTTP или HTTPS уеб адрес.</string>
+    <string name="settings_auto_create_link_stacks_title">Автоматично групиране на раздели за връзки</string>
+    <string name="settings_auto_create_link_stacks_summary">Когато връзка от негрупиран раздел се отвори в нов раздел, двата раздела се поставят в нова група. Изключено по подразбиране.</string>
 </resources>

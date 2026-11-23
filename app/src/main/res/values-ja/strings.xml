@@ -1609,4 +1609,6 @@
     <string name="settings_home_pages_internal">内蔵のスタートページ</string>
     <string name="settings_home_pages_empty">空欄 = 内蔵のスタートページ</string>
     <string name="settings_home_pages_invalid">有効な HTTP または HTTPS のウェブアドレスを入力してください。</string>
+    <string name="settings_auto_create_link_stacks_title">リンクを開くときにスタックを自動作成</string>
+    <string name="settings_auto_create_link_stacks_summary">スタックに入っていないタブからリンクを新しいタブで開いたとき、両方のタブを新しいスタックに入れます。既定ではオフです。</string>
 </resources>

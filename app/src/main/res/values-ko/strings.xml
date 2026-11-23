@@ -1609,4 +1609,6 @@
     <string name="settings_home_pages_internal">내장 시작 페이지</string>
     <string name="settings_home_pages_empty">빈칸 = 내장 시작 페이지</string>
     <string name="settings_home_pages_invalid">올바른 HTTP 또는 HTTPS 웹 주소를 입력하세요.</string>
+    <string name="settings_auto_create_link_stacks_title">링크의 탭 스택 자동 생성</string>
+    <string name="settings_auto_create_link_stacks_summary">그룹에 속하지 않은 탭에서 링크를 새 탭으로 열면 두 탭을 새 스택에 넣습니다. 기본적으로 꺼져 있습니다.</string>
 </resources>

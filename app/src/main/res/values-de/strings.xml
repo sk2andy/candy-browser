@@ -1618,4 +1618,6 @@
     <string name="gecko_extension_uninstall_failed">Die Erweiterung konnte nicht entfernt werden. Die Liste neu laden, um zu prüfen, ob sie noch installiert ist.</string>
     <string name="gecko_extension_private_access_failed">Der Zugriff im privaten Modus konnte nicht geändert werden. Die Liste neu laden, um die aktuelle Berechtigung zu prüfen.</string>
     <string name="gecko_extensions_retry_inventory">Erweiterungsliste neu laden</string>
+    <string name="settings_auto_create_link_stacks_title">Stacks für Links automatisch erstellen</string>
+    <string name="settings_auto_create_link_stacks_summary">Wenn ein Link aus einem Tab ohne Stack in einem neuen Tab geöffnet wird, beide Tabs in einem neuen Stack gruppieren. Standardmäßig aus.</string>
 </resources>

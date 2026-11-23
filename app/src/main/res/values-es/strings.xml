@@ -1633,4 +1633,6 @@
     <string name="settings_home_pages_internal">Página de inicio interna</string>
     <string name="settings_home_pages_empty">Vacío = página de inicio interna</string>
     <string name="settings_home_pages_invalid">Introduce una dirección web HTTP o HTTPS válida.</string>
+    <string name="settings_auto_create_link_stacks_title">Crear pilas automáticamente para enlaces</string>
+    <string name="settings_auto_create_link_stacks_summary">Si un enlace abre una pestaña nueva desde una pestaña sin agrupar, colocar ambas en una pila nueva. Desactivado por defecto.</string>
 </resources>

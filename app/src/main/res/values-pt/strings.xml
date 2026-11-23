@@ -1633,4 +1633,6 @@
     <string name="settings_home_pages_internal">Página inicial interna</string>
     <string name="settings_home_pages_empty">Vazio = página inicial interna</string>
     <string name="settings_home_pages_invalid">Introduza um endereço web HTTP ou HTTPS válido.</string>
+    <string name="settings_auto_create_link_stacks_title">Criar pilhas automaticamente para links</string>
+    <string name="settings_auto_create_link_stacks_summary">Quando um link abrir um novo separador a partir de um separador sem grupo, colocar ambos numa nova pilha. Desativado por padrão.</string>
 </resources>

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -98,6 +99,46 @@ class BrowserControllerTabStackInstrumentedTest {
             val restored = BrowserController(activity).also { controller = it }
             assertTrue(restored.newTabsInCurrentStackEnabled)
             assertTrue(foreground in restored.activeTabStacks.single().tabIds)
+        }
+    }
+
+    @Test
+    fun automaticStackCreationOnlyGroupsLinkedTabsAndDoesNotEnableJoining() {
+        activityRule.scenario.onActivity { activity ->
+            seedTabs(activity)
+            val browser = BrowserController(activity).also { controller = it }
+            val sourceId = browser.createTab(initialUrl = "https://example.invalid/source")
+            val targetUrl = "https://example.invalid/target"
+            fun showLink(sourceTabId: String, url: String) {
+                browser.selectTab(sourceTabId)
+                browser.contentActions.show(WebContentTarget(linkUrl = url), sourceTabId)
+            }
+
+            assertEquals(false, browser.autoCreateLinkStacksEnabled)
+            showLink(sourceId, targetUrl)
+            assertTrue(browser.openContextLinkInBackground(targetUrl))
+            assertTrue(browser.activeTabStacks.isEmpty())
+
+            browser.updateAutoCreateLinkStacksEnabled(true)
+            val otherSourceId = browser.createTab(initialUrl = "https://example.invalid/other-source")
+            assertTrue(browser.activeTabStacks.isEmpty())
+
+            showLink(sourceId, targetUrl)
+            assertTrue(browser.openContextLinkInForeground(targetUrl))
+            val firstStack = browser.activeTabStacks.single()
+            assertEquals(setOf(sourceId, browser.selectedTabId), firstStack.tabIds.toSet())
+
+            showLink(sourceId, "https://example.invalid/outside-stack")
+            assertTrue(browser.openContextLinkInBackground("https://example.invalid/outside-stack"))
+            assertEquals(firstStack.tabIds, browser.activeTabStacks.single().tabIds)
+
+            showLink(otherSourceId, "https://example.invalid/new-stack")
+            val precedingIds = browser.tabs.map(BrowserTab::id).toSet()
+            assertTrue(browser.openContextLinkInBackground("https://example.invalid/new-stack"))
+            val backgroundId = browser.tabs.single { it.id !in precedingIds }.id
+            val secondStack = browser.activeTabStacks.single { otherSourceId in it.tabIds }
+            assertEquals(setOf(otherSourceId, backgroundId), secondStack.tabIds.toSet())
+            assertEquals(otherSourceId, browser.selectedTabId)
         }
     }
 

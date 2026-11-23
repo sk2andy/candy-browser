@@ -1609,4 +1609,6 @@
     <string name="settings_home_pages_internal">Trang bắt đầu tích hợp</string>
     <string name="settings_home_pages_empty">Để trống = trang bắt đầu tích hợp</string>
     <string name="settings_home_pages_invalid">Nhập địa chỉ trang web HTTP hoặc HTTPS hợp lệ.</string>
+    <string name="settings_auto_create_link_stacks_title">Tự động tạo nhóm thẻ cho liên kết</string>
+    <string name="settings_auto_create_link_stacks_summary">Khi liên kết từ thẻ chưa được nhóm mở trong thẻ mới, đưa cả hai thẻ vào một nhóm mới. Mặc định tắt.</string>
 </resources>

@@ -121,6 +121,22 @@ class SystemWebViewPopupNavigationInstrumentedTest {
         verifyOrdinaryTargetBlank(ExternalAppLinkHandling.AskEveryTime)
     }
 
+    @Test
+    fun targetBlankWebLinkCreatesStackWithUngroupedOpenerWhenEnabled() {
+        PopupFixtureServer().use { server ->
+            openPage(server.url("/ordinary-anchor"), "Ordinary anchor")
+            val openerId = composeRule.runOnIdle {
+                assertNull(controller.tabStackFor(controller.selectedTabId))
+                controller.updateAutoCreateLinkStacksEnabled(true)
+                controller.selectedTabId
+            }
+            val popupId = openPopup(openerId, server.url("/ordinary-result"), "Ordinary destination")
+            composeRule.runOnIdle {
+                assertEquals(listOf(openerId, popupId), controller.tabStackFor(popupId)?.tabIds)
+            }
+        }
+    }
+
     private fun verifyOrdinaryTargetBlank(mode: ExternalAppLinkHandling) {
         composeRule.runOnIdle { controller.updateExternalAppLinkHandling(mode) }
         PopupFixtureServer().use { server ->

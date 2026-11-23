@@ -926,6 +926,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_NEW_TABS_IN_CURRENT_STACK_ENABLED, enabled).apply()
     }
 
+    fun loadAutoCreateLinkStacksEnabled(): Boolean =
+        preferences.getBoolean(KEY_AUTO_CREATE_LINK_STACKS_ENABLED, false)
+
+    fun saveAutoCreateLinkStacksEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_AUTO_CREATE_LINK_STACKS_ENABLED, enabled).apply()
+    }
+
     fun loadAutomaticTabSortingEnabled(): Boolean =
         preferences.getBoolean(KEY_AUTOMATIC_TAB_SORTING_ENABLED, false)
 
@@ -1767,6 +1774,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_TAB_STACK_FOLDER_MODE = "tab_stack_folder_mode"
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
         const val KEY_NEW_TABS_IN_CURRENT_STACK_ENABLED = "new_tabs_in_current_stack_enabled"
+        const val KEY_AUTO_CREATE_LINK_STACKS_ENABLED = "auto_create_link_stacks_enabled"
         const val KEY_AUTOMATIC_TAB_SORTING_ENABLED = "automatic_tab_sorting_enabled"
         const val KEY_CLOSED_TAB_UNDO_ENABLED = "closed_tab_undo_enabled"
         const val KEY_ADDRESS_BAR_DOCKED = "address_bar_docked"

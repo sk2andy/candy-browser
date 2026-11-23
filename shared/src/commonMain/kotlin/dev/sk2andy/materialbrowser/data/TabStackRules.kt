@@ -123,6 +123,29 @@ object TabStackRules {
         return addTab(stacks, tabs, newTabId, sourceStack.id) ?: stacks
     }
 
+    /** Group two otherwise ungrouped tabs; unlike manual creation this never moves a tab. */
+    fun createForNewLinkedTab(
+        stacks: List<TabStack>,
+        tabs: Collection<BrowserTab>,
+        sourceTabId: String,
+        newTabId: String,
+        stackId: String,
+        name: String,
+    ): List<TabStack> {
+        if (sourceTabId == newTabId || stacks.any { sourceTabId in it.tabIds || newTabId in it.tabIds }) {
+            return stacks
+        }
+        return create(
+            stacks = stacks,
+            tabs = tabs,
+            tabIds = listOf(sourceTabId, newTabId),
+            stackId = stackId,
+            name = name,
+            color = TabStackColor.Grape,
+            previewTabId = sourceTabId,
+        ) ?: stacks
+    }
+
     fun addTab(
         stacks: List<TabStack>,
         tabs: Collection<BrowserTab>,

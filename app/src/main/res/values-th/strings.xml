@@ -1609,4 +1609,6 @@
     <string name="settings_home_pages_internal">หน้าเริ่มต้นในตัว</string>
     <string name="settings_home_pages_empty">เว้นว่าง = หน้าเริ่มต้นในตัว</string>
     <string name="settings_home_pages_invalid">ป้อนที่อยู่เว็บไซต์ HTTP หรือ HTTPS ที่ถูกต้อง</string>
+    <string name="settings_auto_create_link_stacks_title">สร้างกลุ่มแท็บสำหรับลิงก์โดยอัตโนมัติ</string>
+    <string name="settings_auto_create_link_stacks_summary">เมื่อเปิดลิงก์จากแท็บที่ไม่ได้อยู่ในกลุ่มในแท็บใหม่ ให้จัดทั้งสองแท็บไว้ในกลุ่มใหม่ ปิดไว้โดยค่าเริ่มต้น</string>
 </resources>

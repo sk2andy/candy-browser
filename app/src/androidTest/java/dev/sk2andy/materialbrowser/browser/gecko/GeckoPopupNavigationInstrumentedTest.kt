@@ -213,6 +213,28 @@ class GeckoPopupNavigationInstrumentedTest {
     }
 
     @Test
+    fun targetBlankWebLinkCreatesStackWithUngroupedOpenerWhenEnabled() {
+        val requests = ConcurrentHashMap<String, AtomicInteger>()
+        fixtureServer(requests).use { server ->
+            val previousSetting = composeRule.runOnIdle { controller.autoCreateLinkStacksEnabled }
+            try {
+                openPage(server.fixtureUrl("/opener"), "Popup opener")
+                val openerId = composeRule.runOnIdle {
+                    check(controller.tabStackFor(controller.selectedTabId) == null)
+                    controller.updateAutoCreateLinkStacksEnabled(true)
+                    controller.selectedTabId
+                }
+                val popupId = openPopupChild(openerId, server.fixtureUrl("/first"), "Popup first")
+                composeRule.runOnIdle {
+                    assertEquals(listOf(openerId, popupId), controller.tabStackFor(popupId)?.tabIds)
+                }
+            } finally {
+                composeRule.runOnIdle { controller.updateAutoCreateLinkStacksEnabled(previousSetting) }
+            }
+        }
+    }
+
+    @Test
     fun targetBlankAutomaticFallbackKeepsGetHistoryAndRootBackWorking() {
         composeRule.runOnIdle {
             controller.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)

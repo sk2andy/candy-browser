@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Ingebouwde startpagina</string>
     <string name="settings_home_pages_empty">Leeg = ingebouwde startpagina</string>
     <string name="settings_home_pages_invalid">Voer een geldig HTTP- of HTTPS-webadres in.</string>
+    <string name="settings_auto_create_link_stacks_title">Automatisch stapels maken voor links</string>
+    <string name="settings_auto_create_link_stacks_summary">Als een link vanuit een niet-gegroepeerd tabblad een nieuw tabblad opent, worden beide tabbladen in een nieuwe stapel geplaatst. Standaard uitgeschakeld.</string>
 </resources>

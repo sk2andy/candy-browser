@@ -42,6 +42,43 @@ class TabStackRulesTest {
     }
 
     @Test
+    fun `automatic stack groups only an ungrouped opener and linked tab`() {
+        val existing = listOf(stack(tabIds = listOf("one", "two"), previewTabId = "one", collapsedAnchorTabId = "one"))
+        val result = TabStackRules.createForNewLinkedTab(existing, tabs, "three", "four", "linked", "site.example")
+
+        assertEquals(existing.single(), result.first())
+        assertEquals(listOf("three", "four"), result.last().tabIds)
+        assertEquals("three", result.last().previewTabId)
+        assertEquals("site.example", result.last().name)
+        assertEquals(result, TabStackRules.createForNewLinkedTab(result, tabs, "three", "four", "again", "site"))
+        assertEquals(existing, TabStackRules.createForNewLinkedTab(existing, tabs, "one", "three", "new", "site"))
+        assertEquals(existing, TabStackRules.createForNewLinkedTab(existing, tabs, "three", "two", "new", "site"))
+    }
+
+    @Test
+    fun `automatic linked stacks ignore stale tabs and preserve privacy profile and pin boundaries`() {
+        fun create(source: String, child: String, candidates: List<BrowserTab> = tabs): List<TabStack> =
+            TabStackRules.createForNewLinkedTab(emptyList(), candidates, source, child, "new", "site")
+
+        for (id in listOf("one", "missing", "work", "private")) assertEquals(emptyList<TabStack>(), create("one", id))
+        assertEquals(emptyList<TabStack>(), create("missing", "two"))
+        val pinned = tabs.map { if (it.id == "one") it.copy(isPinned = true) else it }
+        assertEquals(emptyList<TabStack>(), create("one", "two", pinned))
+        val matchedPrivate = tabs.map { it.copy(isIncognito = true) }
+        assertEquals(listOf("one", "two"), create("one", "two", matchedPrivate).single().tabIds)
+        assertEquals(emptyList<TabStack>(), TabStackRules.persistent(create("one", "two", matchedPrivate), matchedPrivate))
+    }
+
+    @Test
+    fun `automatic linked stack leaves both tabs alone at the stack limit`() {
+        val members = List(TabStackRules.MAX_STACKS * 2) { index -> BrowserTab(id = "member-$index", lastAccessedAt = 0L) }
+        val existing = members.chunked(2).mapIndexed { index, pair ->
+            stack(id = "stack-$index", tabIds = pair.map(BrowserTab::id))
+        }
+        assertEquals(existing, TabStackRules.createForNewLinkedTab(existing, tabs + members, "one", "two", "new", "site"))
+    }
+
+    @Test
     fun `create normalizes name and moves tab out of previous stack`() {
         val existing = stack(id = "old", tabIds = listOf("one", "two"))
 

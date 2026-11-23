@@ -1626,4 +1626,6 @@
     <string name="settings_home_pages_internal">Yerleşik başlangıç sayfası</string>
     <string name="settings_home_pages_empty">Boş = yerleşik başlangıç sayfası</string>
     <string name="settings_home_pages_invalid">Geçerli bir HTTP veya HTTPS web adresi girin.</string>
+    <string name="settings_auto_create_link_stacks_title">Bağlantılar için otomatik sekme grubu oluştur</string>
+    <string name="settings_auto_create_link_stacks_summary">Gruplanmamış bir sekmedeki bağlantı yeni sekmede açıldığında iki sekmeyi yeni bir gruba ekler. Varsayılan olarak kapalıdır.</string>
 </resources>

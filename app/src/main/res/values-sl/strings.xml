@@ -1658,4 +1658,6 @@
     <string name="settings_home_pages_internal">Vgrajena začetna stran</string>
     <string name="settings_home_pages_empty">Prazno = vgrajena začetna stran</string>
     <string name="settings_home_pages_invalid">Vnesite veljaven spletni naslov HTTP ali HTTPS.</string>
+    <string name="settings_auto_create_link_stacks_title">Samodejno ustvari skupine zavihkov za povezave</string>
+    <string name="settings_auto_create_link_stacks_summary">Ko se povezava iz nezdruženega zavihka odpre v novem zavihku, se oba zavihka uvrstita v novo skupino. Privzeto izklopljeno.</string>
 </resources>
