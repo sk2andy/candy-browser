@@ -32,6 +32,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.annotation.VisibleForTesting
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -1976,6 +1977,14 @@ class BrowserController(
                 activeTabs
             }
         }
+
+    internal val addressBarSwipeTargets by derivedStateOf {
+        TabStackRules.swipeTargets(
+            tabs = activeTabs,
+            stacks = tabStacks,
+            selectedTabId = selectedTabId,
+        )
+    }
 
     private val localProfiles: List<BrowserProfile>
         get() = profiles.filterNot(BrowserProfile::isSynced)

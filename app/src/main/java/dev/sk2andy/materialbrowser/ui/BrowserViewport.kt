@@ -416,11 +416,8 @@ internal fun BrowserViewport(
         derivedStateOf { dragOffset.floatValue.compareTo(0f) }
     }
     val tabs = controller.activeTabs
-    val selectedTabIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }
-    val adjacentTab = when {
-        dragDirection < 0 -> tabs.getOrNull(selectedTabIndex + 1)
-        dragDirection > 0 -> tabs.getOrNull(selectedTabIndex - 1)
-        else -> null
+    val adjacentTab = if (dragDirection == 0) null else {
+        controller.addressBarSwipeTargets.forDragDirection(dragDirection)
     }
     val pageErrorFeedbackByTab = remember {
         mutableMapOf<String, MutableState<PageErrorFeedbackState>>()

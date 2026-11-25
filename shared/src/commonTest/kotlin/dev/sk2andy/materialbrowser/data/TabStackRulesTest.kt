@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import kotlin.test.Test
@@ -16,6 +17,30 @@ class TabStackRulesTest {
         BrowserTab(id = "three", lastAccessedAt = 5L),
         BrowserTab(id = "four", lastAccessedAt = 6L),
     )
+
+    @Test
+    fun `horizontal swipe follows stack order without leaking to adjacent tabs`() {
+        val active = tabs.filter { it.profileId == DEFAULT_PROFILE_ID && !it.isIncognito }
+        val stacks = listOf(stack(tabIds = listOf("three", "one", "four")))
+        val middle = TabStackRules.swipeTargets(active, stacks, "one")
+
+        assertEquals("three", middle.forDragDirection(1)?.id)
+        assertEquals("four", middle.forDragDirection(-1)?.id)
+        assertNull(middle.forDragDirection(0))
+        assertNull(TabStackRules.swipeTargets(active, stacks, "three").forDragDirection(1))
+        assertNull(TabStackRules.swipeTargets(active, stacks, "four").forDragDirection(-1))
+    }
+
+    @Test
+    fun `horizontal swipe from ungrouped tab keeps active tab order`() {
+        val active = tabs.filter { it.profileId == DEFAULT_PROFILE_ID && !it.isIncognito }
+        val stacks = listOf(stack(tabIds = listOf("one", "four")))
+        val targets = TabStackRules.swipeTargets(active, stacks, "two")
+
+        assertEquals("one", targets.forDragDirection(1)?.id)
+        assertEquals("three", targets.forDragDirection(-1)?.id)
+        assertEquals(TabStackRules.SwipeTargets(), TabStackRules.swipeTargets(active, stacks, "missing"))
+    }
 
     @Test
     fun `new tabs inherit only when enabled and source belongs to a stack`() {

@@ -517,13 +517,8 @@ internal fun BoxScope.BrowserAddressChrome(
                     controller.refreshSelectedTabPreviewBeforeDeparture()
                 }
                 val proposed = browserDragOffset.floatValue + delta
-                val tabs = controller.activeTabs
-                val currentIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }
-                val hasTarget = if (proposed < 0f) {
-                    currentIndex in 0 until tabs.lastIndex
-                } else {
-                    currentIndex > 0
-                }
+                val hasTarget = controller.addressBarSwipeTargets
+                    .forDragDirection(proposed.compareTo(0f)) != null
                 browserDragOffset.floatValue = if (hasTarget) {
                     proposed.coerceIn(-tabSwitchTravelPx, tabSwitchTravelPx)
                 } else {
@@ -536,14 +531,14 @@ internal fun BoxScope.BrowserAddressChrome(
         },
         onTabDragStopped = { velocity ->
             val direction = browserDragOffset.floatValue.compareTo(0f)
-            val tabs = controller.activeTabs
-            val currentIndex = tabs.indexOfFirst { it.id == controller.selectedTabId }
-            val targetTab = tabs.getOrNull(currentIndex - direction)
+            val sourceTabId = controller.selectedTabId
+            val targetTab = controller.addressBarSwipeTargets.forDragDirection(direction)
             val minTravel = with(density) { 24.dp.toPx() }
             val fastEnough = browserDragOffset.floatValue.absoluteValue >= minTravel &&
                 velocity.absoluteValue >= with(density) { 900.dp.toPx() } &&
                 velocity.compareTo(0f) == direction
-            val shouldSwitch = tabSwipeEnabled && targetTab != null &&
+            val shouldSwitch = tabSwipeEnabled && !addressEditorVisible && !tabOverviewVisible &&
+                targetTab != null &&
                 (
                     AddressBarTabSwitchRules.hasReachedDistance(
                         dragDistance = browserDragOffset.floatValue.absoluteValue,
@@ -560,7 +555,11 @@ internal fun BoxScope.BrowserAddressChrome(
                     spring(dampingRatio = 0.82f, stiffness = 520f)
                 },
             ) { browserDragOffset.floatValue = value }
-            if (shouldSwitch) {
+            if (
+                shouldSwitch &&
+                controller.selectedTabId == sourceTabId &&
+                controller.addressBarSwipeTargets.forDragDirection(direction)?.id == targetTab.id
+            ) {
                 onLiveFrameCleared()
                 tabHandoffAlpha.snapTo(1f)
                 onTabHandoffChanged(

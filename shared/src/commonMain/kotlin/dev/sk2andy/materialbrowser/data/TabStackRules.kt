@@ -16,6 +16,40 @@ object TabStackRules {
         .replace(whitespace, " ")
         .take(MAX_NAME_LENGTH)
 
+    data class SwipeTargets(val previous: BrowserTab? = null, val next: BrowserTab? = null) {
+        fun forDragDirection(direction: Int): BrowserTab? = when {
+            direction < 0 -> next
+            direction > 0 -> previous
+            else -> null
+        }
+    }
+
+    fun swipeTargets(
+        tabs: List<BrowserTab>,
+        stacks: List<TabStack>,
+        selectedTabId: String,
+    ): SwipeTargets {
+        val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }
+        if (selectedIndex < 0) return SwipeTargets()
+        val stack = if (stacks.isEmpty()) null else {
+            sanitized(stacks, tabs).firstOrNull { selectedTabId in it.tabIds }
+        }
+        if (stack == null) {
+            return SwipeTargets(
+                previous = tabs.getOrNull(selectedIndex - 1),
+                next = tabs.getOrNull(selectedIndex + 1),
+            )
+        }
+
+        val stackIndex = stack.tabIds.indexOf(selectedTabId)
+        val previousId = stack.tabIds.getOrNull(stackIndex - 1)
+        val nextId = stack.tabIds.getOrNull(stackIndex + 1)
+        return SwipeTargets(
+            previous = tabs.firstOrNull { it.id == previousId },
+            next = tabs.firstOrNull { it.id == nextId },
+        )
+    }
+
     fun sanitized(
         stacks: List<TabStack>,
         tabs: Collection<BrowserTab>,
