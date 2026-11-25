@@ -14,7 +14,7 @@
 | Identity | Existing normalized HTTP URL rules, SHA-256 identity; duplicate article URLs retain all subscribed source IDs |
 | Similar headlines | Bounded presentation grouping only; each article URL and state remains independent and can be expanded |
 | Refresh | Existing content remains usable; source error and last-success state persist; opening refresh enabled by default, background work opt-in |
-| Read state | Unread/Today/Starred/All/Hidden plus source/folder/tag/search filters; bulk read action affects displayed unread IDs and supports undo |
+| Read state | Unread/Today/Starred/All/Hidden plus source/folder/tag/search filters; tapping a folder in Sources opens its articles in the Inbox, and All clears the folder scope; bulk read action affects displayed unread IDs and supports undo |
 | Rules | Source/folder scope plus keyword conditions; mark read, star, hide, tag or notify; preview uses same matcher. Mutations apply to new items; refresh preserves manual choices |
 | Search views | Persist name, query, source/folder, unread and tag criteria; evaluate current items when opened |
 | Revisions | Changed feed text/title records update time and one previous text; refresh preserves read state; comparison shown only with a previous text |

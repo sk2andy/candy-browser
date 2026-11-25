@@ -49,6 +49,7 @@ internal fun FeedSourcesScreen(
     mutate: FeedMutation,
     onAdd: () -> Unit,
     onOpenSource: (String) -> Unit,
+    onOpenFolder: (String) -> Unit,
     onNotificationPermission: () -> Unit,
     modifier: Modifier = Modifier,
     onManual: () -> Unit = onAdd,
@@ -111,12 +112,16 @@ internal fun FeedSourcesScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(
-                            folder?.name ?: stringResource(R.string.feeds_no_folder),
-                            Modifier.align(Alignment.CenterVertically),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        if (folder != null) {
+                        if (folder == null) {
+                            Text(
+                                stringResource(R.string.feeds_no_folder),
+                                Modifier.align(Alignment.CenterVertically),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        } else {
+                            TextButton(onClick = { onOpenFolder(folder.id) }) {
+                                Text(folder.name, style = MaterialTheme.typography.titleMedium)
+                            }
                             TextButton(
                                 onClick = { editFolder = FeedEditorSession(folder) },
                                 modifier = Modifier.testTag("feeds_folder_edit_${folder.id}"),

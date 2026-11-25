@@ -21,10 +21,13 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.feeds.FeedArticle
+import dev.sk2andy.materialbrowser.feeds.FeedFolder
 import dev.sk2andy.materialbrowser.feeds.FeedImportEntry
 import dev.sk2andy.materialbrowser.feeds.FeedImportPreview
 import dev.sk2andy.materialbrowser.feeds.FeedImportStatus
 import dev.sk2andy.materialbrowser.feeds.FeedRepository
+import dev.sk2andy.materialbrowser.feeds.FeedRules
+import dev.sk2andy.materialbrowser.feeds.FeedSource
 import dev.sk2andy.materialbrowser.feeds.FeedState
 import dev.sk2andy.materialbrowser.feeds.FeedStore
 import dev.sk2andy.materialbrowser.reader.ReaderBlock
@@ -202,6 +205,116 @@ class FeedsScreenInstrumentedTest {
             composeRule.onAllNodesWithText(all).assertCountEquals(1)
             composeRule.onNodeWithText(all).performScrollTo().performClick().assertIsSelected()
             composeRule.onNodeWithText("Other article").assertExists()
+        } finally {
+            runBlocking { FeedRepository.deleteProfile(context, profileId).getOrThrow() }
+            profiles.saveProfiles(savedProfiles.first, savedProfiles.second)
+        }
+    }
+
+    @Test
+    fun openingSourceFoldersFiltersInboxAndAllClearsScope() {
+        val profileId = "ui-test-${UUID.randomUUID()}"
+        val techUrl = "https://example.org/tech.xml"
+        val techId = FeedRules.identity(techUrl)
+        val foodUrl = "https://example.org/food.xml"
+        val foodId = FeedRules.identity(foodUrl)
+        val looseUrl = "https://example.org/loose.xml"
+        val looseId = FeedRules.identity(looseUrl)
+        val profiles = BrowserSessionStore(context)
+        val savedProfiles = profiles.loadProfiles()
+        profiles.saveProfiles(
+            savedProfiles.first + BrowserProfile(profileId, "🍬"),
+            savedProfiles.second,
+        )
+        try {
+            FeedStore(context, profileId)
+                .write(
+                    FeedState(
+                        folders = listOf(FeedFolder("tech", "Technology"), FeedFolder("food", "Food")),
+                        sources =
+                            listOf(
+                                FeedSource(
+                                    techId,
+                                    techUrl,
+                                    "Tech RSS",
+                                    folderId = "tech",
+                                ),
+                                FeedSource(
+                                    foodId,
+                                    foodUrl,
+                                    "Food RSS",
+                                    folderId = "food",
+                                ),
+                                FeedSource(looseId, looseUrl, "Loose RSS"),
+                            ),
+                        articles =
+                            listOf(
+                                FeedArticle(
+                                    "cpu",
+                                    setOf(techId),
+                                    "https://example.org/cpu",
+                                    "Processor design",
+                                ),
+                                FeedArticle(
+                                    "soup",
+                                    setOf(foodId),
+                                    "https://example.org/soup",
+                                    "Pumpkin soup",
+                                ),
+                                FeedArticle(
+                                    "moon",
+                                    setOf(looseId),
+                                    "https://example.org/moon",
+                                    "Lunar eclipse",
+                                ),
+                            ),
+                    )
+                )
+            val repository = FeedRepository.get(context, profileId)
+            runBlocking { repository.load().getOrThrow() }
+            composeRule.setContent {
+                MaterialBrowserTheme {
+                    FeedsScreen(
+                        repository = repository,
+                        library = ReaderLibraryState(),
+                        onOpenArticle = {},
+                        onOpenSnapshot = {},
+                        onOpenOriginal = {},
+                        onDownloadArticle = {},
+                        onRemoveSnapshot = {},
+                        onPlayQueue = {},
+                        onImportOpml = {},
+                        onExportOpml = {},
+                        onDismiss = {},
+                    )
+                }
+            }
+            val sources = composeRule.onNodeWithTag("feeds_destination_sources")
+            val inbox = composeRule.onNodeWithTag("feeds_destination_inbox")
+            val technology = composeRule.onNodeWithText("Technology")
+            val food = composeRule.onNodeWithText("Food")
+            val processor = composeRule.onNodeWithText("Processor design")
+            val soup = composeRule.onNodeWithText("Pumpkin soup")
+            val eclipse = composeRule.onNodeWithText("Lunar eclipse")
+
+            sources.performClick()
+            technology.performClick()
+            inbox.assertIsSelected()
+            processor.assertExists()
+            soup.assertDoesNotExist()
+            eclipse.assertDoesNotExist()
+
+            sources.performClick()
+            food.performClick()
+            inbox.assertIsSelected()
+            soup.assertExists()
+            processor.assertDoesNotExist()
+            eclipse.assertDoesNotExist()
+
+            composeRule.onNodeWithText(context.getString(R.string.feeds_all)).performClick()
+            processor.assertExists()
+            soup.assertExists()
+            eclipse.assertExists()
         } finally {
             runBlocking { FeedRepository.deleteProfile(context, profileId).getOrThrow() }
             profiles.saveProfiles(savedProfiles.first, savedProfiles.second)

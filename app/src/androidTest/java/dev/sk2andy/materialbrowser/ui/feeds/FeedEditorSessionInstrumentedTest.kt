@@ -62,6 +62,7 @@ class FeedEditorSessionInstrumentedTest {
                         mutate = { pending += it },
                         onAdd = {},
                         onOpenSource = {},
+                        onOpenFolder = {},
                         onNotificationPermission = {},
                     )
                 }

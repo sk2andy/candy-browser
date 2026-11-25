@@ -669,6 +669,14 @@ internal fun FeedsScreen(
                                                 filter = FeedInboxFilter.All
                                                 destination = FeedDestination.Inbox
                                             },
+                                            onOpenFolder = {
+                                                sourceId = null
+                                                folderId = it
+                                                query = ""
+                                                tag = null
+                                                filter = FeedInboxFilter.All
+                                                destination = FeedDestination.Inbox
+                                            },
                                             onNotificationPermission = onNotificationPermission,
                                             modifier = Modifier.weight(1f),
                                             onManual = {
