@@ -653,9 +653,16 @@ implements them.
   disabled in private browsing, and is hidden from the Firefox extension manager. Regular first
   navigation waits for its bounded initialization gate so cold-start `document-start` scripts are
   not missed.
-- GeckoView `160.0.20261104181552` is pinned with Android SDK 37.2, AGP 9.4.0 and Gradle 9.6.0.
+- GeckoView `161.0.20261118180411` is pinned with Android SDK 37.2, AGP 9.4.0 and Gradle 9.6.0.
   `minSdk` remains 31 and `targetSdk` remains 36. Gecko upgrades stay coordinated toolchain changes,
   not floating dependency bumps.
+  The 160 to 161 Omni upgrade retains the same compile SDK requirement and declared dependencies.
+  Omni advertises the Glean native capability at 71.0.0 instead of 70.3.0; the existing Gradle
+  capability selection still prefers the Omni AAR.
+  The shipped AAR preserves the checked runtime, session, delegate and extension API signatures.
+  Candy continues to dismiss Gecko credit-card save and selection prompts.
+  The official AAR adds ANGLE libraries to its existing native ABIs;
+  System WebView builds still use GeckoView only at compile time.
   The [155 to 157 upgrade audit](../audits/geckoview-157-upgrade.md) records API compatibility,
   transitive dependency changes, upstream fixes and device regression evidence.
   The [159 eMudhra audit](../audits/geckoview-159-emudhra.md) records bundled revocation evidence

@@ -725,7 +725,7 @@ listOf("release", "nightly").forEach { buildType ->
     }
 }
 
-val geckoViewDependency = "org.mozilla.geckoview:geckoview-omni:160.0.20261104181552"
+val geckoViewDependency = "org.mozilla.geckoview:geckoview-omni:161.0.20261118180411"
 
 configurations.named("fossImplementation") {
     exclude(group = "com.google.android.gms", module = "play-services-fido")
