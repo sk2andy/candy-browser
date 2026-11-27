@@ -1,0 +1,1 @@
+Open pinned tabs faster, keep new links in the right stack, and open your RSS Inbox for the selected source or folder. This update also adds Mozilla Sync and improves downloads and add-on recovery.

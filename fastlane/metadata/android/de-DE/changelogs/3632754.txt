@@ -1,0 +1,1 @@
+Greife schneller auf angepinnte Tabs zu, öffne Links im passenden Stack und filtere den RSS-Eingang nach Quelle oder Ordner. Dazu kommen Mozilla Sync und Verbesserungen bei Downloads und Add-ons.
