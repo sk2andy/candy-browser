@@ -8,7 +8,8 @@ const redditSource = readFileSync(new URL('../app/src/main/assets/candy_privacy/
 
 function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnimationFrames = false,
   normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
-  viewportContent = null, themeColor = null, mediaMatches = () => true, userCssBridge = false } = {}) {
+  viewportContent = null, themeColor = null, mediaMatches = () => true, userCssBridge = false,
+  inspectVisibleContent = false } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const observers = [];
   const resizeObservers = [];
@@ -114,7 +115,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     set textContent(value) { this.content = value; this.reparse(); }
     get textContent() { return this.content; }
     get firstChild() {
-      if (this.content) return { nodeType: 3, textContent: this.content, nextSibling: this.children[0] || null };
+      if (this.content) return { nodeType: 3, textContent: this.content, parentElement: this, nextSibling: this.children[0] || null };
       return this.children[0] || null;
     }
     reparse() {
@@ -217,6 +218,14 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       if (listeners.get(`document:${type}`) === callback) listeners.delete(`document:${type}`);
     },
   };
+  if (inspectVisibleContent) {
+    document.elementFromPoint = () => document.hitElement || null;
+    document.createRange = () => ({
+      selectNodeContents(node) { this.node = node; },
+      getClientRects() { return [this.node.parentElement.getBoundingClientRect()]; },
+      detach() {},
+    });
+  }
   function computed(element) {
     const result = { display: 'block', visibility: 'visible', paddingTop: '0px', backgroundColor: 'rgba(0, 0, 0, 0)', ...element.computed };
     const activeRules = (rules) => Array.from(rules).flatMap((rule) =>
@@ -280,7 +289,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     requestAnimationFrame: simulateAnimationFrames ? (callback) => frameCallbacks.push(callback) : undefined,
     setTimeout: (callback, delay = 0) => {
       const id = ++timerId; timers.set(id, { callback, at: clock + delay });
-      assert.ok(timers.size <= (userCssBridge ? 2 : 1), 'Only bounded prototype workers may be pending'); return id;
+      assert.ok(timers.size <= (userCssBridge ? 2 : 1) + (inspectVisibleContent ? 1 : 0), 'Only bounded prototype workers may be pending'); return id;
     },
     clearTimeout: (id) => timers.delete(id),
     addEventListener: (type, callback, options) => {
@@ -405,6 +414,152 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     diagnostics: () => context.CandyCssSafeAreaDiagnostics.sample(),
   };
 }
+
+test('deep visible banner requests a native safe area before CSS correction', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  let parent = f.element('static', 'auto');
+  for (let i = 0; i < 12; i++) parent = parent.append(f.context.document.createElement('div'));
+  parent.textContent = 'Free shipping';
+  f.context.document.hitElement = parent;
+  f.start();
+  assert.equal(f.fallbacks.length, 1);
+  assert.deepEqual(f.fallbacks[0], [1, 1, null, true]);
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+});
+
+test('a parser-created banner is checked as soon as the document becomes interactive', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  f.context.document.readyState = 'loading';
+  const text = f.element('static', 'auto', 'p');
+  text.textContent = 'Shipping announcement';
+  f.context.document.hitElement = text;
+  f.start();
+  assert.equal(f.fallbacks.length, 0);
+  f.context.document.readyState = 'interactive';
+  f.event('DOMContentLoaded');
+  f.flush();
+  assert.equal(f.fallbacks.length, 1);
+});
+
+test('background-only and already-safe content do not request a native safe area', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  const background = f.element('static', 'auto');
+  const text = background.append(f.context.document.createElement('p'));
+  text.textContent = 'Already below the status bar';
+  text.rect = { top: 40, bottom: 60, left: 0, right: 180, width: 180, height: 20 };
+  f.context.document.hitElement = text;
+  f.start();
+  assert.equal(f.fallbacks.length, 0);
+});
+
+test('late native safe-area delivery does not permanently mark an already-aware cover page', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true,
+    simulateAnimationFrames: true, envTop: 0 });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const text = f.element('static', 'auto', 'p');
+  text.textContent = 'Safe when the renderer delivers its inset';
+  f.context.document.hitElement = text;
+  f.start();
+  assert.equal(f.fallbacks.length, 0);
+  text.rect = { top: 32, bottom: 52, left: 0, right: 180, width: 180, height: 20 };
+  f.setEnvTop(96);
+  f.frame(8);
+  f.flush();
+  assert.equal(f.fallbacks.length, 0);
+});
+
+test('unsafe cover content falls back when the renderer never delivers its inset', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true,
+    simulateAnimationFrames: true, envTop: 0 });
+  const text = f.element('static', 'auto', 'p');
+  text.textContent = 'Unsafe banner';
+  f.context.document.hitElement = text;
+  f.start();
+  assert.equal(f.fallbacks.length, 0);
+  f.advance(3100);
+  f.frame(4);
+  f.flush();
+  assert.equal(f.fallbacks.length, 1);
+});
+
+test('visible controls request native protection on ordinary pages', () => {
+  const f = fixture({ inspectVisibleContent: true });
+  const button = f.element('fixed', '0px', 'button');
+  f.context.document.hitElement = button;
+  f.start();
+  assert.equal(f.fallbacks.length, 1);
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+});
+
+test('icon-only links request native protection', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  const link = f.element('static', 'auto', 'a');
+  link.setAttribute('href', '/cart');
+  const icon = link.append(f.context.document.createElement('svg'));
+  f.context.document.hitElement = icon;
+  f.start();
+  assert.equal(f.fallbacks.length, 1);
+});
+
+test('a banner added after document readiness requests native protection', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  f.start();
+  const banner = f.context.document.createElement('div');
+  const text = banner.append(f.context.document.createElement('p'));
+  text.textContent = 'New announcement';
+  f.context.document.hitElement = text;
+  f.childAdded(f.body, banner);
+  f.flush();
+  assert.equal(f.fallbacks.length, 1);
+});
+
+test('a later same-document route gets its own window for a delayed banner', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  f.start();
+  f.advance(4000);
+  f.configure({ navigationGeneration: 2, revision: 2 });
+  const banner = f.context.document.createElement('div');
+  const text = banner.append(f.context.document.createElement('p'));
+  text.textContent = 'Route announcement';
+  f.context.document.hitElement = text;
+  f.childAdded(f.body, banner);
+  f.flush();
+  assert.equal(f.fallbacks.length, 1);
+  assert.equal(f.fallbacks[0][0], 2);
+});
+
+test('hidden and covered text does not trigger a native fallback', () => {
+  for (const covered of [false, true]) {
+    const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+    const text = f.element('static', 'auto', 'p');
+    text.textContent = 'Not visible';
+    if (!covered) text.computed.display = 'none';
+    f.context.document.hitElement = covered ? f.body : text;
+    f.start();
+    assert.equal(f.fallbacks.length, 0);
+  }
+});
+
+test('text inside a transparent container does not trigger a native fallback', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  const container = f.element('static', 'auto');
+  container.computed.opacity = '0';
+  const text = container.append(f.context.document.createElement('p'));
+  text.textContent = 'Invisible text';
+  f.context.document.hitElement = text;
+  f.start();
+  assert.equal(f.fallbacks.length, 0);
+});
+
+test('scrolling normal page content into the status bar does not trigger a fallback', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', inspectVisibleContent: true });
+  const text = f.element('static', 'auto', 'p');
+  text.textContent = 'Scrolled text';
+  f.context.document.hitElement = text;
+  f.scrollTo(100);
+  f.start();
+  assert.equal(f.fallbacks.length, 0);
+});
 
 test('user CSS protection is unnecessary when the computed body padding matches Candy protection', () => {
   const f = fixture({ userCssBridge: true });

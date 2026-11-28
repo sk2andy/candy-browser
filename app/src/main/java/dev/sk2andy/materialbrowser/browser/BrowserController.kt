@@ -47,6 +47,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
 import dev.sk2andy.materialbrowser.StatusBarScrollAccessibilityContract
 import dev.sk2andy.materialbrowser.BuildConfig
+import dev.sk2andy.materialbrowser.CandyApplication
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.startSelectedTextSpeech
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
@@ -1579,6 +1580,8 @@ class BrowserController(
     private val pendingBrowserEngineLoadRequests = mutableMapOf<String, Long>()
     private var nextBrowserEngineLoadRequestId = 0L
     private val automaticNativeTopSafeAreaTabIds = mutableSetOf<String>()
+    private val webContentSafeAreaSession =
+        (activity.application as CandyApplication).webContentSafeAreaSession
     private val webContentTopBarStates = mutableStateMapOf<String, WebContentTopBarState>()
     private val webContentStatusBarBackdrops =
         mutableStateMapOf<String, WebContentStatusBarAppearance>()
@@ -5152,8 +5155,9 @@ class BrowserController(
                 safeUrl != null && safeUrl != state.currentUrl && !state.isLoading)
         if (startsSafeAreaNavigation) {
             runtime.safeAreaNavigationGeneration++
-            runtime.nativeTopSafeArea = false
-            runtime.nativeTopHeaderSafeArea = false
+            val remembered = webContentSafeAreaSession.contains(runtime.policyTab, safeUrl)
+            runtime.nativeTopSafeArea = remembered
+            runtime.nativeTopHeaderSafeArea = remembered
         }
         if (event.type == BrowserEngineEventType.NavigationStarted &&
             findInPageSession?.geckoSession === session
@@ -5409,6 +5413,7 @@ class BrowserController(
         ) ?: return
         event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
             if (navigationGeneration != runtime.safeAreaNavigationGeneration) return
+            webContentSafeAreaSession.remember(runtime.policyTab, externalLinkPreviewState?.currentUrl)
             if (runtime.nativeTopSafeArea &&
                 (!event.safeAreaFallbackIsTopHeader || runtime.nativeTopHeaderSafeArea)
             ) return
@@ -5580,7 +5585,7 @@ class BrowserController(
         }
         val previewRuntime = externalLinkPreviewRuntime?.takeIf { it.binding.view === view }
         val nativeTopHeaderSafeArea = if (tabId != null) {
-            webContentTopBarStates.containsKey(tabId)
+            webContentTopBarStates.containsKey(tabId) || hasSessionTopSafeArea(tabId)
         } else {
             previewRuntime?.nativeTopHeaderSafeArea == true
         }
@@ -11720,7 +11725,8 @@ class BrowserController(
         !developerSettings.forceSafeAreaFallback &&
         !isSafeAreaForced(tabId) &&
         tabId !in automaticNativeTopSafeAreaTabIds &&
-        !webContentTopBarStates.containsKey(tabId)
+        !webContentTopBarStates.containsKey(tabId) &&
+        !hasSessionTopSafeArea(tabId)
     ) {
         0
     } else {
@@ -13109,7 +13115,10 @@ class BrowserController(
         federatedLoginPopupTabIds.clear()
         federatedLoginCompatibilityTabIds.clear()
         destroyLinkPeekPreviewSessions()
-        if (tabs.any(BrowserTab::isIncognito)) prepareIncognitoProfileForRemoval()
+        if (tabs.any(BrowserTab::isIncognito)) {
+            prepareIncognitoProfileForRemoval()
+            webContentSafeAreaSession.clearPrivate()
+        }
         geckoViewBindings.keys.toList().forEach(::detachBrowserEngineView)
         browserEngineSessions.keys.toList().forEach(::closeBrowserEngineSession)
         webViewStateRepository.flush()
@@ -14718,6 +14727,7 @@ class BrowserController(
         val targetUrl = autoDeAmpPublisherUrl(tabId, url) ?: url
         resetWebContentSafeAreaForDomainNavigation(tabId, targetUrl)
         pageUrls[tabId] = targetUrl
+        applySessionTopSafeArea(tabId)
         updateProtectionRequestContext(tabId, targetUrl)
         val policy = geckoPrivacyPolicyFor(tabId) ?: return
         val pending = pendingInitialBrowserEngineNavigations[tabId]
@@ -14881,6 +14891,7 @@ class BrowserController(
             PrivacyRequestSanitizer.webHost(pageUrl)?.let { host -> isSafeAreaForced(tab, host) } == true ||
             tab.id in automaticNativeTopSafeAreaTabIds ||
             webContentTopBarStates.containsKey(tab.id) ||
+            webContentSafeAreaSession.contains(tab, pageUrl) ||
             externalLinkPreviewRuntime?.let { runtime ->
                 runtime.policyTab.id == tab.id && runtime.nativeTopSafeArea
             } == true ||
@@ -15058,6 +15069,25 @@ class BrowserController(
         }
     }
 
+    private fun hasSessionTopSafeArea(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return webContentSafeAreaSession.contains(tab, pageUrls[tabId] ?: tab.url)
+    }
+
+    private fun rememberSessionTopSafeArea(tabId: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        webContentSafeAreaSession.remember(tab, pageUrls[tabId] ?: tab.url)
+    }
+
+    private fun applySessionTopSafeArea(tabId: String) {
+        if (!hasSessionTopSafeArea(tabId)) return
+        lastWindowInsets?.let { insets ->
+            geckoViewBindings.values
+                .filter { binding -> binding.tabId == tabId }
+                .forEach { binding -> applyGeckoWindowInsets(binding.view, tabId, insets) }
+        }
+    }
+
     private fun enableAutomaticNativeTopSafeArea(
         tabId: String,
         navigationGeneration: Int,
@@ -15068,6 +15098,7 @@ class BrowserController(
         ) {
             return
         }
+        rememberSessionTopSafeArea(tabId)
         val dispatchUpdatedInsets = {
             lastWindowInsets?.let { insets ->
                 geckoViewBindings.values
@@ -15092,6 +15123,7 @@ class BrowserController(
         reportedThemeColor: String?,
     ) {
         if (navigationGenerations[tabId] != navigationGeneration) return
+        rememberSessionTopSafeArea(tabId)
         val nextState = WebContentTopBarState(
             statusBarAppearance = WebContentStatusBarAppearanceRules.fromReportedColor(
                 reportedThemeColor,
@@ -15240,6 +15272,7 @@ class BrowserController(
                 )
                 reconcileInlineVideoGestureHapticOwner()
                 event.address?.let { address -> pageUrls[event.tabId] = address }
+                applySessionTopSafeArea(event.tabId)
                 refreshDomainMuteForTab(event.tabId)
                 updateProtectionRequestContext(event.tabId, event.address)
                 geckoPrivacyPolicyFor(
@@ -19298,6 +19331,7 @@ class BrowserController(
     }
 
     private fun clearIncognitoProfile() {
+        webContentSafeAreaSession.clearPrivate()
         browserEngineSessionFactory.clearPrivateData()
         privateExternalAppSiteExceptions = emptyList()
         pendingExternalAppFeedback?.takeIf { it.feedback.isPrivate }

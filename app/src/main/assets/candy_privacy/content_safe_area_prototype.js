@@ -53,6 +53,8 @@
   let coverCheckedRevision = -1;
   let coverCheckedInset = -1;
   let coverNeedsProtection = false;
+  let initialContentCheckUntil = performance.now() + 3000;
+  let initialContentTimer = 0;
   let coverEnvProbe = null;
   let coverEnvWatchGeneration = 0;
   let coverEnvRecheckedInset = null;
@@ -209,7 +211,7 @@
   function resumeDeferredSafeAreaMeasurements() {
     if (!safeAreaMeasurementsDeferred || safeAreaMeasurementsMustWait()) return;
     safeAreaMeasurementsDeferred = false;
-    configure(true);
+    configure(true, true);
     if (configuration?.active) {
       bodyPending = true;
       protectBody();
@@ -224,6 +226,59 @@
         Number.parseFloat(style.opacity) <= 0.01) return false;
     const rect = element.getBoundingClientRect();
     return rect.width > 1 && rect.height > 1 && rect.top < safeTop - 0.5 && rect.bottom > 1;
+  }
+
+  function requestFallbackForUnsafeContent() {
+    if (!configuration?.safeAreaEnabled || nativeFallbackRequested || !document.body ||
+        document.readyState === "loading" || safeAreaMeasurementsMustWait() ||
+        typeof document.createRange !== "function" || typeof document.elementFromPoint !== "function") return false;
+    if (configuration.cover && globalThis.requestAnimationFrame && coverEnvRecheckedInset !== inset &&
+        (!coverEnvProbe || (pixels(getComputedStyle(coverEnvProbe).paddingTop) || 0) < inset - 0.5)) return false;
+    const unsafe = withAuthorTopStyles(() => {
+      const range = document.createRange();
+      const scrolled = Math.abs(globalThis.scrollY || 0) > 1;
+      const width = globalThis.innerWidth;
+      const hitsStatusBar = (rect, element) => {
+        const left = Math.max(0, rect.left), right = Math.min(width, rect.right);
+        const top = Math.max(0, rect.top), bottom = Math.min(inset, rect.bottom);
+        if (right - left <= 1 || bottom - top <= 1) return false;
+        const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+        if (hit !== element && !element.contains(hit)) return false;
+        for (let parent = element.parentElement; parent && parent !== document.documentElement;
+            parent = parent.parentElement) {
+          if (Number.parseFloat(getComputedStyle(parent).opacity) <= 0.01) return false;
+        }
+        return true;
+      };
+      for (let element = document.body.firstElementChild, visited = 0;
+          element && visited < configuration.maxInitialElements;
+          element = nextElement(element, document.body), visited++) {
+        const style = getComputedStyle(element);
+        if (!visibleNearTop(element, style, inset)) continue;
+        if (scrolled) {
+          let fixed = false;
+          for (let parent = element, depth = 0; parent && parent !== document.body && depth < 16;
+              parent = parent.parentElement, depth++) {
+            if (["fixed", "sticky"].includes(getComputedStyle(parent).position)) { fixed = true; break; }
+          }
+          if (!fixed) continue;
+        }
+        const control = ["button", "input", "select", "textarea"].includes(element.localName) ||
+          (element.localName === "a" && element.hasAttribute("href")) ||
+          ["button", "link"].includes(element.getAttribute("role"));
+        if (control && hitsStatusBar(element.getBoundingClientRect(), element)) return element;
+        for (let child = element.firstChild, checked = 0; child && checked < 8;
+            child = child.nextSibling, checked++) {
+          if (child.nodeType !== 3 || !child.textContent?.slice(0, 128).trim()) continue;
+          range.selectNodeContents(child);
+          if (Array.from(range.getClientRects()).some((rect) => hitsStatusBar(rect, element))) return element;
+        }
+      }
+      return null;
+    });
+    if (!unsafe) return false;
+    cancel();
+    return requestNativeTopFallback(unsafe, getComputedStyle(unsafe));
   }
 
   function zeroInset(value) {
@@ -1053,14 +1108,19 @@
         return;
       }
       lastNativeInset = nativeInset;
-      if (coverNeedsProtection && nativeInset >= inset - 0.5 && coverEnvRecheckedInset !== inset) {
+      if (nativeInset >= inset - 0.5 && coverEnvRecheckedInset !== inset) {
         // The first author-layout check may have run before Gecko delivered env().
         coverEnvRecheckedInset = inset;
         coverLayoutRevision++;
-        configure();
+        configure(false, true);
         return;
       }
-      if (nativeInset < inset - 0.5 && performance.now() < deadline) globalThis.requestAnimationFrame(sample);
+      if (nativeInset < inset - 0.5 && performance.now() < deadline) {
+        globalThis.requestAnimationFrame(sample);
+      } else if (nativeInset < inset - 0.5 && coverEnvRecheckedInset !== inset) {
+        coverEnvRecheckedInset = inset;
+        configure(false, true);
+      }
     };
     globalThis.requestAnimationFrame(sample);
   }
@@ -1341,6 +1401,7 @@
   }
 
   function schedule(delay = 0) {
+    if (nativeFallbackRequested) return;
     const otherWorkPending = cleanup.length > 0 || bodyPending || jobs.length > 0 || !!selectorScan ||
       !!selectorBuild || !!sourceDiscovery || sourceQueue.length > 0 || semanticCheckPending ||
       headerVerificationPending || statusBarBackdropPending || coverLayoutPending || viewportOverlayCandidates.length > 0;
@@ -1918,7 +1979,7 @@
   }
 
   function protectBody() {
-    if (!configuration?.active || (cleanup.length && !configuration.cover) ||
+    if (!configuration?.active || nativeFallbackRequested || (cleanup.length && !configuration.cover) ||
         !document.body || !document.documentElement) return;
     bodyPending = cleanup.length > 0;
     if (!cleanup.length) apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
@@ -2166,6 +2227,19 @@
     }
     if (records.some((record) => record.type === "childList" && record.removedNodes?.length)) {
       releaseDetachedElements();
+    }
+    if (configuration?.safeAreaEnabled && !nativeFallbackRequested &&
+        typeof document.createRange === "function" && typeof document.elementFromPoint === "function" &&
+        performance.now() < initialContentCheckUntil &&
+        records.slice(0, 32).some((record) => record.type === "childList" &&
+          Array.from(record.addedNodes || []).slice(0, 8).some((node) =>
+            node.nodeType === 1 && !["style", "link", "script", "meta"].includes(node.localName) &&
+            !isOwnSource(node)))) {
+      if (initialContentTimer) clearTimeout(initialContentTimer);
+      initialContentTimer = setTimeout(() => {
+        initialContentTimer = 0;
+        requestFallbackForUnsafeContent();
+      }, minimumHeaderVerificationQuietMillis);
     }
     queueSideDrawerMutations(records);
     queueHeaderTopMutations(records);
@@ -2420,7 +2494,7 @@
     scrollListenersAttached = needed;
   }
 
-  function configure(resize = false) {
+  function configure(resize = false, checkContent = false) {
     startStyleSheetTracking();
     const incoming = globalThis.CandyContentTopInset?.cssSafeAreaConfiguration?.();
     if (!incoming) return;
@@ -2433,6 +2507,7 @@
       Math.max(0, incoming.navigationGeneration) : 0;
     const routeChanged = configuration !== null &&
       configuration.navigationGeneration !== nextNavigationGeneration;
+    if (routeChanged) initialContentCheckUntil = performance.now() + 3000;
     const cover = viewportFitCoversSafeArea();
     const recheckCover = cover && document.body &&
       (routeChanged || coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset);
@@ -2466,6 +2541,7 @@
     if (key === configurationKey) {
       const revisionChanged = configuration.revision !== next.revision;
       configuration = next;
+      if ((checkContent || recheckCover) && requestFallbackForUnsafeContent()) return;
       if (revisionChanged) {
         if (nativeFallbackRequested) {
           globalThis.CandyContentTopInset?.fallbackToNative?.(
@@ -2584,6 +2660,7 @@
     semanticHeaderCandidates = new Set();
     headerVerificationPending = false;
     scrollGeneration = 0;
+    if (requestFallbackForUnsafeContent()) return;
     if ((next.active || redditActive) && (!cleanup.length || next.cover) && document.documentElement) {
       if (!cleanup.length) apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
       if (next.active) protectBody();
@@ -2693,9 +2770,11 @@
   });
   document.addEventListener("fullscreenchange", fullscreenChanged);
   document.addEventListener("DOMContentLoaded", () => {
+    initialContentCheckUntil = performance.now() + 3000;
     globalThis.CandyRedditSafeArea?.sync();
     if (configuration?.cover) coverLayoutRevision++;
-    configure();
+    configure(false, true);
+    if (configuration?.cover && !coverEnvProbe?.isConnected) watchCoverNativeInset();
     observe();
     startSelectorScan();
     if (configuration?.active && (protectedBody !== document.body || refreshBodyAtReady)) {
@@ -2741,7 +2820,7 @@
     }
     globalThis.CandyRedditSafeArea?.sync();
     if (configuration?.cover) coverLayoutRevision++;
-    configure();
+    configure(false, true);
     watchBodyProtection();
     startSelectorScan();
     seedInitialDom();

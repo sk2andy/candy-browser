@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.BuildConfig
+import dev.sk2andy.materialbrowser.CandyApplication
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
@@ -56,6 +57,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -86,6 +88,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalAddressBarDockingEnabled: Boolean? = null
     private var originalAddressBarDocked: Boolean? = null
     private var originalLastAddressBarDockPlacement: AddressBarDockPlacement? = null
+
+    @Before
+    fun clearSafeAreaSession() {
+        (composeRule.activity.application as CandyApplication).webContentSafeAreaSession.clear()
+    }
 
     @Test
     fun siteDataDeletionReloadsCapturedSessionOnlyAfterSuccessfulCompletion() {
@@ -1469,6 +1476,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             try {
                 controller?.destroy()
             } finally {
+                (composeRule.activity.application as CandyApplication).webContentSafeAreaSession.clear()
                 val store = BrowserSessionStore(composeRule.activity)
                 originalEngineKind?.let { kind ->
                     assertTrue(store.saveAndroidBrowserEngineKind(kind))
@@ -2413,7 +2421,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(0, session.privacyPolicies.last().topInsetPx)
             assertEquals(2, session.privacyPolicies.size)
             assertEquals(0, session.privacyPolicies.first().cssSafeAreaTopInsetPx)
-            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
             session.privacyPolicies.clear()
             browserController.dispatchSelectedGeckoPrivacyEventForTesting(
                 GeckoPrivacyEvent(
@@ -2431,7 +2439,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
-    fun topHeaderFallbackKeepsThemeColorUntilNextNavigation() {
+    fun topHeaderFallbackKeepsDomainProtectedAfterNextNavigation() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
             originalEngineKind = store.loadAndroidBrowserEngineKind()
@@ -2447,12 +2455,12 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
                     .build(),
             )
-            fun navigate(path: String) {
+            fun navigate(url: String) {
                 browserController.dispatchGeckoEngineEventForTesting(
                     BrowserEngineEvent(
                         tabId = tabId,
                         type = BrowserEngineEventType.NavigationStarted,
-                        address = "https://example.com/$path",
+                        address = url,
                         title = null,
                         canGoBack = false,
                         canGoForward = false,
@@ -2461,7 +2469,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 )
             }
 
-            navigate("first")
+            navigate("https://example.com/first")
             session.privacyPolicies.clear()
             browserController.dispatchSelectedGeckoPrivacyEventForTesting(
                 GeckoPrivacyEvent(
@@ -2486,10 +2494,19 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
 
             session.privacyPolicies.clear()
-            navigate("second")
+            navigate("https://example.com/second")
 
             assertEquals(null, browserController.selectedWebContentTopBarState)
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            assertEquals(96, browserController.previewTopInsetPx(tabId))
+
+            navigate("https://other.example/")
             assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            assertEquals(0, browserController.previewTopInsetPx(tabId))
+
+            navigate("https://example.com/third")
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            assertEquals(96, browserController.previewTopInsetPx(tabId))
         }
     }
 
@@ -2562,7 +2579,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(null, browserController.selectedWebContentTopBarState)
             assertEquals(null, browserController.selectedWebContentStatusBarBackdrop)
             assertEquals(2, session.privacyPolicies.last().navigationGeneration)
-            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
             browserController.dispatchSelectedGeckoPrivacyEventForTesting(
                 GeckoPrivacyEvent(
                     requestUrl = "",
@@ -2595,7 +2612,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
             session.privacyPolicies.clear()
             engineEvent(BrowserEngineEventType.StateChanged, detailUrl)
-            assertEquals(listOf(0, 96), session.privacyPolicies.map { it.cssSafeAreaTopInsetPx })
+            assertEquals(listOf(0, 0), session.privacyPolicies.map { it.cssSafeAreaTopInsetPx })
             assertEquals(3, session.privacyPolicies.last().navigationGeneration)
         }
     }
@@ -2763,7 +2780,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertTrue(session.privacyPolicies.isEmpty())
 
             session.policyReadyCallbacks.last()()
-            assertEquals(96, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
             session.deferPolicyReadyCallbacks = false
             session.privacyPolicies.clear()
             fallback(3)

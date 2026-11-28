@@ -8,6 +8,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.CandyApplication
 import dev.sk2andy.materialbrowser.browser.gecko.CandyGeckoView
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -15,6 +16,7 @@ import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -30,9 +32,17 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
         .getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val originalPreferences = preferences.all.toMap()
 
+    @Before
+    fun clearSafeAreaSession() {
+        (InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as CandyApplication)
+            .webContentSafeAreaSession.clear()
+    }
+
     @After
     fun tearDown() {
         activityRule.scenario.onActivity { controller?.destroy() }
+        (InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as CandyApplication)
+            .webContentSafeAreaSession.clear()
         val editor = preferences.edit()
         // Restore the fixture without clearing unrelated existing browser settings.
         (preferences.all.keys - originalPreferences.keys).forEach(editor::remove)
@@ -96,7 +106,7 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
     }
 
     @Test
-    fun newDocumentClearsFallbackAndRejectsPreviousDocumentReport() {
+    fun sameDomainDocumentRetainsFallbackAndRejectsPreviousDocumentReport() {
         activityRule.scenario.onActivity { activity ->
             val browser = preparePreview(activity)
             val oldGeneration = browser.externalLinkPreviewSafeAreaNavigationGenerationForTesting
@@ -106,8 +116,8 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
             browser.dispatchExternalPreviewEventForTesting(event(BrowserEngineEventType.NavigationStarted, PAGE_URL))
 
             val layout = previewView(browser).insetLayoutSnapshot()
-            assertEquals(0, layout.margins.top)
-            assertEquals(96, layout.rendererSafeAreaOverride?.top)
+            assertEquals(96, layout.margins.top)
+            assertEquals(0, layout.rendererSafeAreaOverride?.top)
             browser.dispatchExternalLinkPreviewPrivacyEventForTesting(fallback(oldGeneration))
             assertEquals(layout, previewView(browser).insetLayoutSnapshot())
             browser.dispatchExternalLinkPreviewPrivacyEventForTesting(
@@ -118,7 +128,7 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
     }
 
     @Test
-    fun sameDocumentRouteClearsGenericFallbackAndRejectsOldReport() {
+    fun sameDocumentRouteRetainsGenericFallbackAndRejectsOldReport() {
         activityRule.scenario.onActivity { activity ->
             val browser = preparePreview(activity)
             browser.dispatchExternalPreviewEventForTesting(event(BrowserEngineEventType.NavigationCommitted, PAGE_URL))
@@ -134,9 +144,9 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
                 event(BrowserEngineEventType.StateChanged, "https://example.com/next"),
             )
 
-            assertEquals(0, previewView(browser).insetLayoutSnapshot().margins.top)
+            assertEquals(96, previewView(browser).insetLayoutSnapshot().margins.top)
             browser.dispatchExternalLinkPreviewPrivacyEventForTesting(fallback(oldGeneration))
-            assertEquals(0, previewView(browser).insetLayoutSnapshot().margins.top)
+            assertEquals(96, previewView(browser).insetLayoutSnapshot().margins.top)
         }
     }
 
