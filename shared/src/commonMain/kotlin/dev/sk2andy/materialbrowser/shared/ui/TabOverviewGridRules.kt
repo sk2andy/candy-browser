@@ -16,9 +16,11 @@ object TabOverviewGridRules {
     fun layout(
         viewportWidth: Float,
         viewportHeight: Float,
+        preferredColumns: Int = BrowserTabOverviewLayoutRules.AUTO_GRID_COLUMNS,
     ): Layout = BrowserTabOverviewLayoutRules.grid(
         viewportWidth = viewportWidth,
         viewportHeight = viewportHeight,
+        preferredColumns = preferredColumns,
     ).let { layout ->
         Layout(
             columnCount = layout.columnCount,
@@ -30,6 +32,8 @@ object TabOverviewGridRules {
             itemSpacing = layout.itemSpacing,
         )
     }
+
+    fun usesDenseTitle(cardWidth: Float): Boolean = cardWidth < 140f
 
     fun leadingEmptyCellCount(
         tabCount: Int,

@@ -93,14 +93,21 @@ object BrowserTabOverviewLayoutRules {
     fun grid(
         viewportWidth: Float,
         viewportHeight: Float,
+        preferredColumns: Int = AUTO_GRID_COLUMNS,
     ): BrowserTabGridLayout {
         val safeWidth = viewportWidth.takeIf { it.isFinite() && it > 0f } ?: 0f
         val safeHeight = viewportHeight.takeIf { it.isFinite() && it > 0f } ?: 0f
         val isLandscape = safeWidth > safeHeight
-        val columnCount = if (isLandscape && safeWidth >= TABLET_WIDTH) {
+        val automaticColumns = if (isLandscape && safeWidth >= TABLET_WIDTH) {
             TABLET_LANDSCAPE_COLUMNS
         } else {
             DEFAULT_COLUMNS
+        }
+        val preference = normalizeGridColumns(preferredColumns)
+        val columnCount = if (preference == AUTO_GRID_COLUMNS) {
+            automaticColumns
+        } else {
+            preference.coerceAtMost(maximumGridColumns(safeWidth))
         }
         val previewAspectRatio = if (isLandscape) {
             LANDSCAPE_PREVIEW_ASPECT_RATIO
@@ -119,6 +126,16 @@ object BrowserTabOverviewLayoutRules {
             contentPadding = GRID_CONTENT_PADDING,
             itemSpacing = GRID_ITEM_SPACING,
         )
+    }
+
+    fun normalizeGridColumns(columns: Int): Int =
+        if (columns in 1..MAX_GRID_COLUMNS) columns else AUTO_GRID_COLUMNS
+
+    fun maximumGridColumns(viewportWidth: Float): Int {
+        if (!viewportWidth.isFinite()) return 1
+        val available = viewportWidth - GRID_CONTENT_PADDING * 2f + GRID_ITEM_SPACING
+        return (available / (MIN_GRID_CARD_WIDTH + GRID_ITEM_SPACING)).toInt()
+            .coerceIn(1, MAX_GRID_COLUMNS)
     }
 
     fun list(): BrowserTabListLayout = BrowserTabListLayout(
@@ -143,6 +160,9 @@ object BrowserTabOverviewLayoutRules {
     private const val PORTRAIT_GRID_PREVIEW_ASPECT_RATIO = 0.72f
     private const val TABLET_WIDTH = 900f
     private const val TABLET_LANDSCAPE_COLUMNS = 3
+    const val AUTO_GRID_COLUMNS = 0
+    private const val MAX_GRID_COLUMNS = 5
+    private const val MIN_GRID_CARD_WIDTH = 96f
     private const val DEFAULT_COLUMNS = 2
     private const val GRID_CONTENT_PADDING = 16f
     private const val GRID_ITEM_SPACING = 12f

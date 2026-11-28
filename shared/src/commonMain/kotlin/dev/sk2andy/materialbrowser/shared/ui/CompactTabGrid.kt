@@ -7,7 +7,6 @@ package dev.sk2andy.materialbrowser.shared.ui
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -22,7 +21,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -44,12 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
@@ -106,6 +99,7 @@ fun CompactTabGrid(
     cardFrame: @Composable (BrowserTab, @Composable () -> Unit) -> Unit = { _, content -> content() },
     topPadding: Dp = 8.dp,
     modifier: Modifier = Modifier,
+    denseTitle: Boolean = false,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
     val leadingEmptyCellCount = TabOverviewGridRules.leadingEmptyCellCount(
@@ -129,23 +123,8 @@ fun CompactTabGrid(
             gridState.scrollToItem(targetGridIndex)
         }
     }
-    val topFadeAlpha by animateFloatAsState(
-        targetValue = if (gridState.canScrollBackward) 1f else 0f,
-        animationSpec = tween(durationMillis = 120),
-        label = "gridTopFade",
-    )
-    val bottomFadeAlpha by animateFloatAsState(
-        targetValue = if (gridState.canScrollForward) 1f else 0f,
-        animationSpec = tween(durationMillis = 120),
-        label = "gridBottomFade",
-    )
     var gridBounds by remember { mutableStateOf<Rect?>(null) }
     reorderAutoScroll(gridBounds)
-    val overviewBackgroundColors = listOf(
-        MaterialTheme.colorScheme.primaryContainer,
-        MaterialTheme.colorScheme.tertiaryContainer,
-        MaterialTheme.colorScheme.surface,
-    )
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -192,6 +171,7 @@ fun CompactTabGrid(
                         dismissResistanceFraction = dismissResistanceFraction,
                         interactionsEnabled = interactionsEnabled,
                         previewAspectRatio = layout.previewAspectRatio,
+                        denseTitle = denseTitle,
                         viewportSize = viewportSize,
                         canDelete = { canDelete(tab) },
                         haptics = haptics,
@@ -219,66 +199,11 @@ fun CompactTabGrid(
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .height(28.dp)
-                .graphicsLayer {
-                    alpha = topFadeAlpha
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawWithContent {
-                    val topInRoot = gridBounds?.top ?: 0f
-                    val rootSize = viewportSize()
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = overviewBackgroundColors,
-                            start = Offset(0f, -topInRoot),
-                            end = Offset(
-                                rootSize.width.toFloat(),
-                                rootSize.height.toFloat() - topInRoot,
-                            ),
-                        ),
-                    )
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color.Black, Color.Transparent),
-                        ),
-                        blendMode = BlendMode.DstIn,
-                    )
-                },
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(36.dp)
-                .graphicsLayer {
-                    alpha = bottomFadeAlpha
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawWithContent {
-                    val rootSize = viewportSize()
-                    val bottomInRoot = gridBounds?.bottom ?: rootSize.height.toFloat()
-                    val topInRoot = bottomInRoot - size.height
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = overviewBackgroundColors,
-                            start = Offset(0f, -topInRoot),
-                            end = Offset(
-                                rootSize.width.toFloat(),
-                                rootSize.height.toFloat() - topInRoot,
-                            ),
-                        ),
-                    )
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black),
-                        ),
-                        blendMode = BlendMode.DstIn,
-                    )
-                },
+        TabOverviewScrollFades(
+            canScrollBackward = gridState.canScrollBackward,
+            canScrollForward = gridState.canScrollForward,
+            bounds = { gridBounds },
+            viewportSize = viewportSize,
         )
     }
 }
@@ -297,6 +222,7 @@ private fun CompactGridTabItem(
     dismissResistanceFraction: Float,
     interactionsEnabled: Boolean,
     previewAspectRatio: Float,
+    denseTitle: Boolean,
     viewportSize: () -> IntSize,
     canDelete: () -> Boolean,
     haptics: TabOverviewHeroPagerHaptics,
@@ -534,6 +460,7 @@ private fun CompactGridTabItem(
                 visuals = visuals,
                 interactionsEnabled = interactionsEnabled,
                 onClose = onClose,
+                denseTitle = denseTitle,
                 modifier = Modifier.fillMaxSize(),
             )
         }

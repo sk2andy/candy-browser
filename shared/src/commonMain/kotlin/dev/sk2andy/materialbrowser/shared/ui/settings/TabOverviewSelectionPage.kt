@@ -24,12 +24,15 @@ fun TabOverviewSelectionPage(
     onModeChanged: (TabOverviewMode) -> Unit,
     onBack: () -> Unit,
     testTagPrefix: String = "tab_overview_option",
+    previewOverride: (@Composable () -> Unit)? = null,
+    belowPreview: (@Composable () -> Unit)? = null,
 ) {
     SettingsSelectionPage(
         title = strings.overviewMode,
         backContentDescription = backContentDescription,
         onBack = onBack,
-        preview = { TabOverviewPreview(mode) },
+        preview = previewOverride ?: { TabOverviewPreview(mode) },
+        belowPreview = belowPreview,
     ) {
         TabOverviewMode.entries.forEachIndexed { index, candidate ->
             if (index > 0) SettingsPreferenceDivider()

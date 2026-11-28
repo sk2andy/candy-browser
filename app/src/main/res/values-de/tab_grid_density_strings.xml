@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_grid_density_title">Rastergröße</string>
+    <string name="tab_grid_density_automatic">Automatisch (%1$s)</string>
+    <string name="tab_grid_density_hint">Mehr Spalten zeigen kleinere Tab-Vorschauen.</string>
+    <plurals name="tab_grid_density_columns">
+        <item quantity="one">%d Spalte</item>
+        <item quantity="other">%d Spalten</item>
+    </plurals>
+</resources>

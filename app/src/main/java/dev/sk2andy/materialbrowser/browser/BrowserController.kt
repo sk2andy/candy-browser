@@ -323,6 +323,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
+import dev.sk2andy.materialbrowser.shared.browser.BrowserTabOverviewLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
@@ -854,6 +855,8 @@ class BrowserController(
     var dismissResistancePercent by mutableIntStateOf(40)
         private set
     var tabOverviewMode by mutableStateOf(TabOverviewMode.Hero)
+        private set
+    var tabOverviewGridColumns by mutableIntStateOf(BrowserTabOverviewLayoutRules.AUTO_GRID_COLUMNS)
         private set
     var tabStackFolderMode by mutableStateOf(TabOverviewMode.Grid)
         private set
@@ -2920,6 +2923,7 @@ class BrowserController(
         isHistorySuggestionsEnabled = store.loadHistorySuggestionsEnabled()
         dismissResistancePercent = store.loadDismissResistancePercent()
         tabOverviewMode = store.loadTabOverviewMode()
+        tabOverviewGridColumns = store.loadTabOverviewGridColumns()
         tabStackFolderMode = store.loadTabStackFolderMode()
         tabListStartsAtBottom = store.loadTabListStartsAtBottom()
         newTabsInCurrentStackEnabled = store.loadNewTabsInCurrentStackEnabled()
@@ -12098,6 +12102,13 @@ class BrowserController(
     fun updateTabOverviewMode(mode: TabOverviewMode) {
         tabOverviewMode = mode
         store.saveTabOverviewMode(mode)
+    }
+
+    fun updateTabOverviewGridColumns(columns: Int) {
+        val normalized = BrowserTabOverviewLayoutRules.normalizeGridColumns(columns)
+        if (normalized == tabOverviewGridColumns) return
+        tabOverviewGridColumns = normalized
+        store.saveTabOverviewGridColumns(normalized)
     }
 
     fun updateTabStackFolderMode(mode: TabOverviewMode) {

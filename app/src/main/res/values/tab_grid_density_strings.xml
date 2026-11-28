@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="tab_grid_density_title">Grid size</string>
+    <string name="tab_grid_density_automatic">Automatic (%1$s)</string>
+    <string name="tab_grid_density_hint">More columns show smaller tab previews.</string>
+    <plurals name="tab_grid_density_columns">
+        <item quantity="one">%d column</item>
+        <item quantity="other">%d columns</item>
+    </plurals>
+</resources>

@@ -101,6 +101,7 @@ internal fun SettingsScreen(
     isRecallEnabled: Boolean,
     historyRecordingMode: HistoryRecordingMode,
     tabOverviewMode: TabOverviewMode,
+    tabOverviewGridColumns: Int,
     tabStackFolderMode: TabOverviewMode,
     tabListStartsAtBottom: Boolean,
     automaticTabSortingEnabled: Boolean,
@@ -184,6 +185,7 @@ internal fun SettingsScreen(
     onRecallEnabledChanged: (Boolean) -> Unit,
     onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
+    onTabOverviewGridColumnsChanged: (Int) -> Unit,
     onTabStackFolderModeChanged: (TabOverviewMode) -> Unit,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
     onAutomaticTabSortingEnabledChanged: (Boolean) -> Unit,
@@ -514,13 +516,28 @@ internal fun SettingsScreen(
                     onContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,
                 )
 
-                SettingsDestination.TabOverview -> dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSelectionPage(
-                    mode = tabOverviewMode,
-                    strings = androidTabOverviewSettingsStrings(),
-                    backContentDescription = stringResource(R.string.action_back),
-                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
-                    onModeChanged = onTabOverviewModeChanged,
-                )
+                SettingsDestination.TabOverview -> {
+                    val draft = rememberTabGridDensityDraft(tabOverviewGridColumns)
+                    dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSelectionPage(
+                        mode = tabOverviewMode,
+                        strings = androidTabOverviewSettingsStrings(),
+                        backContentDescription = stringResource(R.string.action_back),
+                        onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                        onModeChanged = onTabOverviewModeChanged,
+                        previewOverride = if (tabOverviewMode == TabOverviewMode.Grid) {
+                            { TabGridDensityPreview(draft.intValue) }
+                        } else null,
+                        belowPreview = if (tabOverviewMode == TabOverviewMode.Grid) {
+                            {
+                                TabGridDensityControl(
+                                    draftColumns = draft.intValue,
+                                    onDraftChanged = { draft.intValue = it },
+                                    onChangeFinished = { onTabOverviewGridColumnsChanged(draft.intValue) },
+                                )
+                            }
+                        } else null,
+                    )
+                }
 
                 SettingsDestination.TabStackFolder -> dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSelectionPage(
                     mode = tabStackFolderMode,

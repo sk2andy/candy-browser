@@ -52,6 +52,7 @@ import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.shared.browser.BrowserTabOverviewLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
@@ -900,6 +901,18 @@ class BrowserSessionStore internal constructor(
 
     fun saveTabOverviewMode(mode: TabOverviewMode) {
         preferences.edit().putString(KEY_TAB_OVERVIEW_MODE, mode.wireValue).apply()
+    }
+
+    fun loadTabOverviewGridColumns(): Int = BrowserTabOverviewLayoutRules.normalizeGridColumns(
+        runCatching {
+            preferences.getInt(KEY_TAB_OVERVIEW_GRID_COLUMNS, BrowserTabOverviewLayoutRules.AUTO_GRID_COLUMNS)
+        }.getOrDefault(BrowserTabOverviewLayoutRules.AUTO_GRID_COLUMNS),
+    )
+
+    fun saveTabOverviewGridColumns(columns: Int) {
+        preferences.edit()
+            .putInt(KEY_TAB_OVERVIEW_GRID_COLUMNS, BrowserTabOverviewLayoutRules.normalizeGridColumns(columns))
+            .apply()
     }
 
     fun loadTabStackFolderMode(): TabOverviewMode =
@@ -1771,6 +1784,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_HISTORY_SUGGESTIONS_ENABLED = "history_suggestions_enabled"
         const val KEY_DISMISS_RESISTANCE_START_PERCENT = "dismiss_resistance_start_percent"
         const val KEY_TAB_OVERVIEW_MODE = "tab_overview_mode"
+        const val KEY_TAB_OVERVIEW_GRID_COLUMNS = "tab_overview_grid_columns"
         const val KEY_TAB_STACK_FOLDER_MODE = "tab_stack_folder_mode"
         const val KEY_TAB_LIST_STARTS_AT_BOTTOM = "tab_list_starts_at_bottom"
         const val KEY_NEW_TABS_IN_CURRENT_STACK_ENABLED = "new_tabs_in_current_stack_enabled"

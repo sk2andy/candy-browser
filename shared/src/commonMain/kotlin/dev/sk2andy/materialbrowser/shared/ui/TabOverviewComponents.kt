@@ -751,7 +751,9 @@ fun TabTitleRow(
     contentColor: Color,
     alpha: () -> Float,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
+    val iconSize = if (compact) 16.dp else 22.dp
     Surface(
         modifier = modifier.graphicsLayer { this.alpha = alpha() },
         shape = MaterialTheme.shapes.extraLarge,
@@ -760,15 +762,18 @@ fun TabTitleRow(
         shadowElevation = 2.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(
+                horizontal = if (compact) 8.dp else 12.dp,
+                vertical = if (compact) 6.dp else 8.dp,
+            ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             when {
-                tab.isIncognito -> visuals.incognitoIcon(Modifier.size(22.dp), contentColor)
-                tab.url == BLANK_URL -> visuals.blankIcon(Modifier.size(22.dp))
-                visuals.hasFavicon -> visuals.favicon(22.dp)
+                tab.isIncognito -> visuals.incognitoIcon(Modifier.size(iconSize), contentColor)
+                tab.url == BLANK_URL -> visuals.blankIcon(Modifier.size(iconSize))
+                visuals.hasFavicon -> visuals.favicon(iconSize)
                 else -> Surface(
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(iconSize),
                     shape = RoundedCornerShape(7.dp),
                     color = MaterialTheme.colorScheme.primary,
                 ) {
@@ -782,7 +787,7 @@ fun TabTitleRow(
                     }
                 }
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
             Column(Modifier.weight(1f, fill = false)) {
                 Text(
                     visuals.title,
@@ -803,8 +808,8 @@ fun TabTitleRow(
                 }
             }
             if (tab.isPinned) {
-                Spacer(Modifier.width(8.dp))
-                visuals.pinnedIcon(Modifier.size(18.dp), contentColor)
+                Spacer(Modifier.width(if (compact) 4.dp else 8.dp))
+                visuals.pinnedIcon(Modifier.size(if (compact) 14.dp else 18.dp), contentColor)
             }
         }
     }
@@ -817,6 +822,7 @@ fun GridTabPreviewChrome(
     interactionsEnabled: Boolean,
     onClose: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    denseTitle: Boolean = false,
 ) {
     val contentColor = MaterialTheme.colorScheme.onSurface
     Box(modifier) {
@@ -825,12 +831,14 @@ fun GridTabPreviewChrome(
             visuals = visuals,
             contentColor = contentColor,
             alpha = { 1f },
+            compact = denseTitle,
             modifier = Modifier
-                .align(Alignment.TopStart)
+                .align(if (denseTitle) Alignment.BottomStart else Alignment.TopStart)
                 .padding(
                     start = 8.dp,
-                    top = 8.dp,
-                    end = if (tab.isPinned) 8.dp else 60.dp,
+                    top = if (denseTitle) 0.dp else 8.dp,
+                    end = if (denseTitle || tab.isPinned) 8.dp else 60.dp,
+                    bottom = if (denseTitle) 8.dp else 0.dp,
                 )
                 .testTag(visuals.titleTestTag),
         )

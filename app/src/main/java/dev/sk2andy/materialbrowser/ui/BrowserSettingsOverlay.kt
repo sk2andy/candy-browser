@@ -205,6 +205,7 @@ internal fun BrowserSettingsOverlay(
             isRecallEnabled = controller.isRecallEnabled,
             historyRecordingMode = controller.historyRecordingMode,
             tabOverviewMode = controller.tabOverviewMode,
+            tabOverviewGridColumns = controller.tabOverviewGridColumns,
             tabStackFolderMode = controller.tabStackFolderMode,
             tabListStartsAtBottom = controller.tabListStartsAtBottom,
             automaticTabSortingEnabled = controller.automaticTabSortingEnabled,
@@ -332,6 +333,7 @@ internal fun BrowserSettingsOverlay(
             onRecallEnabledChanged = controller::updateRecallEnabled,
             onHistoryRecordingModeChanged = controller::updateHistoryRecordingMode,
             onTabOverviewModeChanged = controller::updateTabOverviewMode,
+            onTabOverviewGridColumnsChanged = controller::updateTabOverviewGridColumns,
             onTabStackFolderModeChanged = controller::updateTabStackFolderMode,
             onTabListStartsAtBottomChanged = controller::updateTabListStartsAtBottom,
             onAutomaticTabSortingEnabledChanged =

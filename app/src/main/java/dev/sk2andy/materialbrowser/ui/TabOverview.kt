@@ -678,6 +678,7 @@ internal fun TabOverview(
         val gridLayout = TabOverviewGridRules.layout(
             viewportWidth = maxWidth.value,
             viewportHeight = maxHeight.value,
+            preferredColumns = controller.tabOverviewGridColumns,
         )
         val gridColumnPitchPx = with(density) { gridLayout.columnPitch.dp.toPx() }
         val gridRowPitchPx = with(density) { gridLayout.rowPitch.dp.toPx() }
@@ -1535,6 +1536,7 @@ internal fun TabOverview(
                 TabOverviewMode.Grid -> CompactTabGrid(
                     gridState = gridState,
                     layout = gridLayout,
+                    denseTitle = TabOverviewGridRules.usesDenseTitle(gridLayout.cardWidth),
                     tabs = stackAwareTabs,
                     startsAtBottom = controller.tabListStartsAtBottom,
                     visible = visible,
@@ -1669,6 +1671,7 @@ internal fun TabOverview(
                 )
                 TabOverviewMode.List -> CompactTabList(
                     listState = listState,
+                    fadeViewportSize = { IntSize(rootView.width, rootView.height) },
                     tabs = controller.activeTabs,
                     startsAtBottom = controller.tabListStartsAtBottom,
                     visible = visible,

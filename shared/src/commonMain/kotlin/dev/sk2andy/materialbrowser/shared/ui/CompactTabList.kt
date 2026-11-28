@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -75,6 +76,7 @@ fun CompactTabList(
     tabTestTag: (BrowserTab) -> String,
     topPadding: Dp = 8.dp,
     modifier: Modifier = Modifier,
+    fadeViewportSize: (() -> IntSize)? = null,
 ) {
     val selectedIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0)
     var listBounds by remember { mutableStateOf<Rect?>(null) }
@@ -87,50 +89,61 @@ fun CompactTabList(
             listState.scrollToItem(targetIndex)
         }
     }
-    LazyColumn(
-        state = listState,
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .testTag(listTestTag)
             .onGloballyPositioned { listBounds = it.boundsInRoot() },
-        userScrollEnabled = interactionsEnabled,
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            top = topPadding,
-            end = 16.dp,
-            bottom = 8.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(
-            space = 8.dp,
-            alignment = if (startsAtBottom) Alignment.Bottom else Alignment.Top,
-        ),
     ) {
-        itemsIndexed(
-            items = tabs,
-            key = { _, tab -> tab.id },
-            contentType = { _, _ -> "tab-list-row" },
-        ) { _, tab ->
-            CompactListTabItem(
-                tab = tab,
-                visuals = visuals(tab),
-                selected = tab.id == selectedTabId,
-                initial = tab.id == initialTabId,
-                heroProgress = heroProgress,
-                heroCompleted = heroCompleted,
-                heroVisible = heroVisible,
-                exitTarget = tab.id == exitHeroTabId,
-                interactionsEnabled = interactionsEnabled,
-                onBounds = { bounds -> onRowBounds(tab, bounds) },
-                onBoundsDisposed = { bounds -> onRowBoundsDisposed(tab, bounds) },
-                onSelect = { bounds -> onSelect(tab, bounds) },
-                onClose = { onCloseTab(tab) },
-                modifier = Modifier
-                    .then(
-                        if (reorderSessionId == null) Modifier.animateItem() else Modifier,
-                    )
-                    .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
-                    .then(reorderModifier(tab))
-                    .testTag(tabTestTag(tab)),
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().testTag(listTestTag),
+            userScrollEnabled = interactionsEnabled,
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = topPadding,
+                end = 16.dp,
+                bottom = 8.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(
+                space = 8.dp,
+                alignment = if (startsAtBottom) Alignment.Bottom else Alignment.Top,
+            ),
+        ) {
+            itemsIndexed(
+                items = tabs,
+                key = { _, tab -> tab.id },
+                contentType = { _, _ -> "tab-list-row" },
+            ) { _, tab ->
+                CompactListTabItem(
+                    tab = tab,
+                    visuals = visuals(tab),
+                    selected = tab.id == selectedTabId,
+                    initial = tab.id == initialTabId,
+                    heroProgress = heroProgress,
+                    heroCompleted = heroCompleted,
+                    heroVisible = heroVisible,
+                    exitTarget = tab.id == exitHeroTabId,
+                    interactionsEnabled = interactionsEnabled,
+                    onBounds = { bounds -> onRowBounds(tab, bounds) },
+                    onBoundsDisposed = { bounds -> onRowBoundsDisposed(tab, bounds) },
+                    onSelect = { bounds -> onSelect(tab, bounds) },
+                    onClose = { onCloseTab(tab) },
+                    modifier = Modifier
+                        .then(
+                            if (reorderSessionId == null) Modifier.animateItem() else Modifier,
+                        )
+                        .zIndex(if (reorderDraggedTabId == tab.id) 6f else 0f)
+                        .then(reorderModifier(tab))
+                        .testTag(tabTestTag(tab)),
+                )
+            }
+        }
+        if (fadeViewportSize != null) {
+            TabOverviewScrollFades(
+                canScrollBackward = listState.canScrollBackward,
+                canScrollForward = listState.canScrollForward,
+                bounds = { listBounds },
+                viewportSize = fadeViewportSize,
             )
         }
     }

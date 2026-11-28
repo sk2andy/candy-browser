@@ -37,6 +37,7 @@ fun SettingsSelectionPage(
     onBack: () -> Unit,
     summary: String? = null,
     preview: @Composable () -> Unit,
+    belowPreview: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     SettingsPage(title = title, backContentDescription = backContentDescription, onBack = onBack) {
@@ -46,6 +47,10 @@ fun SettingsSelectionPage(
         Spacer(Modifier.height(24.dp))
         if (summary != null) {
             Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
+        }
+        if (belowPreview != null) {
+            belowPreview()
             Spacer(Modifier.height(16.dp))
         }
         Column(Modifier.selectableGroup()) {
